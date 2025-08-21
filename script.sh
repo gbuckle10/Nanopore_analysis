@@ -9,26 +9,55 @@
 install_dorado() {
   local VERSION=$1
   echo "--- Downloading and setting up Dorado ---"
+
+  echo "-- Detecting OS --"
+  case "$(uname -s)" in
+    Linux*)
+      os_type="linux-x64"
+      archive_filename="dorado.tar.gz"
+      download_url="https://cdn.oxfordnanoportal.com/software/analysis/dorado-$VERSION-${os_type}.tar.gz"
+      ;;
+    CYGWIN*|MINGW*|MSYS*)
+      os_type="win64"
+      archive_filename="dorado.zip"
+      download_url="https://cdn.oxfordnanoportal.com/software/analysis/dorado-$VERSION-${os_type}.zip"
+      ;;
+    *)
+      echo "I don't have a clue what operating system you're trying to use..."
+      return 1
+      ;;
+  esac
+  echo "The OS has been found, it's $os_type"
+
   echo "--- Checking for existing Dorado installation ---"
-  if [ -d "tools/dorado_v$VERSION" ]; then
+  expected_folder=tools/dorado-$VERSION-${os_type}
+  if [ -d "tools/dorado-$VERSION-${os_type}" ]; then
     echo -e "Dorado folder already exists"
     return 0
   fi
 
-  echo "Dorado not found, so I'll install it now."
+  echo "Dorado folder ${expected_folder} not found, so I'll install it now."
 
   echo "Creating installation directory in tools"
   mkdir -p "tools"
 
-  echo "Downloading dorado from https://cdn.oxfordnanoportal.com/software/analysis/dorado-$VERSION-win64.zip"
-  curl -o tools/dorado.zip  "https://cdn.oxfordnanoportal.com/software/analysis/dorado-$VERSION-win64.zip"
+  # Include a check here for whether the archive_filename is there to save more time.
+  echo "Downloading dorado version $VERSION for ${os_type} from ${download_url}"
+  curl -o tools/${archive_filename}  $download_url
 
-  echo "Downloading dorado version 0.9.6 from https://cdn.oxfordnanoportal.com/software/analysis/dorado-0.9.6-win64.zip"
   echo "Download complete. Unzipping and setting up."
 
-  unzip -q tools/dorado.zip -d tools
-  mv "tools/dorado-$VERSION-win64"* "tools/dorado_v$VERSION"
-  rm tools/dorado.zip
+  case ${os_type} in
+    "linux-x64")
+      tar -xzvf "tools/${archive_filename}" -C "tools/"
+      ;;
+    "win64")
+      unzip -q "tools/${archive_filename}" -d "tools/"
+      ;;
+  esac
+
+  mv "tools/dorado-$VERSION-${os_type}"* "tools/dorado_v$VERSION-${os_type}"
+  rm tools/${archive_filename}
 
   echo "-------- Dorado was successfully installed ---------------"
 
@@ -79,7 +108,7 @@ basecalling_pod5() {
 }
 
 run_script(){
-  DORADO_VERSION="1.1.1"
+  DORADO_VERSION="0.9.6"
   install_dorado "$DORADO_VERSION"
 }
 
