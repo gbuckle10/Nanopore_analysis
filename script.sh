@@ -116,10 +116,14 @@ basecalling_pod5() {
 }
 
 run_script(){
+
   #install_dorado "$DORADO_VERSION"
   #download_fast5_data 10
   #convert_fast5_to_pod5
   basecalling_pod5
+
+  DORADO_VERSION="0.9.6"
+  install_dorado "$DORADO_VERSION"
 }
 
 run_script
