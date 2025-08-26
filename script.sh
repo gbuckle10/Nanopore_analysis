@@ -64,7 +64,7 @@ install_dorado() {
   echo "-------- Dorado was successfully installed ---------------"
 
   echo "-------- Setting Dorado exe to path --------------"
-  LOCAL_DORADO_BIN="tools/dorado-$VERSION-${os_type}"
+  LOCAL_DORADO_BIN="tools/dorado-v$VERSION-${os_type}"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
 
 
@@ -73,6 +73,7 @@ install_dorado() {
 }
 
 download_fast5_data() {
+  local NUM_FILES=$1
   alias mkdir='/usr/bin/mkdir'
   set -e
 
@@ -85,11 +86,11 @@ download_fast5_data() {
   mkdir -p data/fast5_input
   mkdir -p data/basecalled_output
 
-  echo "--- Downloading 20 fast5 files ---"
+  echo "--- Downloading ${NUM_FILES} fast5 files ---"
   #aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request | head -n 20 | awk '{print $4}' | xargs -I {} aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/{} data/fast5_input/ --no-sign-request
 
   aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request \
-  | head -n 3 \
+  | head -n $NUM_FILES \
   | awk '{print $4}' \
   | while read -r filename; do
       aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"$filename" data/fast5_input/"$filename" --no-sign-request
@@ -99,21 +100,25 @@ download_fast5_data() {
 convert_fast5_to_pod5() {
   echo "Converting fast5 to pod5"
 
-  mkdir -p data/pod5_output/all_reads.pod5
+  mkdir -p data/pod5_output/
 
-  pod5 convert fast5 data/fast5_input --output data/pod5_output/all_reads.pod5
+  pod5 convert fast5 data/fast5_input --output data/pod5_output/all_reads.pod5 --force-overwrite
 }
 
 basecalling_pod5() {
+  pwd
+  echo "Adding dorado to the path"
+  LOCAL_DORADO_BIN="$(pwd)/tools/dorado_v0.9.6/bin/"
+  export PATH="$LOCAL_DORADO_BIN:$PATH"
+  which dorado
   # This line doesn't work on the old fast5 data I found online...it will work for new ones but the data I downloaded is too old for this version of dorado
   dorado basecaller hac data/pod5_output/all_reads.pod5 > data/basecalled_output/calls.bam
 }
 
 run_script(){
-  DORADO_VERSION="0.9.6"
-  install_dorado "$DORADO_VERSION"
-  download_fast5_data
-  convert_fast5_to_pod5
+  #install_dorado "$DORADO_VERSION"
+  #download_fast5_data 10
+  #convert_fast5_to_pod5
   basecalling_pod5
 }
 
