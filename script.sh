@@ -2,6 +2,7 @@
 
 # --- Config ---
 
+
 check_device_for_dorado() {
 
   if command -v nvidia-smi &> /dev/null; then
@@ -219,15 +220,17 @@ run_alignment() {
 }
 
 run_script(){
-
+  activate_conda "/c/Users/gbuck/miniconda3"
   DORADO_VERSION="0.9.6"
   #install_dorado "$DORADO_VERSION"
   #download_fast5_data 10
   #convert_fast5_to_pod5
+
   #download_dorado_model
   basecalling_pod5 128
   download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
   run_alignment "hg38.fa"
+
 
   ## MAKE A GENERIC DOWNLOADER ONE DAY
 }
