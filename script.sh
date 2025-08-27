@@ -26,6 +26,7 @@ check_device_for_dorado() {
 }
 
 # --- Dorado installation ---
+
 install_dorado() {
   local VERSION=$1
   echo "--- Downloading and setting up Dorado ---"
@@ -49,17 +50,17 @@ install_dorado() {
   esac
   echo "The OS has been found, it's $os_type"
 
-  expected_folder=tools/dorado-${VERSION}-${os_type}
-  echo "--- Checking for existing Dorado installation in ${expected_folder}---"
-  if [ -d "${expected_folder}" ]; then
+  dorado_folder=tools/dorado-${VERSION}-${os_type}
+  echo "--- Checking for existing Dorado installation in ${dorado_folder}---"
+  if [ -d "${dorado_folder}" ]; then
     echo "Dorado folder already exists"
-    LOCAL_DORADO_BIN="${expected_folder}/bin"
+    LOCAL_DORADO_BIN="${dorado_folder}/bin"
     export PATH="$LOCAL_DORADO_BIN:$PATH"
     echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
     return 0
   fi
 
-  echo "Dorado folder ${expected_folder} not found, so I'll install it now."
+  echo "Dorado folder ${dorado_folder} not found, so I'll install it now."
 
   echo "Creating installation directory in tools"
   mkdir -p "tools"
@@ -87,7 +88,7 @@ install_dorado() {
   echo "-------- Dorado was successfully installed ---------------"
 
   echo "-------- Setting Dorado exe to path --------------"
-  LOCAL_DORADO_BIN="${expected_folder}/bin"
+  LOCAL_DORADO_BIN="${dorado_folder}/bin"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
   echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
 
@@ -122,11 +123,12 @@ download_fast5_data() {
 }
 
 convert_fast5_to_pod5() {
-  echo "Converting fast5 to pod5"
+  echo "--- Converting fast5 to pod5 ---"
 
-  mkdir -p data/pod5_output/
+  POD5_DIR="data/pod5_output"
+  mkdir -p "${POD5_DIR}"
 
-  pod5 convert fast5 data/fast5_input --output data/pod5_output/all_reads.pod5 --force-overwrite
+  pod5 convert fast5 data/fast5_input --output "${POD5_DIR}/all_reads.pod5" --force-overwrite
 }
 
 download_dorado_model() {
@@ -151,6 +153,9 @@ basecalling_pod5() {
   local POD5_INPUT="data/pod5_output/all_reads.pod5"
   local BASECALLED_OUTPUT="data/basecalled_output/calls.bam"
 
+  # ---- You need to add the download_dorado_model here
+  #  download_dorado_model
+  # ---- You could also make it so that the alignment and basecalling is done at once. That should be the next thing to test.
   #local MODEL_NAME="dna_r9.4.1_e8_sup@v3.3"
 
   check_device_for_dorado
@@ -158,17 +163,73 @@ basecalling_pod5() {
   dorado basecaller --batchsize "${BATCHSIZE}" hac,5mCG_5hmCG ${POD5_INPUT} > ${BASECALLED_OUTPUT}
 }
 
+download_reference_genome() {
+  local url=$1
+  local compressed_filename
+
+  REF_DIR="reference_genomes"
+  compressed_filename=$(basename "${url}")
+  REF_FASTA="${REF_DIR}/hg38.fa"
+
+  echo "--- Downloading reference genome ---"
+  echo "URL: ${url}"
+  echo "Final destination: ${REF_DIR}"
+
+  # Create the directory
+  mkdir -p "${REF_DIR}"
+
+  # Check to see whether the file already exists.
+  if [ -f "${REF_FASTA}" ]; then
+    echo "Reference file ${REF_FASTA} already exists, so we will skip the download"
+    return 0
+  fi
+
+  echo "Reference genome not found, so let's download it."
+  echo "We'll download from ${url}"
+
+  COMPRESSED_FILE="${REF_DIR}/${compressed_filename}"
+
+  echo "And put it in $COMPRESSED_FILE"
+
+  curl -L -f -o "${REF_DIR}/${compressed_filename}" "${url}"
+
+  echo "Decompressing genome from ${COMPRESSED_FILE} and putting it into ${REF_FASTA}"
+
+  gunzip -c "${COMPRESSED_FILE}" > "$REF_FASTA"
+
+  echo "Cleaning up compressed file"
+  rm "${COMPRESSED_FILE}"
+
+}
+
+run_alignment() {
+  # In the end it'd be good to have the option to align and basecall at once, or optionally do the two separately.
+  local UNALIGNED_BAM="data/basecalled_output/calls.bam"
+  local REFERENCE_GENOME="reference_genome/$1"
+  local ALIGNED_BAM="data/alignment_output/aligned.sorted.bam"
+  local THREADS=8
+
+  echo "--- Starting alignment ---"
+  mkdir -p "data/alignment_output"
+
+  # A 3-stage pipe
+  samtools fastq -T
+
+
+}
+
 run_script(){
 
   DORADO_VERSION="0.9.6"
-  install_dorado "$DORADO_VERSION"
+  #install_dorado "$DORADO_VERSION"
   #download_fast5_data 10
   #convert_fast5_to_pod5
   #download_dorado_model
-
   basecalling_pod5 128
+  download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
+  run_alignment "hg38.fa"
 
-
+  ## MAKE A GENERIC DOWNLOADER ONE DAY
 }
 
 run_script
