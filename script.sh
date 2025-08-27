@@ -2,11 +2,24 @@
 
 # --- Config ---
 activate_conda() {
-  CONDA_BASE=$(conda info --base)
+  CONDA_INSTALL_PATH=$1
+  CONDA_EXE="${CONDA_INSTALL_PATH}/Scripts/conda.exe"
 
-  if [ -z "$CONDA_BASE" ]; then
-    echo "Error: Conda installation not found"
+  if [ ! -f "${CONDA_EXE}" ]; then
+    echo "Error: conda.exe not found at '${CONDA_EXE}'"
+    echo "Update the CONDA_INSTALL_PATH variable above"
+    exit 1
   fi
+
+  _conda_setup="$("${CONDA_EXE}" 'shell.bash' 'hook' 2> /dev/null)"
+
+  if [ $? -eq 0 ]; then
+    eval "${_conda_setup}"
+  else
+    echo "It didn't work :("
+  fi
+  unset _conda_setup
+
 }
 
 
@@ -202,15 +215,15 @@ run_alignment() {
 }
 
 run_script(){
-
+  activate_conda "/c/Users/gbuck/miniconda3"
   DORADO_VERSION="0.9.6"
   #install_dorado "$DORADO_VERSION"
   #download_fast5_data 10
   #convert_fast5_to_pod5
   #basecalling_pod5 128
   conda
-  download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
-  run_alignment "hg38.fa"
+  #download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
+  #run_alignment "hg38.fa"
 
   ## MAKE A GENERIC DOWNLOADER ONE DAY
 }
