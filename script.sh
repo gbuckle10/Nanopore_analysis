@@ -29,12 +29,13 @@ install_dorado() {
   esac
   echo "The OS has been found, it's $os_type"
 
-  echo "--- Checking for existing Dorado installation ---"
-  expected_folder=tools/dorado-$VERSION-${os_type}
-  if [ -d "tools/dorado-$VERSION-${os_type}" ]; then
-    echo -e "Dorado folder already exists"
-    LOCAL_DORADO_BIN="tools/dorado-$VERSION-${os_type}"
+  expected_folder=tools/dorado-${VERSION}-${os_type}
+  echo "--- Checking for existing Dorado installation in ${expected_folder}---"
+  if [ -d "${expected_folder}" ]; then
+    echo "Dorado folder already exists"
+    LOCAL_DORADO_BIN="${expected_folder}/bin"
     export PATH="$LOCAL_DORADO_BIN:$PATH"
+    echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
     return 0
   fi
 
@@ -45,7 +46,7 @@ install_dorado() {
 
   # Include a check here for whether the archive_filename is there to save more time.
   echo "Downloading dorado version $VERSION for ${os_type} from ${download_url}"
-  curl -o tools/${archive_filename}  $download_url
+  curl -o tools/${archive_filename}  "$download_url"
 
   echo "Download complete. Unzipping and setting up."
 
@@ -58,15 +59,17 @@ install_dorado() {
       ;;
   esac
 
-  mv "tools/dorado-$VERSION-${os_type}"* "tools/dorado_v$VERSION-${os_type}"
-  rm tools/${archive_filename}
+  folder_to_remove=tools/${archive_filename}
+  echo "Removing ${folder_to_remove}"
+
+  rm "${folder_to_remove}"
 
   echo "-------- Dorado was successfully installed ---------------"
 
   echo "-------- Setting Dorado exe to path --------------"
-  LOCAL_DORADO_BIN="tools/dorado-v$VERSION-${os_type}"
+  LOCAL_DORADO_BIN="${expected_folder}/bin"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
-
+  echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
 
   echo "Installing pod5 package"
   pip install pod5
@@ -105,25 +108,31 @@ convert_fast5_to_pod5() {
   pod5 convert fast5 data/fast5_input --output data/pod5_output/all_reads.pod5 --force-overwrite
 }
 
+download_dorado_model() {
+  MODEL_ALIAS="hac"
+  MODEL_DIR="models"
+
+  mkdir -p "${MODEL_DIR}"
+}
+
 basecalling_pod5() {
-  pwd
+  BATCHSIZE=$1
   echo "Adding dorado to the path"
   LOCAL_DORADO_BIN="$(pwd)/tools/dorado_v0.9.6/bin/"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
-  which dorado
-  # This line doesn't work on the old fast5 data I found online...it will work for new ones but the data I downloaded is too old for this version of dorado
-  dorado basecaller hac data/pod5_output/all_reads.pod5 > data/basecalled_output/calls.bam
+
+  dorado basecaller --batchsize "${BATCHSIZE}" hac data/pod5_output/all_reads.pod5 > data/basecalled_output/calls.bam
 }
 
 run_script(){
 
-  #install_dorado "$DORADO_VERSION"
-  #download_fast5_data 10
-  #convert_fast5_to_pod5
-  basecalling_pod5
-
   DORADO_VERSION="0.9.6"
   install_dorado "$DORADO_VERSION"
+  #download_fast5_data 10
+  #convert_fast5_to_pod5
+  basecalling_pod5 128
+
+
 }
 
 run_script
