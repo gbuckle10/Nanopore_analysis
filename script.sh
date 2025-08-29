@@ -2,7 +2,6 @@
 
 # --- Config ---
 
-
 # --- Dorado installation ---
 
 install_dorado() {
@@ -79,6 +78,7 @@ download_fast5_data() {
   set -e
 
   echo "----Starting Data Download Script----"
+
 
   S3_BASE_PATH="s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"
 
@@ -192,13 +192,13 @@ run_alignment() {
 }
 
 run_script(){
-  DORADO_VERSION="0.9.6"
-  install_dorado "$DORADO_VERSION"
-  download_fast5_data 1
-  convert_fast5_to_pod5
-  basecalling_pod5 64
-  #download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
-  #run_alignment "hg38.fa"
+  #DORADO_VERSION="0.9.6"
+  #install_dorado "$DORADO_VERSION"
+  #download_fast5_data 1
+  #convert_fast5_to_pod5
+  #basecalling_pod5 64
+  download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
+  run_alignment "hg38.fa"
 
   ## MAKE A GENERIC DOWNLOADER ONE DAY
 }

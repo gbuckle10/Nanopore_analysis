@@ -15,8 +15,10 @@ dependencies:
   - python=3.9
   - pip
   - pip:
-      - awscli>=1.22
+      #- awscliv2
       - pod5
+  - unzip
+  - curl
   # --- Conda Packages ---
   - minimap2
   - samtools

@@ -20,6 +20,8 @@ Setup for WSL:
     Setup the project to run in WSL:
         Open WSL again and go to the project folder
         Check that the environment.yml file is there, then run conda env create -f environment.yml to set up the Conda environment.
+    If you have changed the environment.yml file or want to update the environment for some other reason, use the following command:
+        - conda env update --file environment.yml --prune
     It should be now possible to run the pipeline by running main.py. There are some possible issues though:
         Errors like $'\r': command not found:
             I edited the bash code in Windows, but it's running from Ubuntu which means that the line endings are different.
