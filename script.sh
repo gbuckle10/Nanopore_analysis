@@ -2,10 +2,30 @@
 
 # --- Config ---
 
+check_device_for_dorado() {
 
+  if command -v nvidia-smi &> /dev/null; then
+    echo "NVIDIA GPU found, so we'll use that for basecalling"
+
+    # Tell dorado to tun with --device flag cuda:0
+    export DORADO_DEVICE_FLAG="--device cuda:0"
+    # Default batchsize is 128
+    export DORADO_BATCHSIZE_FLAG="--batchsize 128"
+
+  else
+    echo "No NVIDIA GPU found, so we'll run with the CPU only"
+
+    # Tell dorado to run with --device flag cpu
+    export DORADO_DEVICE_FLAG="--device cpu"
+    # Default batchsize is 128
+    export DORADO_BATCHSIZE_FLAG=""
+  fi
+
+  echo "Dorado device flags set: ${DORADO_DEVICE_FLAG} ${DORAGO_BATCHSIZE_FLAG}"
+
+}
 
 # --- Dorado installation ---
-
 install_dorado() {
   local VERSION=$1
   echo "--- Downloading and setting up Dorado ---"
@@ -121,15 +141,20 @@ basecalling_pod5() {
   LOCAL_DORADO_BIN="$(pwd)/tools/dorado_v0.9.6/bin/"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
 
-  dorado basecaller --batchsize "${BATCHSIZE}" hac data/pod5_output/all_reads.pod5 > data/basecalled_output/calls.bam
+  local POD5_INPUT="data/pod5_output/all_reads.pod5"
+  local BASECALLED_OUTPUT="data/basecalled_output/calls.bam"
+
+  check_device_for_dorado
+
+  dorado basecaller --batchsize "${BATCHSIZE}" hac ${POD5_INPUT} > ${BASECALLED_OUTPUT}
 }
 
 run_script(){
 
   DORADO_VERSION="0.9.6"
   install_dorado "$DORADO_VERSION"
-  #download_fast5_data 10
-  #convert_fast5_to_pod5
+  download_fast5_data 10
+  convert_fast5_to_pod5
   basecalling_pod5 128
 
 
