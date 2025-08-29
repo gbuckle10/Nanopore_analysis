@@ -13,6 +13,7 @@ channels:
 dependencies:
 
   - python=3.9
+  - pip
   - pip:
       - awscli>=1.22
       - pod5
