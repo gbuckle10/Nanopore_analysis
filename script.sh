@@ -1,33 +1,9 @@
 #!/bin/bash
 
 # --- Config ---
-activate_conda() {
-  CONDA_INSTALL_PATH=$1
-  CONDA_EXE="${CONDA_INSTALL_PATH}/Scripts/conda.exe"
-
-  if [ ! -f "${CONDA_EXE}" ]; then
-    echo "Error: conda.exe not found at '${CONDA_EXE}'"
-    echo "Update the CONDA_INSTALL_PATH variable above"
-    exit 1
-  fi
-
-  _conda_setup="$("${CONDA_EXE}" 'shell.bash' 'hook' 2> /dev/null)"
-
-  if [ $? -eq 0 ]; then
-    eval "${_conda_setup}"
-  else
-    echo "It didn't work :("
-  fi
-  unset _conda_setup
-
-}
 
 
 # --- Dorado installation ---
-
-install_minimap2_samtools() {
-  conda
-}
 
 install_dorado() {
   local VERSION=$1
@@ -94,8 +70,7 @@ install_dorado() {
   export PATH="$LOCAL_DORADO_BIN:$PATH"
   echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
 
-  echo "Installing pod5 package"
-  pip install pod5
+
 }
 
 download_fast5_data() {
@@ -113,14 +88,16 @@ download_fast5_data() {
   mkdir -p data/basecalled_output
 
   echo "--- Downloading ${NUM_FILES} fast5 files ---"
-  #aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request | head -n 20 | awk '{print $4}' | xargs -I {} aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/{} data/fast5_input/ --no-sign-request
+  #aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request | head -n 5 | awk '{print $4}' | xargs -I {} aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/{} data/fast5_input/ --no-sign-request
+
 
   aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request \
   | head -n "$NUM_FILES" \
   | awk '{print $4}' \
   | while read -r filename; do
-      aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"$filename" data/fast5_input/"$filename" --no-sign-request
+      aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"$filename" data/fast5_input/"$filename" --no-sign-request || true
   done
+
 }
 
 convert_fast5_to_pod5() {
@@ -215,13 +192,11 @@ run_alignment() {
 }
 
 run_script(){
-  activate_conda "/c/Users/gbuck/miniconda3"
   DORADO_VERSION="0.9.6"
-  #install_dorado "$DORADO_VERSION"
-  #download_fast5_data 10
-  #convert_fast5_to_pod5
-  #basecalling_pod5 128
-  conda
+  install_dorado "$DORADO_VERSION"
+  download_fast5_data 1
+  convert_fast5_to_pod5
+  basecalling_pod5 64
   #download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
   #run_alignment "hg38.fa"
 
