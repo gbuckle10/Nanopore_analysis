@@ -1,0 +1,22 @@
+# environment.yml
+# This file defines the software environment for the nanopore analysis pipeline.
+# It lists the dependencies for the pipeline to work properly.
+
+name: nanopore_analysis
+
+channels:
+  # Conda will search these channels in this order when it tries to find a program
+  - bioconda
+  - conda-forge
+  - defaults
+
+dependencies:
+
+  - python=3.9
+  - pip:
+      - awscli>=1.22
+      - pod5
+  # --- Conda Packages ---
+  - minimap2
+  - samtools
+
