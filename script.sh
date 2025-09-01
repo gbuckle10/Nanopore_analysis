@@ -21,7 +21,7 @@ check_device_for_dorado() {
     export DORADO_BATCHSIZE_FLAG=""
   fi
 
-  echo "Dorado device flags set: ${DORADO_DEVICE_FLAG} ${DORAGO_BATCHSIZE_FLAG}"
+  echo "Dorado device flags set: ${DORADO_DEVICE_FLAG} ${DORADO_BATCHSIZE_FLAG}"
 
 }
 
@@ -91,8 +91,6 @@ install_dorado() {
   export PATH="$LOCAL_DORADO_BIN:$PATH"
   echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
 
-  echo "Installing pod5 package"
-  pip install pod5
 }
 
 download_fast5_data() {
@@ -102,7 +100,10 @@ download_fast5_data() {
 
   echo "----Starting Data Download Script----"
 
-  S3_BASE_PATH="s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"
+  #DOWNLOAD_FILE_PATH="s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"
+  DOWNLOAD_FILE_PATH="s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
+  DESTINATION_DIR="data/fast5_input/"
+
 
   echo "--- Making fast5 input and basecalled output folders ---"
   mkdir -p data
@@ -112,11 +113,11 @@ download_fast5_data() {
   echo "--- Downloading ${NUM_FILES} fast5 files ---"
   #aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request | head -n 20 | awk '{print $4}' | xargs -I {} aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/{} data/fast5_input/ --no-sign-request
 
-  aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request \
+  aws s3 ls ${DOWNLOAD_FILE_PATH} --no-sign-request \
   | head -n $NUM_FILES \
   | awk '{print $4}' \
   | while read -r filename; do
-      aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/"$filename" data/fast5_input/"$filename" --no-sign-request
+      aws s3 cp "${DOWNLOAD_FILE_PATH}${filename}" "${DESTINATION_DIR}${filename}" --no-sign-request || true
   done
 }
 
@@ -145,14 +146,16 @@ basecalling_pod5() {
   echo "Adding dorado to the path"
   LOCAL_DORADO_BIN="$(pwd)/tools/dorado_v0.9.6/bin/"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
-
+  local MODEL_ALIAS="hac"
+  local MODEL_MODIFICATION="5mCG_5hmCG"
   local POD5_INPUT="data/pod5_output/all_reads.pod5"
   local BASECALLED_OUTPUT="data/basecalled_output/calls.bam"
-  local MODEL_NAME="dna_r9.4.1_e8_sup@v3.3"
+
+  #local MODEL_NAME="dna_r9.4.1_e8_sup@v3.3"
 
   check_device_for_dorado
 
-  dorado basecaller --batchsize "${BATCHSIZE}" "models/${MODEL_NAME}" ${POD5_INPUT} > ${BASECALLED_OUTPUT}
+  dorado basecaller --batchsize "${BATCHSIZE}" hac,5mCG_5hmCG ${POD5_INPUT} > ${BASECALLED_OUTPUT}
 }
 
 run_script(){
@@ -161,7 +164,7 @@ run_script(){
   install_dorado "$DORADO_VERSION"
   #download_fast5_data 10
   #convert_fast5_to_pod5
-  download_dorado_model
+  #download_dorado_model
 
   basecalling_pod5 128
 
