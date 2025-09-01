@@ -1,4 +1,6 @@
-Sample data from https://epi2me.nanoporetech.com/rrms2022.07/
+Sample data can be gotten from s3://ont-open-data/. There might be a better way, but you can browse the data using the command:
+    - aws s3 ls {folder_path}
+    - This will show the contents of the folder you provided the path for.
 
 First thing to do is run script.sh to download the fast_5 data from the Nanopore sample data.
     I think script.sh needs to be run using git bash
@@ -14,8 +16,11 @@ Setup for WSL:
     Installation:
         run wsl --install in powershell
         Restart and open WSL. Create a username and password.
-        Download miniconda - In the command line, run wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-        Run bash Miniconda3-latest-Linux-x86_64.sh. Accept the licence agreement. Say yes to everything, except when it asks you whether you want to always open in the conda environment
+        Download and install miniconda. In the command line run:
+         - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+         - bash Miniconda3-latest-Linux-x86_64.sh
+         - Accept the licence agreement. Say no when it asks you whether you want to always open in the conda environment
+         - If you accidentally said yes to automatically initialise conda, you can undo that (after restarting WSL) with the command: conda config --set auto_activate_base false
         Close WSL to finish installation
     Setup the project to run in WSL:
         Open WSL again and go to the project folder
@@ -41,3 +46,5 @@ Setup for WSL:
                         \+ - tells find to add all of the filenames
                         ; - end of the line.
 
+Useful base calling models:
+    -

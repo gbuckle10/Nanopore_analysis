@@ -112,15 +112,14 @@ download_fast5_data() {
 
   echo "--- Downloading ${NUM_FILES} fast5 files ---"
   #aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request | head -n 5 | awk '{print $4}' | xargs -I {} aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/{} data/fast5_input/ --no-sign-request
+  DATA_DOWNLOAD_DIR="s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
 
 
-  aws s3 ls ${DOWNLOAD_FILE_PATH} --no-sign-request \
-  | head -n $NUM_FILES \
+  aws s3 ls "${DATA_DOWNLOAD_DIR}" --no-sign-request \
+  | head -n "$NUM_FILES" \
   | awk '{print $4}' \
   | while read -r filename; do
-
-      aws s3 cp "${DOWNLOAD_FILE_PATH}${filename}" "${DESTINATION_DIR}${filename}" --no-sign-request || true
-
+      aws s3 cp "${DATA_DOWNLOAD_DIR}${filename}" data/fast5_input/"$filename" --no-sign-request || true
   done
 
 }
@@ -159,11 +158,10 @@ basecalling_pod5() {
   # ---- You need to add the download_dorado_model here
   #  download_dorado_model
   # ---- You could also make it so that the alignment and basecalling is done at once. That should be the next thing to test.
-  #local MODEL_NAME="dna_r9.4.1_e8_sup@v3.3"
 
-  check_device_for_dorado
+  which dorado
+  dorado basecaller --modified-bases 5mCG_5hmCG --batchsize "${BATCHSIZE}" hac data/pod5_output/all_reads.pod5 > data/basecalled_output/calls.bam
 
-  dorado basecaller --batchsize "${BATCHSIZE}" hac,5mCG_5hmCG ${POD5_INPUT} > ${BASECALLED_OUTPUT}
 }
 
 download_reference_genome() {
@@ -205,39 +203,52 @@ download_reference_genome() {
 
 }
 
-run_alignment() {
+align_and_index() {
   # In the end it'd be good to have the option to align and basecall at once, or optionally do the two separately.
-  local UNALIGNED_BAM="data/basecalled_output/calls.bam"
-  local REFERENCE_GENOME="reference_genome/$1"
+  local UNALIGNED_BAM="data/basecalled_output/calls_meth_096.bam"
+  local REFERENCE_GENOME="reference_genomes/$1"
   local ALIGNED_BAM="data/alignment_output/aligned.sorted.bam"
-  local THREADS=8
+  local THREADS=1
 
   echo "--- Starting alignment ---"
   mkdir -p "data/alignment_output"
 
-  # A 3-stage pipe
-  samtools fastq -T
+  # Step 1: Alignment and sorting. It's a 3-stage pipe:
+  # 1. samtools fastq converts the input BAM to FASTQ format
+  # 2. minimap2 aligns the FASTQ reads to the reference
+  # 3. samtools sort sorts the aligned output and saves it as a bam.bai file.
+
+  echo "Aligning and sorting reads"
+
+  samtools fastq -T '*' -@ "${THREADS}" "${UNALIGNED_BAM}" \
+  | minimap2 -ax map-ont -t "${THREADS}" "${REFERENCE_GENOME}" - \
+  | samtools sort -@ "${THREADS}" -m "${SORT_MEMORY_LIMIT}" -o "${ALIGNED_BAM}"
+
+
+
+  echo "Sorting and indexing the BAM file"
+  # Sort and index the BAM file.
+  samtools sort "${UNALIGNED_BAM}" -o "${ALIGNED_BAM}"
+
+  echo "Indexing the sorted BAM file"
+  # Index the sorted BAM file
+  samtools index "${ALIGNED_BAM}"
+
+
+
 
 
 }
 
 run_script(){
-  DORADO_VERSION="0.9.6"
 
-  #install_dorado "$DORADO_VERSION"
-  #download_fast5_data 10
-  #convert_fast5_to_pod5
-
-  #download_dorado_model
-  basecalling_pod5 128
-
-  #DORADO_VERSION="0.9.6"
-  #install_dorado "$DORADO_VERSION"
+  DORADO_VERSION="1.0.0"
+  install_dorado "$DORADO_VERSION"
   #download_fast5_data 1
   #convert_fast5_to_pod5
   #basecalling_pod5 64
-  download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
-  run_alignment "hg38.fa"
+  #download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
+  align_and_index "hg38.fa"
 
   ## MAKE A GENERIC DOWNLOADER ONE DAY
 }
