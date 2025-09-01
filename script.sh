@@ -130,9 +130,14 @@ convert_fast5_to_pod5() {
 
 download_dorado_model() {
   MODEL_ALIAS="hac"
+  MODEL_NAME="dna_r9.4.1_e8_sup@v3.3"
   MODEL_DIR="models"
 
   mkdir -p "${MODEL_DIR}"
+
+  dorado download --model "${MODEL_NAME}" --models-directory "${MODEL_DIR}"
+
+
 }
 
 basecalling_pod5() {
@@ -143,18 +148,21 @@ basecalling_pod5() {
 
   local POD5_INPUT="data/pod5_output/all_reads.pod5"
   local BASECALLED_OUTPUT="data/basecalled_output/calls.bam"
+  local MODEL_NAME="dna_r9.4.1_e8_sup@v3.3"
 
   check_device_for_dorado
 
-  dorado basecaller --batchsize "${BATCHSIZE}" hac ${POD5_INPUT} > ${BASECALLED_OUTPUT}
+  dorado basecaller --batchsize "${BATCHSIZE}" "models/${MODEL_NAME}" ${POD5_INPUT} > ${BASECALLED_OUTPUT}
 }
 
 run_script(){
 
   DORADO_VERSION="0.9.6"
   install_dorado "$DORADO_VERSION"
-  download_fast5_data 10
-  convert_fast5_to_pod5
+  #download_fast5_data 10
+  #convert_fast5_to_pod5
+  download_dorado_model
+
   basecalling_pod5 128
 
 
