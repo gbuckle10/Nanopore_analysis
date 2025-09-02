@@ -203,6 +203,23 @@ download_reference_genome() {
 
 }
 
+alignment_qc() {
+  local ALIGNED_BAM="data/alignment_output/aligned.sorted.bam"
+  local QC_DIR="data/qc_output/"
+
+  echo "--- Starting alignment quality control ---"
+
+  # Make QC output directory
+  mkdir -p "${QC_DIR}"
+
+  # Summary with flagstat
+  local flagstat_report="${QC_DIR}/alignment.flagstat.txt"
+  echo " Generating summary with flagstat"
+  samtools flagstat "${ALIGNED_BAM}" > "${flagstat_report}"
+
+
+}
+
 align_and_index() {
   # In the end it'd be good to have the option to align and basecall at once, or optionally do the two separately.
   local UNALIGNED_BAM="data/basecalled_output/calls_meth_096.bam"
@@ -221,8 +238,8 @@ align_and_index() {
   echo "Aligning and sorting reads"
 
   samtools fastq -T '*' -@ "${THREADS}" "${UNALIGNED_BAM}" \
-  | minimap2 -ax map-ont -t "${THREADS}" "${REFERENCE_GENOME}" - \
-  | samtools sort -@ "${THREADS}" -m "${SORT_MEMORY_LIMIT}" -o "${ALIGNED_BAM}"
+  | minimap2 -ax map-ont -t "${THREADS}" -K5M "${REFERENCE_GENOME}" - \
+  | samtools sort -@ "${THREADS}" -o "${ALIGNED_BAM}" -
 
 
 
@@ -233,9 +250,6 @@ align_and_index() {
   echo "Indexing the sorted BAM file"
   # Index the sorted BAM file
   samtools index "${ALIGNED_BAM}"
-
-
-
 
 
 }
@@ -249,6 +263,7 @@ run_script(){
   #basecalling_pod5 64
   #download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
   align_and_index "hg38.fa"
+  alignment_qc
 
   ## MAKE A GENERIC DOWNLOADER ONE DAY
 }
