@@ -166,10 +166,8 @@ basecalling_pod5() {
 
 download_reference_genome() {
   local url=$1
-  local compressed_filename
 
   REF_DIR="reference_genomes"
-  compressed_filename=$(basename "${url}")
   REF_FASTA="${REF_DIR}/hg38.fa"
 
   echo "--- Downloading reference genome ---"
@@ -188,19 +186,12 @@ download_reference_genome() {
   echo "Reference genome not found, so let's download it."
   echo "We'll download from ${url}"
 
-  COMPRESSED_FILE="${REF_DIR}/${compressed_filename}"
+  aws s3 cp "${url}" "${REF_FASTA}" --no-sign-request
 
-  echo "And put it in $COMPRESSED_FILE"
+  echo "Genome has been downloaded."
 
-  curl -L -f -o "${REF_DIR}/${compressed_filename}" "${url}"
-
-  echo "Decompressing genome from ${COMPRESSED_FILE} and putting it into ${REF_FASTA}"
-
-  gunzip -c "${COMPRESSED_FILE}" > "$REF_FASTA"
-
-  echo "Cleaning up compressed file"
-  rm "${COMPRESSED_FILE}"
-
+  # The output of this should be in the format >chr1 >chr2 etc.
+  grep ">" "${REF_FASTA}" | head -n 5
 }
 
 alignment_qc() {
@@ -216,7 +207,13 @@ alignment_qc() {
   local flagstat_report="${QC_DIR}/alignment.flagstat.txt"
   echo " Generating summary with flagstat"
   samtools flagstat "${ALIGNED_BAM}" > "${flagstat_report}"
+  echo " Flagstat report saved to ${flagstat_report}"
 
+  # Detailed report with stats
+  local stats_report="${QC_DIR}/alignment.stats.txt"
+  echo " Generating detailed report"
+  samtools stats "${ALIGNED_BAM}" > "${stats_report}"
+  echo " Stats report saved to ${stats_report}"
 
 }
 
@@ -226,6 +223,7 @@ align_and_index() {
   local REFERENCE_GENOME="reference_genomes/$1"
   local ALIGNED_BAM="data/alignment_output/aligned.sorted.bam"
   local THREADS=1
+  local SORT_MEMORY_LIMIT="1G"
 
   echo "--- Starting alignment ---"
   mkdir -p "data/alignment_output"
@@ -239,13 +237,7 @@ align_and_index() {
 
   samtools fastq -T '*' -@ "${THREADS}" "${UNALIGNED_BAM}" \
   | minimap2 -ax map-ont -t "${THREADS}" -K5M "${REFERENCE_GENOME}" - \
-  | samtools sort -@ "${THREADS}" -o "${ALIGNED_BAM}" -
-
-
-
-  echo "Sorting and indexing the BAM file"
-  # Sort and index the BAM file.
-  samtools sort "${UNALIGNED_BAM}" -o "${ALIGNED_BAM}"
+  | samtools sort -@ "${THREADS}" -m "${SORT_MEMORY_LIMIT}" -o "${ALIGNED_BAM}" -
 
   echo "Indexing the sorted BAM file"
   # Index the sorted BAM file
@@ -261,8 +253,9 @@ run_script(){
   #download_fast5_data 1
   #convert_fast5_to_pod5
   #basecalling_pod5 64
-  #download_reference_genome "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz"
+  #download_reference_genome s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa
   align_and_index "hg38.fa"
+
   alignment_qc
 
   ## MAKE A GENERIC DOWNLOADER ONE DAY

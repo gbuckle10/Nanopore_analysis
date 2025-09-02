@@ -1,5 +1,5 @@
 Sample data can be gotten from s3://ont-open-data/. There might be a better way, but you can browse the data using the command:
-    - aws s3 ls {folder_path}
+    - aws s3 ls {folder_path} --no-sign-request
     - This will show the contents of the folder you provided the path for.
 
 First thing to do is run script.sh to download the fast_5 data from the Nanopore sample data.
@@ -9,6 +9,10 @@ First thing to do is run script.sh to download the fast_5 data from the Nanopore
 Basecalling - Use Dorado to do the basecalling
     Install Dorado (install it into the folder for this project, but if I put this on git it should be in .gitignore):
     NOTE ----- I HAD TO DOWNLOAD AN OLD VERSION OF DORADO TO DO THE BASECALLING FOR THE SAMPLE DATASET
+
+When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
+headers. e.g. chr1.
+
 
 You need to install awscli.
 This should be run on Linux/Ubuntu. On colab it's fine for testing purposes, but if you're running this on a Windows machine
