@@ -10,6 +10,8 @@ POD5_DIR=$5
 SHOULD_DOWNLOAD_FAST5_FILES=$6
 SHOULD_CONVERT_FAST5_TO_POD5=$7
 
+RUNTIME_CONFIG="scripts/runtime_config.sh"
+
 make_directories() {
   mkdir -p data
   mkdir -p logs
@@ -73,19 +75,14 @@ install_dorado() {
     
   fi
   
-  #LOCAL_DORADO_BIN="${DORADO_DIR}/bin"
-  #export PATH="$LOCAL_DORADO_BIN:$PATH"
-  #echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
-  
-  
-  DORADO_BIN_PATH=$(find "$(pwd)/${DORADO_DIR}" -type f -name dorado -executable)
+  LOCAL_DORADO_BIN="${DORADO_DIR}/bin"
+  export PATH="$LOCAL_DORADO_BIN:$PATH"
+  echo "The local dorado binary is in ${LOCAL_DORADO_BIN}"
 
-  if [ -z "${DORADO_BIN_PATH}" ]; then
-    echo "ERROR: Could not find the dorado executable after setup" >&2
-    exit 1
-  fi
+  DORADO_EXECUTABLE_PATH=$(realpath "${LOCAL_DORADO_BIN}/dorado")
+  echo "INFO: Saving Dorado path to ${RUNTIME_CONFIG}" >&2
+  echo "export DORADO_EXECUTABLE=\"${DORADO_EXECUTABLE_PATH}\"" > "${RUNTIME_CONFIG}"
 
-  echo "$DORADO_BIN_PATH"
 
   echo "-------- Dorado was successfully installed ---------------" >&2
 }

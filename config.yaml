@@ -11,19 +11,24 @@ dorado_version: "0.9.6"
 # --- Run control ---
 run_steps:
   - setup
-  - basecall
+  - basecalling
   - align
   - modkit
 
 run_setup_tasks:
   download_fast5_data: false
-  convert_fast5_to_pod5: true
+  convert_fast5_to_pod5: false
 
 # Download data
 fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
 num_fast5_files: "1"
 reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
 
+# Dorado models
+dorado_model_name: "dna_r9.4.1_e8_sup@v3.3"
+model_speed: "fast" # fast, hac or sup
+basecalling_modifications: "5mCG_5hmCG"
+basecalling_batch_size: "64"
 
 
 # Directories

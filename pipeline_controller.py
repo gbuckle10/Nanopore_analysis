@@ -1,5 +1,5 @@
 import subprocess
-import argparse
+import os
 import sys
 import yaml
 
@@ -72,9 +72,28 @@ def run_setup(config):
     ]
 
     dorado_path = run_and_capture(config, command)
-    #run_and_stream(config, command)
-    print(dorado_path)
 
+    #if not dorado_path or not os.path.exists(dorado_path):
+    #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
+
+    #print(f"--- Successfully found Dorado executable at: {dorado_path} ---\n ")
+
+    #return dorado_path
+
+def run_basecalling(config):
+    """ Executes the basecalling script using the 01_basecalling.sh script """
+    print(">>> Starting step 1: Basecalling")
+    script_path = "scripts/01_basecalling.sh"
+
+    command = [
+        "bash", script_path,
+        config['dorado_model_name'],
+        config['model_speed'],
+        config['basecalling_modifications'],
+        config['basecalling_batch_size']
+    ]
+
+    run_and_stream(config, command)
 def main():
     """ Main entry point for the pipeline controller """
     config = load_config()
@@ -88,7 +107,8 @@ def main():
 
     if 'setup' in steps_to_run:
         run_setup(config)
-
+    if 'basecalling' in steps_to_run:
+        run_basecalling(config)
 
 if __name__ == '__main__':
     main()

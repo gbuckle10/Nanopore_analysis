@@ -216,3 +216,5 @@ __marimo__/
 # Ignore downloaded archives
 *.zip
 *.tar.gz
+
+scripts/runtime_config.sh
