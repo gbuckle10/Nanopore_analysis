@@ -1,14 +1,6 @@
 # --- Environment Settings ---
 conda_env_name: "nanopore_analysis"
 
-# --- Run control ---
-run_steps:
-  - setup
-  - basecall
-  - align
-  - modkit
-
-
 # --- General Parameters ---
 threads: 2
 sort_memory_limit: "2G"
@@ -16,18 +8,32 @@ sort_memory_limit: "2G"
 # --- Dorado Models and Data ---
 dorado_version: "0.9.6"
 
+# --- Run control ---
+run_steps:
+  - setup
+  - basecall
+  - align
+  - modkit
+
+run_setup_tasks:
+  download_fast5_data: false
+  convert_fast5_to_pod5: true
+
+# Download data
+fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
+num_fast5_files: "1"
 reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
 
 
 
 # Directories
-reference_genome_dir: "reference_genomes"
-pod5_dir: "data/pod5_output"
-alignment_output_dir: "data/alignment_output"
-basecalled_output_dir: "data/basecalled_output"
-fast5_input_dir: "data/fast5_input"
-methylation_calls_dir: "data/methylation_calls"
-pod5_output_dir: "data/pod5_output"
+reference_genome_dir: "reference_genomes/"
+pod5_dir: "data/pod5_output/"
+alignment_output_dir: "data/alignment_output/"
+basecalled_output_dir: "data/basecalled_output/"
+fast5_input_dir: "data/fast5_input/"
+methylation_calls_dir: "data/methylation_calls/"
+pod5_output_dir: "data/pod5_output/"
 
 # Key files
 reference_fasta: "reference_genome/hg38.fa"

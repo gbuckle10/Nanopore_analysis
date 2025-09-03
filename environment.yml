@@ -6,21 +6,22 @@ name: nanopore_analysis
 
 channels:
   # Conda will search these channels in this order when it tries to find a program
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
-
 dependencies:
-
   - python=3.9
-  - pip
-  - pip:
-      - pyyaml
-      - pod5
   - unzip
   - curl
-  #- pyyaml
+  - pyarrow=20.0
+  - pip
+  - pip:
+    - pyyaml
   # --- Conda Packages ---
   - minimap2
   - samtools
+  - pod5
+  - typing-extensions
+
+
 
