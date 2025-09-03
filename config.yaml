@@ -1,0 +1,35 @@
+# --- Environment Settings ---
+conda_env_name: "nanopore_analysis"
+
+# --- Run control ---
+run_steps:
+  - setup
+  - basecall
+  - align
+  - modkit
+
+
+# --- General Parameters ---
+threads: 2
+sort_memory_limit: "2G"
+
+# --- Dorado Models and Data ---
+dorado_version: "0.9.6"
+
+reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
+
+
+
+# Directories
+reference_genome_dir: "reference_genomes"
+pod5_dir: "data/pod5_output"
+alignment_output_dir: "data/alignment_output"
+basecalled_output_dir: "data/basecalled_output"
+fast5_input_dir: "data/fast5_input"
+methylation_calls_dir: "data/methylation_calls"
+pod5_output_dir: "data/pod5_output"
+
+# Key files
+reference_fasta: "reference_genome/hg38.fa"
+reference_index: "reference_genome/hg38.mmi"
+unaligned_bam: "data/basecalled_output/calls.bam"
