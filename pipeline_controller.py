@@ -1,78 +1,64 @@
 import subprocess
 import argparse
-import shlex
-import shutil
+import sys
+import yaml
 
+# --- Configuration ---
+def load_config(config_file="config.yaml"):
+    """ Loads the pipeline config from a YAML file """
+    with open(config_file, 'r') as f:
+        return yaml.safe_load(f)
 
-def run_command(command, step_name=""):
-    """
-    This function runs an external command, prints it, streams it output in real time and checks for errors
-    :param command: The bash command to use
-    :param step_name: (optional) the name of the current step
-    :return:
-    """
+def run_in_conda(config, command):
+    """ Runs a command inside the conda environment """
+    conda_env = config['conda_env_name']
 
-    if step_name:
-        print(f"\n--- Starting Step: {step_name} ---")
+    full_command = ["conda", "run", "-n", conda_env] + command
 
-    use_shell = isinstance(command, str) and any(c in command for c in ">|&;")
+    print(f"--- Running : {' '.join(full_command)} --- ")
 
     try:
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=use_shell,
-            text=True,
-            bufsize=1,
-            executable="/bin/bash" if use_shell else None
-        )
-
-        for line in iter(process.stdout.readline, ""):
-            print(line, end="")
-
-        process.wait()
-
-        if process.returncode != 0:
-            raise subprocess.CalledProcessError(process.returncode, process.args)
-
-        if step_name:
-            print(f"--- Finished Step: {step_name} ---")
-
+        result = subprocess.run(full_command, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
-        print(f"\n\n--- ERROR ---")
-        print(f"Error during '{step_name}': Command failed with exit code {e.returncode}")
-        print(f"Command was: {e.cmd}")
-        exit(1)
+        print(f"--- ERROR IN COMMAND ---")
+        print(f"Exit code: {e.returncode}")
+        print(f"STDOUT:\n{e.stdout}")
+        print(f"STDERR:\n{e.stderr}")
+        raise
 
-    except FileNotFoundError:
-        print(f"\n\n--- ERROR ---")
-        print(f"Error during '{step_name}': Command '{command.split()[0]}' not found.")
-
-
-def main(args):
-    print(f"Starting pipeline with {args.threads} threads")
-    # Check here if the input files exist and create the output directories if necessary.
-
-    dorado_cmd = [
-        "dorado", "basecaller",
-        "--device", "cuda:0",
-        "batchsize", str(args.batchsize),
-        args.model,
-        args.input_pod5,
-        ">", args.output_bam
+def run_setup(config):
+    """ Executes the 00_setup.sh script """
+    print(">>> Starting step 0: Setup")
+    script_path = "scripts/00_setup.sh"
+    command = [
+        "bash", script_path,
+        config['reference_genome_url'],
+        config['reference_genome_dir'],
+        config['reference_fasta'],
+        config['reference_index'],
+        config['dorado_version']
     ]
 
-    run_command(" ".join(dorado_cmd), "Basecalling")
+    run_in_conda(config, command)
+
+def main():
+    """ Main entry point for the pipeline controller """
+    config = load_config()
+    steps_to_run = config.get('run_steps', [])
+
+    if not steps_to_run:
+        print("Error, there aren't any steps for me to run. Check config.yaml.")
+        sys.exit(1)
+
+    print(f"--- Pipeline will execute the following steps: {steps_to_run} ---")
+
+    if 'setup' in steps_to_run:
+        run_setup(config)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Nanopore Pipeline")
-    args = parser.parse_args()
+    main()
 
-    bash_path = shutil.which("bash.exe")
-    subprocess.run([bash_path, 'script.sh'], check=True)
 
-    #main(args)
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
