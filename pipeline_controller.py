@@ -94,6 +94,40 @@ def run_basecalling(config):
     ]
 
     run_and_stream(config, command)
+
+def run_alignment(config):
+    """ Executes the alignment script: 02_alignment.sh """
+    print(">>> Starting step 2: Alignment and Indexing")
+    script_path = "scripts/02_alignment.sh"
+
+    command = [
+        "bash", script_path,
+        config['reference_genome_dir'],
+        config['reference_genome_url'],
+        config['reference_genome_name'],
+        config['indexed_ref_gen_name'],
+        config['basecalled_output_dir'],
+        config['unaligned_basecalled_name'],
+        config['alignment_output_dir'],
+        config['aligned_bam_name'],
+        config['threads'],
+        config['sort_memory_limit']
+    ]
+
+def run_alignment_qc(config):
+    print(">>> Running QC on aligned and indexed data")
+    script_path = "scripts/03_alignment_qc.sh"
+
+    command = [
+        "bash", script_path,
+        config['alignment_output_dir'],
+        config['aligned_bam_name'],
+        config['qc_dir'],
+        config['alignment_flagstat_name'],
+        config['alignment_stats_name']
+    ]
+
+
 def main():
     """ Main entry point for the pipeline controller """
     config = load_config()

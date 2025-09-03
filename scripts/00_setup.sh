@@ -108,6 +108,8 @@ download_fast5_data() {
       aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
   done
 
+  echo "--- Fast5 input downloaded ---"
+
 }
 
 convert_fast5_to_pod5() {
