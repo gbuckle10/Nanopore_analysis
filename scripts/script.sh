@@ -1,7 +1,6 @@
 #!/bin/bash
 
 check_device_for_dorado() {
-
   if command -v nvidia-smi &> /dev/null; then
     echo "NVIDIA GPU found, so we'll use that for basecalling"
 
@@ -20,7 +19,6 @@ check_device_for_dorado() {
   fi
 
   echo "Dorado device flags set: ${DORADO_DEVICE_FLAG} ${DORADO_BATCHSIZE_FLAG}"
-
 }
 
 # --- Dorado installation ---
@@ -158,7 +156,6 @@ basecalling_pod5() {
   #  download_dorado_model
   # ---- You could also make it so that the alignment and basecalling is done at once. That should be the next thing to test.
 
-  which dorado
   dorado basecaller --modified-bases 5mCG_5hmCG --batchsize "${BATCHSIZE}" hac data/pod5_output/all_reads.pod5 > data/basecalled_output/calls.bam
 
 }
@@ -219,30 +216,45 @@ alignment_qc() {
 
 }
 
+index_reference_genome() {
+  REF_FASTA="reference_genomes/hg38.fa"
+  REF_MMI="reference_genomes/hg38.mmi"
+
+  echo "Checking for reference index"
+  if [ ! -f "${REF_MMI}" ]; then
+    echo "INFO: Index not found, creating minimap2 index"
+    dorado index "${REF_MMI}" "${REF_FASTA}"
+    echo "We did it! index created"
+  else
+    echo "INFO: Index already exists, so we'll skip indexing."
+  fi
+
+}
+
 align_and_index() {
   # In the end it'd be good to have the option to align and basecall at once, or optionally do the two separately.
   local UNALIGNED_BAM="data/basecalled_output/taken_bam.bam"
-  local REFERENCE_GENOME="reference_genomes/$1"
+  local REFERENCE_INDEX="reference_genomes/$1"
   local ALIGNED_BAM="data/alignment_output/aligned.sorted.bam"
+
   local THREADS=1
   local SORT_MEMORY_LIMIT="1G"
 
   echo "--- Starting alignment ---"
   mkdir -p "data/alignment_output"
 
-  # Step 1: Alignment and sorting. It's a 3-stage pipe:
-  # 1. samtools fastq converts the input BAM to FASTQ format
-  # 2. minimap2 aligns the FASTQ reads to the reference
-  # 3. samtools sort sorts the aligned output and saves it as a bam.bai file.
+  # To save on RAM during the alignment, it's much better to index the reference genome before doing the alignment.
+  index_reference_genome
 
-  echo "Aligning and sorting reads"
+  dorado aligner -t 1 "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
+  | samtools sort -@ ${THREADS} -m ${SORT_MEMORY_LIMIT} -o "${ALIGNED_BAM}"
 
-  minimap2 -ax map-ont -t "${THREADS}" -K5M "${REFERENCE_GENOME}" "${UNALIGNED_BAM}" \
-  | samtools sort -@ "${THREADS}" -m "${SORT_MEMORY_LIMIT}" -o "${ALIGNED_BAM}" -
-
-  echo "Indexing the sorted BAM file"
-  # Index the sorted BAM file
   samtools index "${ALIGNED_BAM}"
+
+  echo "INFO: Alignment and indexing finished successfully."
+
+  # To make sure the alignment worked well, you can use something like
+  # samtools view data/alignment_output/aligned.sorted.bam | grep 'Mm:Z:' | head -n 5
 
 
 }
@@ -255,7 +267,7 @@ run_script(){
   #convert_fast5_to_pod5
   #basecalling_pod5 64
   download_reference_genome s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa
-  align_and_index "hg38.fa"
+  align_and_index "hg38.mmi"
 
   alignment_qc
 
