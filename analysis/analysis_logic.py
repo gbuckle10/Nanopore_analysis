@@ -16,15 +16,27 @@ def make_deconvolution_file(bed_file, manifest_file, output_file):
     meth_df['site_id'] = meth_df['chr'].astype(str) + ':' + meth_df['start'].astype(str)
     meth_series = meth_df.set_index('site_id')['percentage']/100.00
 
-    #print(meth_series)
+    print("This is the first 5 rows of our methylation dataframe.")
+    print(meth_df.head())
+
+    meth_df.to_csv("data")
 
     # Load the manifest to get the list of relevant sites
     print(f"--- Loading manifest from: {manifest_file} ---")
     manifest_df = pd.read_csv(
-        manifest_file, sep='\t', skip_rows=7, usecols=['IlmID', 'CHR', 'MAPINFO']
+        manifest_file, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO']
     )
 
-    manifest_df['site_id'] = 'chr' + manifest_df['CHR'] + ':' + manifest_df['MAPINFO'].astype(str)
+    # Remove the decimal point from MAPINFO points.
+    manifest_df = manifest_df.dropna(subset=['MAPINFO'])
+    manifest_df['MAPINFO'] = manifest_df['MAPINFO'].astype(int)
+
+    print("This is the first 5 rows of the manifest dataframe.")
+    manifest_df['site_id'] = 'chr' + manifest_df['CHR'].astype(str) + ':' + manifest_df['MAPINFO'].astype(str)
+
+    print("This is the first 5 rows of the manifest dataframe.")
+    print(manifest_df.head())
+
 
     manifest_sites = set(manifest_df['site_id'])
 

@@ -10,12 +10,12 @@ dorado_version: "0.9.6"
 
 # --- Run control ---
 run_steps:
-  - setup
+  #- setup
   #- basecalling
   #- align
   #- align_qc
-  - methylation_summary
-  #- analysis
+  #- methylation_summary
+  - analysis
 
 run_setup_tasks:
   download_fast5_data: false
@@ -39,7 +39,7 @@ unaligned_basecalled_name: "newcalls.bam"
 aligned_bam_name: "taken_alignment.bam"
 alignment_flagstat_name: "alignment.flagstat.txt"
 alignment_stats_name: "alignment.stats.txt"
-methylation_bed_name: "pileup_taken.bed"
+methylation_bed_name: "pileup5.bed"
 methylation_log_file: "pileup_taken.log"
 pre_deconvolution_file: "methylation_illumina_ids.csv"
 illumina_manifest: "illumina_manifest.csv"
