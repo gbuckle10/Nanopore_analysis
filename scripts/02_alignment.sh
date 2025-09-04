@@ -11,7 +11,11 @@ ALIGNED_BAM_NAME=$8
 THREADS=$9
 SORT_MEMORY_LIMIT=${10}
 
-
+if [ ! -f "scripts/runtime_config.sh" ]; then
+  echo "ERROR: runtime_config.sh not found. Please run 'setup' step first..."
+  exit 1
+fi
+source "scripts/runtime_config.sh"
 
 download_reference_genome() {
 
@@ -55,7 +59,7 @@ align_and_index() {
   # In the end it'd be good to have the option to align and basecall at once, or optionally do the two separately.
   local UNALIGNED_BAM="${BASECALLED_OUTPUT_DIR}/${UNALIGNED_BAM_NAME}"
   local REFERENCE_INDEX="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_INDEX}"
-  local ALIGNED_BAM="${ALIGNED_OUTPUT_DIR}/${}"
+  local ALIGNED_BAM="${ALIGNED_OUTPUT_DIR}/${ALIGNED_BAM_NAME}"
 
 
   echo "--- Starting alignment ---"
@@ -65,7 +69,7 @@ align_and_index() {
   index_reference_genome
 
 
-  dorado aligner -t 1 "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
+  "${DORADO_EXECUTABLE}" aligner -t 1 "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
   | samtools sort -@ ${THREADS} -m ${SORT_MEMORY_LIMIT} -o "${ALIGNED_BAM}"
 
   samtools index "${ALIGNED_BAM}"

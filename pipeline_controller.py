@@ -114,6 +114,8 @@ def run_alignment(config):
         config['sort_memory_limit']
     ]
 
+    run_and_stream(config, command)
+
 def run_alignment_qc(config):
     print(">>> Running QC on aligned and indexed data")
     script_path = "scripts/03_alignment_qc.sh"
