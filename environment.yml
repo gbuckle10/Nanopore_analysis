@@ -18,6 +18,7 @@ dependencies:
   - pip
   - pip:
     - pyyaml
+    - pandas
   # --- Conda Packages ---
   - minimap2
   - samtools

@@ -12,6 +12,8 @@ Sample data can be gotten from s3://ont-open-data/. There might be a better way,
 When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
 headers. e.g. chr1.
 
+Download a full aligned "plate" using:
+    aws s3 cp "s3://ont-open-data/gm24385_mod_2021.09/extra_analysis/alignment/20210510_1600_X1_FAQ32172_f02f2d1c.bam" "data/alignment_output/taken_alignment.bam" --no-sign-request
 
 You need to install awscli.
 This should be run on Linux/Ubuntu. On colab it's fine for testing purposes, but if you're running this on a Windows machine

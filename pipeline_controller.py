@@ -3,7 +3,8 @@ import os
 import sys
 import yaml
 
-# --- Configuration ---
+from analysis.analysis_logic import make_deconvolution_file
+
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
     with open(config_file, 'r') as f:
@@ -149,6 +150,31 @@ def run_methylation_summary(config):
 
     run_and_stream(config, command)
 
+def run_analysis(config):
+    """
+    Executes the full deconvolution analysis in two steps. The first step is to
+    arrange the data in the bed file in such a way that it can be compared to the
+    meth_atlas.
+    """
+
+    print(">>> Starting analysis workflow")
+    deconvolution_ready_file = config['pre_deconvolution_file']
+
+    try:
+
+        bed_file_path=config['methylation_dir']+config['methylation_bed_name']
+        manifest_file_path=config['atlas_dir']+config['illumina_manifest']
+        output_file_path=config['analysis_dir']+config['pre_deconvolution_file']
+
+        make_deconvolution_file(
+            bed_file=bed_file_path,
+            manifest_file=manifest_file_path,
+            output_file=manifest_file_path
+        )
+
+    except Exception as e:
+        print(f"--- ERROR during deconvolution prep: {e} ---")
+        raise
 
 def main():
     """ Main entry point for the pipeline controller """
@@ -169,7 +195,8 @@ def main():
         run_alignment(config)
     if 'methylation_summary' in steps_to_run:
         run_methylation_summary(config)
-
+    if 'analysis' in steps_to_run:
+        run_analysis(config)
 if __name__ == '__main__':
     main()
 
