@@ -1,14 +1,11 @@
+To run the script, the conda environment first needs to be created and activated:
+    - Create the environment using conda env create -f environment.yml.
+    - Activate the environment using conda activate nanopore_analysis.
+    - Sometimes, before activating the environment you need to run $eval "$(path/to/conda shell.bash hook)"
+
 Sample data can be gotten from s3://ont-open-data/. There might be a better way, but you can browse the data using the command:
     - aws s3 ls {folder_path} --no-sign-request
     - This will show the contents of the folder you provided the path for.
-
-First thing to do is run script.sh to download the fast_5 data from the Nanopore sample data.
-    I think script.sh needs to be run using git bash
-
-
-Basecalling - Use Dorado to do the basecalling
-    Install Dorado (install it into the folder for this project, but if I put this on git it should be in .gitignore):
-    NOTE ----- I HAD TO DOWNLOAD AN OLD VERSION OF DORADO TO DO THE BASECALLING FOR THE SAMPLE DATASET
 
 When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
 headers. e.g. chr1.
