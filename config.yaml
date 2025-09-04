@@ -18,11 +18,11 @@ run_steps:
 
 run_setup_tasks:
   download_fast5_data: false
-  convert_fast5_to_pod5: false
+  convert_fast5_to_pod5: true
 
 # Download data
 fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
-num_fast5_files: "1"
+num_fast5_files: "5"
 reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
 reference_genome_name: "hg38.fa"
 indexed_ref_gen_name: "hg38.mmi"

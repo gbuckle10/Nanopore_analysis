@@ -58,8 +58,8 @@ basecalling_pod5() {
   # ---- You could also make it so that the alignment and basecalling is done at once. That should be the next thing to test.
 
   #"${DORADO_EXECUTABLE}" basecaller "${MODEL_SPEED},${BASECALLING_MODIFICATIONS}" --modified-bases "${BASECALLING_MODIFICATIONS}" --batchsize "${BATCHSIZE}" data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
-  "${DORADO_EXECUTABLE}" basecaller models/dna_r9.4.1_e8_fast@v3.4 --modified-bases-models models/dna_r9.4.1_e8_fast@v3.4_5mCG_5hmCG@v0 --batchsize 64 data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
-  "${DORADO_EXECUTABLE}" basecaller fast,5mCG_5hmCG --batchsize 64 data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
+  "${DORADO_EXECUTABLE}" basecaller fast,5mC data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
+  #"${DORADO_EXECUTABLE}" basecaller fast --mpd5mCG_5hmCG --batchsize 64 data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
 
   # Output bam file can be checked out with samtools - if we want to see whether there's any methylation in the bam file use
   # samtools view path/to/file | grep 'Mm:Z:' | head -n 5
