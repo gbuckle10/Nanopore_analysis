@@ -1,10 +1,12 @@
+
+Before running the programme, activate the conda environment:
+    conda activate nanopore_analysis
+Sometimes, before running conda commands in a new WSL terminal you'll have to run:
+    eval "$(path/to/conda shell.bash hook)"
+
 Sample data can be gotten from s3://ont-open-data/. There might be a better way, but you can browse the data using the command:
     - aws s3 ls {folder_path} --no-sign-request
     - This will show the contents of the folder you provided the path for.
-
-First thing to do is run script.sh to download the fast_5 data from the Nanopore sample data.
-    I think script.sh needs to be run using git bash
-
 
 
 When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
