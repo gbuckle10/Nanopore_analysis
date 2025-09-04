@@ -21,7 +21,6 @@ make_directories() {
   mkdir -p tools
 }
 
-
 install_dorado() {
   echo "--- Downloading and setting up Dorado ---" >&2
 
@@ -98,7 +97,6 @@ download_fast5_data() {
   mkdir -p "${FAST5_DESTINATION_DIR}"
 
   echo "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
-  #aws s3 ls s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/ --no-sign-request | head -n 5 | awk '{print $4}' | xargs -I {} aws s3 cp s3://ont-open-data/rrms_2022.07/flowcells/Benchmarking_ASmethylation_COLO829_1-5/COLO829_1/20211102_1709_X1_FAR52193_a64b5c94/fast5_pass/{} data/fast5_input/ --no-sign-request
   echo "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
   aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
@@ -120,9 +118,28 @@ convert_fast5_to_pod5() {
   pod5 convert fast5 "${FAST5_DESTINATION_DIR}" --output "${POD5_DIR}/all_reads.pod5" --force-overwrite
 }
 
+download_methylation_atlas_and_illumina_manifest(){
+  mkdir -p "data/atlas/"
+
+  if ! [ -f "data/atlas/illumina_manifest.csv" ]; then
+    echo "The illumina manifest doesn't already exist so we will download it."
+    wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -O "data/atlas/illumina_manifest.csv"
+  fi
+  if ! [ -f "data/atlas/full_atlas.csv" ]; then
+    echo "The methylation atlas doesn't already exist so we will download it."
+    wget https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz -O "data/atlas/full_atlas.csv.gz"
+    gunzip -v "data/atlas/full_atlas.csv.gz"
+    #rm "data/atlas/full_atlas.csv.gz"
+  fi
+
+  echo "Downloading Illumina manifest."
+  wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -O "data/atlas/illumina_manifest.csv"
+  echo "Illumina manifest successfully downloaded."
+}
 
 make_directories
 install_dorado
+download_methylation_atlas_and_illumina_manifest
 if [[ "$SHOULD_DOWNLOAD_FAST5_FILES" == "true" ]]; then
   download_fast5_data
 fi
