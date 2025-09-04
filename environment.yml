@@ -8,6 +8,7 @@ channels:
   # Conda will search these channels in this order when it tries to find a program
   - conda-forge
   - bioconda
+  - nanoporetech
   - defaults
 dependencies:
   - python=3.9
@@ -22,6 +23,7 @@ dependencies:
   - samtools
   - pod5
   - typing-extensions
+  - modkit
 
 
 

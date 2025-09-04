@@ -2,7 +2,7 @@
 conda_env_name: "nanopore_analysis"
 
 # --- General Parameters ---
-threads: 2
+threads: "2"
 sort_memory_limit: "2G"
 
 # --- Dorado Models and Data ---
@@ -11,14 +11,14 @@ dorado_version: "0.9.6"
 # --- Run control ---
 run_steps:
   - setup
-  - basecalling
-  - align
+  #- basecalling
+  #- align
   - align_qc
-  - modkit
+  - methylation_summary
 
 run_setup_tasks:
   download_fast5_data: false
-  convert_fast5_to_pod5: true
+  convert_fast5_to_pod5: false
 
 # Download data
 fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
@@ -38,6 +38,8 @@ unaligned_basecalled_name: "newcalls.bam"
 aligned_bam_name: "aligned.sorted.bam"
 alignment_flagstat_name: "alignment.flagstat.txt"
 alignment_stats_name: "alignment.stats.txt"
+methylation_bed_name: "pileup5.bed"
+methylation_log_file: "pileup5.log"
 
 # Directories
 reference_genome_dir: "reference_genomes/"
@@ -48,8 +50,9 @@ fast5_input_dir: "data/fast5_input/"
 methylation_calls_dir: "data/methylation_calls/"
 pod5_output_dir: "data/pod5_output/"
 qc_dir: "data/alignment_qc/"
+methylation_dir: "data/methylation/"
 
 # Key files
-reference_fasta: "reference_genome/hg38.fa"
-reference_index: "reference_genome/hg38.mmi"
+reference_fasta: "reference_genomes/hg38.fa"
+reference_index: "reference_genomes/hg38.mmi"
 unaligned_bam: "data/basecalled_output/calls.bam"

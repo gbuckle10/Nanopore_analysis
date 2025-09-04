@@ -129,6 +129,26 @@ def run_alignment_qc(config):
         config['alignment_stats_name']
     ]
 
+    run_and_stream(config, command)
+
+def run_methylation_summary(config):
+    print(">>> Running methylation calling")
+    script_path = "scripts/04_methylation_summary.sh"
+
+    command = [
+        "bash", script_path,
+        config['aligned_bam_name'],
+        config['alignment_output_dir'],
+        config['methylation_bed_name'],
+        config['reference_fasta'],
+        config['threads'],
+        config['methylation_dir'],
+        config['methylation_log_file'],
+        config['reference_fasta']
+    ]
+
+    run_and_stream(config, command)
+
 
 def main():
     """ Main entry point for the pipeline controller """
@@ -145,6 +165,10 @@ def main():
         run_setup(config)
     if 'basecalling' in steps_to_run:
         run_basecalling(config)
+    if 'alignment' in steps_to_run:
+        run_alignment(config)
+    if 'methylation_summary' in steps_to_run:
+        run_methylation_summary(config)
 
 if __name__ == '__main__':
     main()
