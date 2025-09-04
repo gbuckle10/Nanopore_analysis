@@ -6,9 +6,6 @@ First thing to do is run script.sh to download the fast_5 data from the Nanopore
     I think script.sh needs to be run using git bash
 
 
-Basecalling - Use Dorado to do the basecalling
-    Install Dorado (install it into the folder for this project, but if I put this on git it should be in .gitignore):
-    NOTE ----- I HAD TO DOWNLOAD AN OLD VERSION OF DORADO TO DO THE BASECALLING FOR THE SAMPLE DATASET
 
 When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
 headers. e.g. chr1.
