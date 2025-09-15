@@ -6,10 +6,12 @@ from externals.meth_atlas import deconvolve
 
 from analysis.analysis_logic import make_deconvolution_file
 
+
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
     with open(config_file, 'r') as f:
         return yaml.safe_load(f)
+
 
 def run_and_capture(config, command):
     """ Runs a command inside the conda environment and stores the output as a variable"""
@@ -33,6 +35,7 @@ def run_and_capture(config, command):
 
     print(result)
 
+
 def run_and_stream(config, command):
     """ Runs a command inside the conda environment and streams the output """
     conda_env = config['conda_env_name']
@@ -51,6 +54,7 @@ def run_and_stream(config, command):
         raise
 
     print(result)
+
 
 def run_deconvolution_submodule(config):
     print(">>> Starting the deconvolution process using the meth_atlas submodule")
@@ -82,6 +86,7 @@ def run_deconvolution_submodule(config):
         print(f"STDERR:\n{e.stderr}")
         raise
 
+
 def run_setup(config):
     """ Executes the 00_setup.sh script """
     print(">>> Starting step 0: Setup")
@@ -105,12 +110,13 @@ def run_setup(config):
 
     dorado_path = run_and_capture(config, command)
 
-    #if not dorado_path or not os.path.exists(dorado_path):
+    # if not dorado_path or not os.path.exists(dorado_path):
     #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
 
-    #print(f"--- Successfully found Dorado executable at: {dorado_path} ---\n ")
+    # print(f"--- Successfully found Dorado executable at: {dorado_path} ---\n ")
 
-    #return dorado_path
+    # return dorado_path
+
 
 def run_basecalling(config):
     """ Executes the basecalling script using the 01_basecalling.sh script """
@@ -126,6 +132,7 @@ def run_basecalling(config):
     ]
 
     run_and_stream(config, command)
+
 
 def run_alignment(config):
     """ Executes the alignment script: 02_alignment.sh """
@@ -148,6 +155,7 @@ def run_alignment(config):
 
     run_and_stream(config, command)
 
+
 def run_alignment_qc(config):
     print(">>> Running QC on aligned and indexed data")
     script_path = "scripts/03_alignment_qc.sh"
@@ -162,6 +170,7 @@ def run_alignment_qc(config):
     ]
 
     run_and_stream(config, command)
+
 
 def run_methylation_summary(config):
     print(">>> Running methylation calling")
@@ -181,6 +190,7 @@ def run_methylation_summary(config):
 
     run_and_stream(config, command)
 
+
 def run_analysis(config):
     """
     Executes the full deconvolution analysis in two steps. The first step is to
@@ -190,25 +200,26 @@ def run_analysis(config):
 
     print(">>> Starting analysis workflow")
 
-
     try:
 
-        bed_file_path=config['methylation_dir']+config['methylation_bed_name']
-        manifest_file_path=config['atlas_dir']+config['illumina_manifest']
-        output_file_path=config['analysis_dir']+config['file_for_deconvolution']
+        bed_file_path = config['methylation_dir'] + config['methylation_bed_name']
+        manifest_file_path = config['atlas_dir'] + config['illumina_manifest']
+        output_file_path = config['analysis_dir'] + config['file_for_deconvolution']
 
-        '''
+
         make_deconvolution_file(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
-            output_file=manifest_file_path
+            output_file=output_file_path
         )
-        '''
+
+
         run_deconvolution_submodule(config)
 
     except Exception as e:
         print(f"--- ERROR during deconvolution prep: {e} ---")
         raise
+
 
 def main():
     """ Main entry point for the pipeline controller """
@@ -231,9 +242,9 @@ def main():
         run_methylation_summary(config)
     if 'analysis' in steps_to_run:
         run_analysis(config)
+
+
 if __name__ == '__main__':
     main()
-
-
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
