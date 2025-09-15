@@ -41,8 +41,10 @@ alignment_flagstat_name: "alignment.flagstat.txt"
 alignment_stats_name: "alignment.stats.txt"
 methylation_bed_name: "pileup5.bed"
 methylation_log_file: "pileup_taken.log"
-pre_deconvolution_file: "methylation_illumina_ids.csv"
+file_for_deconvolution: "examples.csv"
 illumina_manifest: "illumina_manifest.csv"
+deconvolution_results: "deconvoluted_output.csv"
+atlas_file: "full_atlas.csv"
 
 # Directories
 reference_genome_dir: "reference_genomes/"
@@ -54,7 +56,7 @@ methylation_calls_dir: "data/methylation_calls/"
 pod5_output_dir: "data/pod5_output/"
 qc_dir: "data/alignment_qc/"
 methylation_dir: "data/methylation/"
-analysis_dir: "data/analysis/"
+analysis_dir: "analysis/"
 atlas_dir: "data/atlas/"
 
 # Key files

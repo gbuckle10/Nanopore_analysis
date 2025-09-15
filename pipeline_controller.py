@@ -2,6 +2,7 @@ import subprocess
 import os
 import sys
 import yaml
+from externals.meth_atlas import deconvolve
 
 from analysis.analysis_logic import make_deconvolution_file
 
@@ -50,6 +51,36 @@ def run_and_stream(config, command):
         raise
 
     print(result)
+
+def run_deconvolution_submodule(config):
+    print(">>> Starting the deconvolution process using the meth_atlas submodule")
+
+    atlas_file = f"{config['atlas_dir']}{config['atlas_file']}"
+    file_to_deconvolve = f"{config['analysis_dir']}{config['file_for_deconvolution']}"
+    output_file = f"{config['analysis_dir']}{config['deconvolution_results']}"
+
+    command = [
+        "python",
+        "externals/meth_atlas/deconvolve.py",
+        "-a",
+        atlas_file,
+        file_to_deconvolve,
+        "--out_dir", config['analysis_dir']
+    ]
+
+    print(f"--- Running : {' '.join(command)} --- ")
+
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        if result.stderr:
+            print(result.stderr.strip())
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"--- ERROR IN COMMAND ---")
+        print(f"Exit code: {e.returncode}")
+        print(f"STDOUT:\n{e.stdout}")
+        print(f"STDERR:\n{e.stderr}")
+        raise
 
 def run_setup(config):
     """ Executes the 00_setup.sh script """
@@ -158,19 +189,22 @@ def run_analysis(config):
     """
 
     print(">>> Starting analysis workflow")
-    deconvolution_ready_file = config['pre_deconvolution_file']
+
 
     try:
 
         bed_file_path=config['methylation_dir']+config['methylation_bed_name']
         manifest_file_path=config['atlas_dir']+config['illumina_manifest']
-        output_file_path=config['analysis_dir']+config['pre_deconvolution_file']
+        output_file_path=config['analysis_dir']+config['file_for_deconvolution']
 
+        '''
         make_deconvolution_file(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
             output_file=manifest_file_path
         )
+        '''
+        run_deconvolution_submodule(config)
 
     except Exception as e:
         print(f"--- ERROR during deconvolution prep: {e} ---")
