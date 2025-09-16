@@ -1,10 +1,6 @@
 import subprocess
-import os
 import sys
 import yaml
-from externals.meth_atlas import deconvolve
-
-from analysis.analysis_logic import *
 
 
 def load_config(config_file="config.yaml"):
@@ -151,7 +147,7 @@ def run_alignment(config):
         config['reference_genome_name'],
         config['indexed_ref_gen_name'],
         config['basecalled_output_dir'],
-        config['unaligned_basecalled_name'],
+        config['unaligned_bam_name'],
         config['alignment_output_dir'],
         config['aligned_bam_name'],
         config['threads'],

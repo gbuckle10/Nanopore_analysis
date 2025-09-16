@@ -15,6 +15,7 @@ dependencies:
   - unzip
   - curl
   - pyarrow=20.0
+  - yq
   - pip
   - pip:
     - pyyaml
