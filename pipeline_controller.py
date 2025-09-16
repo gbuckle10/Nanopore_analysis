@@ -4,7 +4,7 @@ import sys
 import yaml
 from externals.meth_atlas import deconvolve
 
-from analysis.analysis_logic import generate_deconvolution_file_illumina_ids
+from analysis.analysis_logic import *
 
 
 def load_config(config_file="config.yaml"):
@@ -204,14 +204,22 @@ def run_analysis(config):
 
         bed_file_path = config['methylation_dir'] + config['methylation_bed_name']
         manifest_file_path = config['atlas_dir'] + config['illumina_manifest']
-        output_file_path = config['analysis_dir'] + config['file_for_deconvolution']
+        file_for_decon_path = config['analysis_dir'] + config['file_for_deconvolution']
+        illumina_atlas_file_path = config['atlas_dir'] + config['atlas_file_illumina']
+        geco_atlas_file_path = config['atlas_dir'] + config['atlas_file_genome_coordinate']
 
+        ''' 
         generate_deconvolution_file_illumina_ids(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
-            output_file=output_file_path
+            output_file=file_for_decon_path
         )
-
+        '''
+        convert_atlas_to_genome_coordinates(
+            output_file=geco_atlas_file_path,
+            atlas_file=illumina_atlas_file_path,
+            manifest_file=manifest_file_path
+        )
         # run_deconvolution_submodule(config)
 
     except Exception as e:

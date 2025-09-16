@@ -1,4 +1,52 @@
 import pandas as pd
+import os
+
+def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
+    """
+    Given a methylation atlas indexed by Illumina IDs, output a methylation atlas indexed by
+    genome coordinates.
+    :param output_file: The methylation atlas file indexed by genome coordinates.
+
+    """
+
+    # Load the atlas and Illumina manifest
+    atlas_df = pd.read_csv(
+        atlas_file, sep=','
+    )
+    atlas_df.rename(columns={'Unnamed: 0': 'IlmnID'}, inplace=True)
+
+    manifest_df = pd.read_csv(
+        manifest_file, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO'],
+        dtype={'CHR': str}
+    )
+    # Remove the decimal point from MAPINFO points.
+    manifest_df = manifest_df.dropna(subset=['MAPINFO'])
+    manifest_df['MAPINFO'] = manifest_df['MAPINFO'].astype(int)
+
+    manifest_df['site_id'] = 'chr' + manifest_df['CHR'].astype(str) + ':' + manifest_df['MAPINFO'].astype(str)
+    manifest_df.drop(['CHR', 'MAPINFO'], axis=1, inplace=True)
+
+    print("The top 5 rows of the atlas file:")
+    print(atlas_df.head())
+
+    print("The top 5 rows of the manifest file:")
+    print(manifest_df.head())
+
+    print(f"The atlas currently contains {len(atlas_df)} rows")
+    print(f"The manifest df currently contains {len(manifest_df)} rows")
+
+    geco_atlas = pd.merge(atlas_df, manifest_df, on='IlmnID', how='inner')
+    all_columns = geco_atlas.columns.tolist()
+    cell_type_columns = [col for col in all_columns if col not in ['IlmnID', 'site_id']]
+    new_column_order = ['site_id'] + cell_type_columns
+    geco_atlas = geco_atlas[new_column_order]
+
+    print("The top 5 rows of the genomic location atlas:")
+    print(geco_atlas.head())
+
+    print(f"The genome location manifest currently contains {len(geco_atlas)} rows")
+
+    geco_atlas.to_csv(output_file, index=False)
 
 
 def generate_deconvolution_file_illumina_ids(bed_file, manifest_file, output_file):
