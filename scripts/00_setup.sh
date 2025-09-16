@@ -9,7 +9,6 @@ NUM_FAST5_FILES=$4
 POD5_DIR=$5
 SHOULD_DOWNLOAD_FAST5_FILES=$6
 SHOULD_CONVERT_FAST5_TO_POD5=$7
-
 RUNTIME_CONFIG="scripts/runtime_config.sh"
 
 make_directories() {
@@ -99,12 +98,34 @@ download_fast5_data() {
   echo "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
   echo "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
-  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
-  | head -n "${NUM_FAST5_FILES}" \
-  | awk '{print $4}' \
-  | while read -r filename; do
-      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
-  done
+  # Build aws command
+  AWS_COMMAND=(
+    aws s3 cp
+    "${FAST5_DOWNLOAD_URL}"
+    "${FAST5_DESTINATION_DIR}"
+    --recursive
+    --no-sign-request
+    --exclude "*"
+    --include "*.fast5"
+  )
+
+  # Add the --max_items flag if necessary
+  if [[ "${NUM_FAST5_FILES}" != "all" ]]; then
+    AWS_COMMAND+=(--max_items "${NUM_FAST5_FILES}")
+    echo "INFO: Preparing to download the first ${NUM_FAST5_FILES} files." >&2
+  else
+    echo "INFO: Preparing to download all available files with command ${AWS_COMMAND}." >&2
+  fi
+
+  "${AWS_COMMAND[@]}"
+
+  #aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
+  #| head -n "${NUM_FAST5_FILES}" \
+  #| awk "{print $4}" \
+  #| while read -r filename; do
+  #    aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
+  #done
+
 
   echo "--- Fast5 input downloaded ---"
 
