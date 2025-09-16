@@ -162,6 +162,10 @@ download_methylation_atlas_and_illumina_manifest(){
   echo "Downloading Illumina manifest."
   wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -O "data/atlas/illumina_manifest.csv"
   echo "Illumina manifest successfully downloaded."
+
+  echo "Downloading UXM atlas"
+  wget https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv -O "data/atlas/UXM_atlas.tsv"
+  echo "UXM atlas successfully downloaded."
 }
 
 make_directories

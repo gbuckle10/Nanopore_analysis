@@ -8,6 +8,7 @@ Sample data can be gotten from s3://ont-open-data/. There might be a better way,
     - aws s3 ls {folder_path} --no-sign-request
     - This will show the contents of the folder you provided the path for.
 
+Use atlas from https://github.com/nloyfer/UXM_deconv/tree/main
 
 When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
 headers. e.g. chr1.
