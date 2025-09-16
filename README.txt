@@ -13,7 +13,10 @@ When you're downloading a reference genome for alignment, you will need to downl
 headers. e.g. chr1.
 
 
-You need to install awscli.
+You need to install awscliv2:
+    - Download the zip file using command: curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - Unzip using command: unzip awscliv2.zip
+    - Install using command: sudo ./aws/install
 This should be run on Linux/Ubuntu. On colab it's fine for testing purposes, but if you're running this on a Windows machine
 Setup for WSL:
     Installation:
