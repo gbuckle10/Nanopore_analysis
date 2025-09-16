@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def make_deconvolution_file(bed_file, manifest_file, output_file):
+def generate_deconvolution_file_illumina_ids(bed_file, manifest_file, output_file):
     """
     Filters the Nanopore methylation data, provided in a .bed file, to retain only the
     methylation sites we can use to deconvolute. This is done by retaining only those
@@ -59,9 +59,12 @@ def make_deconvolution_file(bed_file, manifest_file, output_file):
     print(f"Your sample contains {len(relevant_cpgs)} CpGs which were also found in the manifest.")
 
     deconvolution_df = pd.merge(meth_df, manifest_df, on="site_id", how='inner')[['IlmnID', 'percentage']]
+    deconvolution_df_gl = pd.merge(meth_df, manifest_df, on="site_id", how='inner')[['site_id', 'percentage']]
 
     deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
     deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
+    deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_gl.parquet", index=False)
+    deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_gl.csv", index=False)
 
     #deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
 

@@ -4,7 +4,7 @@ import sys
 import yaml
 from externals.meth_atlas import deconvolve
 
-from analysis.analysis_logic import make_deconvolution_file
+from analysis.analysis_logic import generate_deconvolution_file_illumina_ids
 
 
 def load_config(config_file="config.yaml"):
@@ -206,15 +206,13 @@ def run_analysis(config):
         manifest_file_path = config['atlas_dir'] + config['illumina_manifest']
         output_file_path = config['analysis_dir'] + config['file_for_deconvolution']
 
-
-        make_deconvolution_file(
+        generate_deconvolution_file_illumina_ids(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
             output_file=output_file_path
         )
 
-
-        run_deconvolution_submodule(config)
+        # run_deconvolution_submodule(config)
 
     except Exception as e:
         print(f"--- ERROR during deconvolution prep: {e} ---")
