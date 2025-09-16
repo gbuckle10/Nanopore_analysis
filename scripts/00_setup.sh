@@ -2,13 +2,18 @@
 
 set -e
 
-DORADO_VERSION=$1
-FAST5_DOWNLOAD_URL=$2
-FAST5_DESTINATION_DIR=$3
-NUM_FAST5_FILES=$4
-POD5_DIR=$5
-SHOULD_DOWNLOAD_FAST5_FILES=$6
-SHOULD_CONVERT_FAST5_TO_POD5=$7
+CONFIG_FILE=$1
+echo ${CONFIG_FILE}
+yq eval "${CONFIG_FILE}"
+
+
+DORADO_VERSION=$(yq e '.parameters.setup.dorado_version' "${CONFIG_FILE}")
+FAST5_DOWNLOAD_URL=$(yq e '.paths.fast5_download_url' "${CONFIG_FILE}")
+FAST5_DESTINATION_DIR=$(yq e '.paths.fast5_input_dir' "${CONFIG_FILE}")
+NUM_FAST5_FILES=$(yq e '.parameters.setup.num_fast5_files' "${CONFIG_FILE}")
+POD5_DIR=$(yq e '.paths.pod5_dir' "${CONFIG_FILE}")
+SHOULD_DOWNLOAD_FAST5_FILES=$(yq e '.pipeline_control.run_setup_tasks.download_fast5_data' "${CONFIG_FILE}")
+SHOULD_CONVERT_FAST5_TO_POD5=$(yq e '.pipeline_control.run_setup_tasks.convert_fast5_to_pod5' "${CONFIG_FILE}")
 RUNTIME_CONFIG="scripts/runtime_config.sh"
 
 make_directories() {

@@ -59,8 +59,7 @@ def run_deconvolution_submodule(config):
     file_to_deconvolve = f"{config['analysis_dir']}{config['file_for_deconvolution']}"
     output_file = f"{config['analysis_dir']}{config['deconvolution_results']}"
     deconvolve_script = "externals/meth_atlas/deconvolve.py"
-    #deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
-
+    # deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
 
     command = [
         "python",
@@ -92,24 +91,11 @@ def run_setup(config):
     """ Executes the 00_setup.sh script """
     print(">>> Starting step 0: Setup")
     script_path = "scripts/00_setup.sh"
+    config_file = "config.yaml"
 
-    tasks = config.get('run_setup_tasks', {})
+    command = ["bash", script_path, config_file]
 
-    download_fast5 = str(tasks.get('download_fast5_data', False)).lower()
-    convert_fast5_to_pod5 = str(tasks.get('convert_fast5_to_pod5', False)).lower()
-
-    command = [
-        "bash", script_path,
-        config['dorado_version'],
-        config['fast5_download_url'],
-        config['fast5_input_dir'],
-        config['num_fast5_files'],
-        config['pod5_dir'],
-        download_fast5,
-        convert_fast5_to_pod5
-    ]
-
-    dorado_path = run_and_capture(config, command)
+    run_and_stream(config, command)
 
     # if not dorado_path or not os.path.exists(dorado_path):
     #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
@@ -234,7 +220,13 @@ def run_analysis(config):
 def main():
     """ Main entry point for the pipeline controller """
     config = load_config()
-    steps_to_run = config.get('run_steps', [])
+
+    try:
+        steps_to_run = config['pipeline_control']['run_steps']
+    except (FileNotFoundError, KeyError) as e:
+        print(f"FATAL ERROR: Could not load required configuration.")
+        print(f"Details: {e}")
+        sys.exit(1)
 
     if not steps_to_run:
         print("Error, there aren't any steps for me to run. Check config.yaml.")
