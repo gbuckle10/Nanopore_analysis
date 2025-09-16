@@ -17,6 +17,10 @@ if [ ! -f "scripts/runtime_config.sh" ]; then
 fi
 source "scripts/runtime_config.sh"
 
+# --- Main script ---
+echo "INFO: Using Dorado executable at ${DORADO_EXECUTABLE}" >&2
+
+
 download_reference_genome() {
 
   echo "Checking for reference genome"
@@ -32,10 +36,12 @@ download_reference_genome() {
 
   echo "--- Reference genome not found. Downloading from ${REFERENCE_GENOME_URL} to ${REFERENCE_GENOME_DIR} ---"
 
-
   aws s3 cp "${REFERENCE_GENOME_URL}" "${REF_FASTA}" --no-sign-request
 
-  echo "Genome has been downloaded."
+  # To save on RAM during the alignment, it's much better to index the reference genome before doing the alignment.
+  index_reference_genome
+
+  echo "Genome has been downloaded and indexed."
 
   # The output of this should be in the format >chr1 >chr2 etc.
   # grep ">" "${REF_FASTA}" | head -n 5
@@ -48,7 +54,7 @@ index_reference_genome() {
   echo "Checking for reference index"
   if [ ! -f "${REF_MMI}" ]; then
     echo "INFO: Index not found, creating minimap2 index"
-    dorado index "${REF_MMI}" "${REF_FASTA}"
+    ${DORADO_EXECUTABLE} index "${REF_MMI}" "${REF_FASTA}"
     echo "We did it! index created"
   else
     echo "INFO: Index already exists, so we'll skip indexing."
@@ -64,9 +70,6 @@ align_and_index() {
 
   echo "--- Starting alignment ---"
   mkdir -p "data/alignment_output"
-
-  # To save on RAM during the alignment, it's much better to index the reference genome before doing the alignment.
-  index_reference_genome
 
 
   "${DORADO_EXECUTABLE}" aligner -t 1 "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
@@ -84,4 +87,4 @@ align_and_index() {
 
 
 download_reference_genome
-index_reference_genome
+align_and_index

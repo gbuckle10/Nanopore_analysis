@@ -208,18 +208,20 @@ def run_analysis(config):
         illumina_atlas_file_path = config['atlas_dir'] + config['atlas_file_illumina']
         geco_atlas_file_path = config['atlas_dir'] + config['atlas_file_genome_coordinate']
 
-        ''' 
-        generate_deconvolution_file_illumina_ids(
+        generate_deconvolution_file(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
             output_file=file_for_decon_path
         )
+
         '''
         convert_atlas_to_genome_coordinates(
             output_file=geco_atlas_file_path,
             atlas_file=illumina_atlas_file_path,
             manifest_file=manifest_file_path
         )
+        '''
+
         # run_deconvolution_submodule(config)
 
     except Exception as e:

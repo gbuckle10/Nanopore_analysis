@@ -48,15 +48,13 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
 
     geco_atlas.to_csv(output_file, index=False)
 
-
-def generate_deconvolution_file_illumina_ids(bed_file, manifest_file, output_file):
+def generate_deconvolution_file(bed_file, manifest_file, output_file):
     """
     Filters the Nanopore methylation data, provided in a .bed file, to retain only the
     methylation sites we can use to deconvolute. This is done by retaining only those
     methylation sites which are present in the downloaded illumina manifest.
 
     """
-
     '''
     # Load the relevant information from the bed file.
     print(f'--- Loading Nanopore methylation data from: {bed_file} ---')
@@ -66,18 +64,11 @@ def generate_deconvolution_file_illumina_ids(bed_file, manifest_file, output_fil
     
     meth_df['percentage'] = meth_df['percentage']/100.0
     meth_df['site_id'] = meth_df['chr'].astype(str) + ':' + meth_df['start'].astype(str)
-    meth_df.drop(['chr', 'start'], axis=1, inplace=True)
-
-    # --- MAYBE WE SHOULDN'T REMOVE THE COLUMNS WE DON'T NEED SO WE CAN MANUALLY QC ---
-    
-    meth_df.to_parquet("analysis/methylation_dataframe.parquet", index=False)
-    meth_df.to_csv("analysis/methylation_dataframe.csv", index=False)
-    
     '''
-
+    # --- MAYBE WE SHOULDN'T REMOVE THE COLUMNS WE DON'T NEED SO WE CAN MANUALLY QC ---
     meth_df = pd.read_parquet("analysis/methylation_dataframe.parquet")
 
-    print("This is te first 5 rows of our methylation dataframe.")
+    print("This is the first 5 rows of our methylation dataframe.")
     print(meth_df.head())
 
 
@@ -111,8 +102,8 @@ def generate_deconvolution_file_illumina_ids(bed_file, manifest_file, output_fil
 
     deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
     deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
-    deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_gl.parquet", index=False)
-    deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_gl.csv", index=False)
+    deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
+    deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
 
     #deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
 
