@@ -10,11 +10,12 @@ dorado_version: "0.9.6"
 
 # --- Run control ---
 run_steps:
-  - setup
+  #- setup
   #- basecalling
   #- align
-  - align_qc
-  - methylation_summary
+  #- align_qc
+  #- methylation_summary
+  - analysis
 
 run_setup_tasks:
   download_fast5_data: false
@@ -35,11 +36,15 @@ basecalling_batch_size: "64"
 
 # Generated data
 unaligned_basecalled_name: "newcalls.bam"
-aligned_bam_name: "aligned.sorted.bam"
+aligned_bam_name: "taken_alignment.bam"
 alignment_flagstat_name: "alignment.flagstat.txt"
 alignment_stats_name: "alignment.stats.txt"
-methylation_bed_name: "pileup5.bed"
-methylation_log_file: "pileup5.log"
+methylation_bed_name: "comfy.bed"
+methylation_log_file: "pileup_taken.log"
+file_for_deconvolution: "data_to_deconvolute.csv"
+illumina_manifest: "illumina_manifest.csv"
+deconvolution_results: "deconvoluted_output.csv"
+atlas_file: "full_atlas.csv"
 
 # Directories
 reference_genome_dir: "reference_genomes/"
@@ -51,6 +56,8 @@ methylation_calls_dir: "data/methylation_calls/"
 pod5_output_dir: "data/pod5_output/"
 qc_dir: "data/alignment_qc/"
 methylation_dir: "data/methylation/"
+analysis_dir: "analysis/"
+atlas_dir: "data/atlas/"
 
 # Key files
 reference_fasta: "reference_genomes/hg38.fa"
