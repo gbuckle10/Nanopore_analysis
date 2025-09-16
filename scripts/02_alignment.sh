@@ -39,7 +39,7 @@ download_reference_genome() {
   aws s3 cp "${REFERENCE_GENOME_URL}" "${REF_FASTA}" --no-sign-request
 
   # To save on RAM during the alignment, it's much better to index the reference genome before doing the alignment.
-  index_reference_genome
+
 
   echo "Genome has been downloaded and indexed."
 
@@ -51,10 +51,10 @@ index_reference_genome() {
   REF_FASTA="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_NAME}"
   REF_MMI="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_INDEX}"
 
-  echo "Checking for reference index"
+  echo "Checking for reference index at ${REF_MMI}"
   if [ ! -f "${REF_MMI}" ]; then
     echo "INFO: Index not found, creating minimap2 index"
-    ${DORADO_EXECUTABLE} index "${REF_MMI}" "${REF_FASTA}"
+    minimap2 -d "${REF_MMI}" "${REF_FASTA}"
     echo "We did it! index created"
   else
     echo "INFO: Index already exists, so we'll skip indexing."
@@ -71,6 +71,7 @@ align_and_index() {
   echo "--- Starting alignment ---"
   mkdir -p "data/alignment_output"
 
+  index_reference_genome
 
   "${DORADO_EXECUTABLE}" aligner -t 1 "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
   | samtools sort -@ ${THREADS} -m ${SORT_MEMORY_LIMIT} -o "${ALIGNED_BAM}"
