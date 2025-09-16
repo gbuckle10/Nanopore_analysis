@@ -17,12 +17,13 @@ SHOULD_CONVERT_FAST5_TO_POD5=$(yq e '.pipeline_control.run_setup_tasks.convert_f
 RUNTIME_CONFIG="scripts/runtime_config.sh"
 
 make_directories() {
-  mkdir -p data
-  mkdir -p logs
-  mkdir -p models
-  mkdir -p reference_genomes
-  mkdir -p scripts
-  mkdir -p tools
+
+  DIRECTORIES_TO_CREATE=$(yq '.paths.core_directories[]' "$CONFIG_FILE")
+
+  for dir in ${DIRECTORIES_TO_CREATE}; do
+    echo "Creating directory: ${dir}" >&2
+    mkdir -p "${dir}"
+  done
 }
 
 install_dorado() {
