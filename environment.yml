@@ -16,6 +16,8 @@ dependencies:
   - curl
   - pyarrow=20.0
   - go-yq
+  - bedtools
+  - pybedtools
   - pip
   - pip:
     - pyyaml
