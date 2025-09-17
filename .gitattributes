@@ -1,0 +1,12 @@
+# Set the default behaviour
+* text=auto eol=lf
+
+# These files should always have LF line endings.
+*.sh    eol=lf
+*.py    eol=lf
+*.yaml  eol=lf
+*.yml   eol=lf
+*.md    eol=lf
+*.txt   eol=lf
+.gitattributes  eol=lf
+.gitignore  eol=lf
