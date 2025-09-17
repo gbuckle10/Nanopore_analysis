@@ -217,4 +217,7 @@ __marimo__/
 *.zip
 *.tar.gz
 
+# Ignore IDE-specific files
+.idea/
+
 scripts/runtime_config.sh
