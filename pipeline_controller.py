@@ -217,13 +217,14 @@ def run_analysis(config):
         geco_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_genome_coordinate']
         uxm_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['uxm_atlas_name']
 
-        '''
-        generate_deconvolution_file(
+
+        generate_deconvolution_files(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
-            output_file=file_for_decon_path
+            output_file=file_for_decon_path,
+            range_atlas_file=uxm_atlas_file_path
         )
-        '''
+
 
         '''
         convert_atlas_to_genome_coordinates(
@@ -235,7 +236,7 @@ def run_analysis(config):
 
         #format_atlas_file(atlas_file=uxm_atlas_file_path)
 
-        calculate_methylation_range(file_for_decon_path, uxm_atlas_file_path)
+        #generate_aggregated_deconvolution_file(file_for_decon_path, uxm_atlas_file_path)
 
         #run_deconvolution_submodule(config)
 

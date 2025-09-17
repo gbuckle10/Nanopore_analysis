@@ -2,15 +2,86 @@ import pandas as pd
 import os
 import pybedtools
 
-def calculate_methylation_range(deconvolution_file, range_atlas_file):
+def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atlas_file):
+    """
+    Filters the Nanopore methylation data, provided in a .bed file, to retain only the
+    methylation sites we can use to deconvolute. This is done by retaining only those
+    methylation sites which are present in the downloaded illumina manifest.
+
+    """
+
+    # Load the relevant information from the bed file.
+    print(f'--- Loading Nanopore methylation data from: {bed_file} ---')
+
+    methylation_df = pd.read_csv(
+        bed_file, sep='\t', header=None, usecols=[0, 1, 10], names=['chr', 'start', 'percentage'], nrows=50000000
+    )
+
+    methylation_df['percentage'] = methylation_df['percentage'] / 100.0
+
+    # Make this an if statement
+    generate_aggregated_deconvolution_file(methylation_df, range_atlas_file)
+
+
+    methylation_df['site_id'] = methylation_df['chr'].astype(str) + ':' + methylation_df['start'].astype(str)
+
+    # --- MAYBE WE SHOULDN'T REMOVE THE COLUMNS WE DON'T NEED SO WE CAN MANUALLY QC ---
+    # methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
+
+    print("This is the first 5 rows of our methylation dataframe.")
+    print(methylation_df.head())
+
+
+    # Load the manifest to get the list of relevant sites
+    print(f"--- Loading manifest from: {manifest_file} ---")
+    manifest_df = pd.read_csv(
+        manifest_file, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO'],
+        dtype={'CHR': str}
+    )
+
+    # Remove the decimal point from MAPINFO points.
+    manifest_df = manifest_df.dropna(subset=['MAPINFO'])
+    manifest_df['MAPINFO'] = manifest_df['MAPINFO'].astype(int)
+
+    manifest_df['site_id'] = 'chr' + manifest_df['CHR'].astype(str) + ':' + manifest_df['MAPINFO'].astype(str)
+    manifest_df.drop(['CHR', 'MAPINFO'], axis=1, inplace=True)
+
+    print("This is the first 5 rows of the manifest dataframe.")
+    print(manifest_df.head())
+
+    # Find the sites that are in the manifest and in our data.
+    print(f"--- Finding common sites between your data and the manifest ---")
+
+    # This filter and print is not necessary, it's only here for QC purposes atm.
+    relevant_cpgs = methylation_df[methylation_df.site_id.isin(manifest_df.site_id.unique().tolist())]
+    print(f"Your sample contains {len(relevant_cpgs)} CpGs which were also found in the manifest.")
+
+    deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['IlmnID', 'percentage']]
+    deconvolution_df_gl = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['site_id', 'percentage']]
+
+    deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
+    deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
+    deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
+    deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
+
+    # deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
+
+    print(f"This is the first 5 rows (out of {len(deconvolution_df)} total) of the deconvolution dataframe:")
+    print(deconvolution_df.head())
+
+    print("We are done preparing the data for deconvolution.")
+
+def generate_aggregated_deconvolution_file(methylation_df, range_atlas_file):
     '''
     Assigns each CpG site from the methylation data to a region from the
     atlas.
 
-    :param deconvolution_file: File for deconvolution
-    :param range_atlas_file:  Atlas file with ranges
+    :param deconvolution_file: Methylation dataframe containing columns 'chr', 'loc' and 'percentage'
+    :param range_atlas_file:  Atlas file with location ranges
     :return:
     '''
+
+    print("--- Starting to make the aggregated deconvolution file ---")
 
     atlas_df = pd.read_csv(range_atlas_file, sep='\t')
 
@@ -20,18 +91,15 @@ def calculate_methylation_range(deconvolution_file, range_atlas_file):
                     col not in unneeded_cols]
     atlas_df = atlas_df[cols_to_keep]
 
-    decon_df = pd.read_csv("analysis/data_to_deconvolute_geco.csv", sep=',')
-    decon_df[['chr', 'start']] = decon_df['site_id'].str.split(':', expand=True)
-
     print("Top 5 rows deconvolution file:")
-    print(decon_df.head())
+    print(methylation_df.head())
 
     print("Top 5 rows atlas file:")
     print(atlas_df.head)
 
-    print("--- Converting dataframes to BedTool objects")
+    print("--- Converting dataframes to BedTool objects --- ")
 
-    decon_points_df = decon_df.copy()
+    decon_points_df = methylation_df.copy()
     decon_points_df['end'] = decon_points_df['start'].astype(int) + 1
     decon_points_df = decon_points_df[['chr', 'start', 'end', 'percentage']]
     decon_bed = pybedtools.BedTool.from_dataframe(decon_points_df)
@@ -54,10 +122,21 @@ def calculate_methylation_range(deconvolution_file, range_atlas_file):
         names=['chr', 'start', 'end', 'mean_methylation']
     )
 
+    aggregated_df['site_id'] = aggregated_df['chr'].astype(str) + ':' + aggregated_df['start'].astype(str) + '-' + aggregated_df['end'].astype(str)
+
+    all_columns = aggregated_df.columns.tolist()
+    cell_type_columns = [col for col in all_columns if col not in ['site_id']]
+    new_column_order = ['site_id'] + cell_type_columns
+    aggregated_df = aggregated_df[new_column_order]
     aggregated_df.dropna(subset=['mean_methylation'], inplace=True)
+
+
+
 
     print(f"Top 5 rows of aggregated dataframe (where there are {len(aggregated_df)} total rows")
     print(aggregated_df.head())
+
+    aggregated_df.to_csv("analysis/aggregated_deconvolution.csv", index=False)
 
 
 def format_atlas_file(atlas_file, sep='\t'):
@@ -133,67 +212,3 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
 
     geco_atlas.to_csv(output_file, index=False)
 
-def generate_deconvolution_file(bed_file, manifest_file, output_file):
-    """
-    Filters the Nanopore methylation data, provided in a .bed file, to retain only the
-    methylation sites we can use to deconvolute. This is done by retaining only those
-    methylation sites which are present in the downloaded illumina manifest.
-
-    """
-    '''
-    # Load the relevant information from the bed file.
-    print(f'--- Loading Nanopore methylation data from: {bed_file} ---')
-    meth_df = pd.read_csv(
-        bed_file, sep='\t', header=None, usecols=[0, 1, 10], names=['chr', 'start', 'percentage']
-    )
-    
-    meth_df['percentage'] = meth_df['percentage']/100.0
-    meth_df['site_id'] = meth_df['chr'].astype(str) + ':' + meth_df['start'].astype(str)
-    '''
-
-    # --- MAYBE WE SHOULDN'T REMOVE THE COLUMNS WE DON'T NEED SO WE CAN MANUALLY QC ---
-    meth_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
-
-    print("This is the first 5 rows of our methylation dataframe.")
-    print(meth_df.head())
-
-
-    # Load the manifest to get the list of relevant sites
-    print(f"--- Loading manifest from: {manifest_file} ---")
-    manifest_df = pd.read_csv(
-        manifest_file, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO'],
-        dtype={'CHR': str}
-    )
-
-    # Remove the decimal point from MAPINFO points.
-    manifest_df = manifest_df.dropna(subset=['MAPINFO'])
-    manifest_df['MAPINFO'] = manifest_df['MAPINFO'].astype(int)
-
-    manifest_df['site_id'] = 'chr' + manifest_df['CHR'].astype(str) + ':' + manifest_df['MAPINFO'].astype(str)
-    manifest_df.drop(['CHR', 'MAPINFO'], axis=1, inplace=True)
-
-    print("This is the first 5 rows of the manifest dataframe.")
-    print(manifest_df.head())
-
-
-    # Find the sites that are in the manifest and in our data.
-    print(f"--- Finding common sites between your data and the manifest ---")
-
-    # This filter and print is not necessary, it's only here for QC purposes atm.
-    relevant_cpgs = meth_df[meth_df.site_id.isin(manifest_df.site_id.unique().tolist())]
-    print(f"Your sample contains {len(relevant_cpgs)} CpGs which were also found in the manifest.")
-
-    deconvolution_df = pd.merge(meth_df, manifest_df, on="site_id", how='inner')[['IlmnID', 'percentage']]
-    deconvolution_df_gl = pd.merge(meth_df, manifest_df, on="site_id", how='inner')[['site_id', 'percentage']]
-
-    deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
-    deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
-    deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
-    deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
-
-    #deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
-
-    print(f"This is the first 5 rows (out of {len(deconvolution_df)} total) of the deconvolution dataframe:")
-    print(deconvolution_df.head())
-
-    print("We are done preparing the data for deconvolution.")
