@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import yaml
+from scripts.analysis_logic import *
 
 
 def load_config(config_file="config.yaml"):
@@ -29,35 +30,54 @@ def run_and_capture(config, command):
         print(f"STDERR:\n{e.stderr}")
         raise
 
-    print(result)
 
-
-def run_and_stream(config, command):
+def run_and_log(config, command, log_path="logs/wowow.txt"):
     """ Runs a command inside the conda environment and streams the output """
     conda_env = config['conda_env_name']
-
     full_command = ["conda", "run", "-n", conda_env] + command
 
     print(f"--- Running : {' '.join(full_command)} --- ")
 
+    with open(log_path, 'w') as log_file:
+        process = subprocess.Popen(
+            full_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+
+        for line in process.stdout:
+            log_file.write(line)
+            print(line, end='')
+            sys.stdout.flush()
+
+        process.wait()
+        if process.returncode != 0:
+            print(f"\n--- ERROR in command. Check log for details: {log_path} ---")
+            raise subprocess.CalledProcessError(process.returncode, process.args)
+        else:
+            print("--- Command successful ---\n")
+
+    '''
     try:
-        result = subprocess.run(full_command, check=True, text=True)
+        subprocess.run(full_command, check=True, text=True)
     except subprocess.CalledProcessError as e:
         print(f"--- ERROR IN COMMAND ---")
         print(f"Exit code: {e.returncode}")
         print(f"STDOUT:\n{e.stdout}")
         print(f"STDERR:\n{e.stderr}")
         raise
-
-    print(result)
+    '''
 
 
 def run_deconvolution_submodule(config):
     print(">>> Starting the deconvolution process using the meth_atlas submodule")
 
-    atlas_file = f"{config['atlas_dir']}{config['atlas_file_illumina']}"
-    file_to_deconvolve = f"{config['analysis_dir']}{config['file_for_deconvolution']}"
-    output_file = f"{config['analysis_dir']}{config['deconvolution_results']}"
+    atlas_file = f"{config['paths']['atlas_dir']}{config['paths']['atlas_file_illumina']}"
+    file_to_deconvolve = f"{config['paths']['analysis_dir']}{config['paths']['file_for_deconvolution']}"
+    output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
     deconvolve_script = "externals/meth_atlas/deconvolve.py"
     # deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
 
@@ -67,7 +87,7 @@ def run_deconvolution_submodule(config):
         "-a",
         atlas_file,
         file_to_deconvolve,
-        "--out_dir", config['analysis_dir']
+        "--out_dir", config['paths']['analysis_dir']
     ]
 
     print(f"--- Running : {' '.join(command)} --- ")
@@ -95,7 +115,7 @@ def run_setup(config):
 
     command = ["bash", script_path, config_file]
 
-    run_and_stream(config, command)
+    run_and_log(config, command)
 
     # if not dorado_path or not os.path.exists(dorado_path):
     #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
@@ -118,7 +138,7 @@ def run_basecalling(config):
         config['basecalling_batch_size']
     ]
 
-    run_and_stream(config, command)
+    run_and_log(config, command)
 
 
 def run_alignment(config):
@@ -140,7 +160,7 @@ def run_alignment(config):
         config['sort_memory_limit']
     ]
 
-    run_and_stream(config, command)
+    run_and_log(config, command)
 
 
 def run_alignment_qc(config):
@@ -156,7 +176,7 @@ def run_alignment_qc(config):
         config['alignment_stats_name']
     ]
 
-    run_and_stream(config, command)
+    run_and_log(config, command)
 
 
 def run_methylation_summary(config):
@@ -175,7 +195,7 @@ def run_methylation_summary(config):
         config['reference_fasta']
     ]
 
-    run_and_stream(config, command)
+    run_and_log(config, command)
 
 
 def run_analysis(config):
@@ -189,11 +209,13 @@ def run_analysis(config):
 
     try:
 
-        bed_file_path = config['methylation_dir'] + config['methylation_bed_name']
-        manifest_file_path = config['atlas_dir'] + config['illumina_manifest']
-        file_for_decon_path = config['analysis_dir'] + config['file_for_deconvolution']
-        illumina_atlas_file_path = config['atlas_dir'] + config['atlas_file_illumina']
-        geco_atlas_file_path = config['atlas_dir'] + config['atlas_file_genome_coordinate']
+        # One day change this so that the yaml structure mirrors the file structure. config['paths']['methylation_dir']['methylation_bed_name']
+        bed_file_path = config['paths']['methylation_dir'] + config['paths']['methylation_bed_name']
+        manifest_file_path = config['paths']['atlas_dir'] + config['paths']['illumina_manifest']
+        file_for_decon_path = config['paths']['analysis_dir'] + config['paths']['file_for_deconvolution']
+        illumina_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_illumina']
+        geco_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_genome_coordinate']
+        uxm_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['uxm_atlas_name']
 
         '''
         generate_deconvolution_file(
@@ -202,6 +224,7 @@ def run_analysis(config):
             output_file=file_for_decon_path
         )
         '''
+
         '''
         convert_atlas_to_genome_coordinates(
             output_file=geco_atlas_file_path,
@@ -210,7 +233,11 @@ def run_analysis(config):
         )
         '''
 
-        run_deconvolution_submodule(config)
+        #format_atlas_file(atlas_file=uxm_atlas_file_path)
+
+        calculate_methylation_range(file_for_decon_path, uxm_atlas_file_path)
+
+        #run_deconvolution_submodule(config)
 
     except Exception as e:
         print(f"--- ERROR during deconvolution prep: {e} ---")

@@ -10,6 +10,13 @@ Sample data can be gotten from s3://ont-open-data/. There might be a better way,
 
 Use atlas from https://github.com/nloyfer/UXM_deconv/tree/main
 
+Sometimes the meth_atlas submodule is an empty folder, and you'll get an error like "The directory <Project>/externals/meth_atlas
+is registered as a Git root, but not Git repositories were found there". I'll find a more permanent fix, but to fix this:
+    - git submodule sync
+        - Reads the .gitmodules file and updates the local Git configuration to match
+        - It should tell you "Synchronising submodule url for 'externals/meth_atlas"
+    - git submodule update --init --recursive
+
 When you're downloading a reference genome for alignment, you will need to download a reference genome with USCS-style
 headers. e.g. chr1.
 
