@@ -9,24 +9,22 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
     methylation sites which are present in the downloaded illumina manifest.
 
     """
-
+    '''
     # Load the relevant information from the bed file.
     print(f'--- Loading Nanopore methylation data from: {bed_file} ---')
 
     methylation_df = pd.read_csv(
         bed_file, sep='\t', header=None, usecols=[0, 1, 10], names=['chr', 'start', 'percentage'], nrows=50000000
     )
-
+    print("Loaded bed file into the dataframe")
     methylation_df['percentage'] = methylation_df['percentage'] / 100.0
 
-    # Make this an if statement
-    generate_aggregated_deconvolution_file(methylation_df, range_atlas_file)
-
-
     methylation_df['site_id'] = methylation_df['chr'].astype(str) + ':' + methylation_df['start'].astype(str)
+    '''
 
+    '''
     # --- MAYBE WE SHOULDN'T REMOVE THE COLUMNS WE DON'T NEED SO WE CAN MANUALLY QC ---
-    # methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
+    methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
 
     print("This is the first 5 rows of our methylation dataframe.")
     print(methylation_df.head())
@@ -53,25 +51,32 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
     print(f"--- Finding common sites between your data and the manifest ---")
 
     # This filter and print is not necessary, it's only here for QC purposes atm.
-    relevant_cpgs = methylation_df[methylation_df.site_id.isin(manifest_df.site_id.unique().tolist())]
-    print(f"Your sample contains {len(relevant_cpgs)} CpGs which were also found in the manifest.")
+    illumina_cpgs = methylation_df[methylation_df.site_id.isin(manifest_df.site_id.unique().tolist())]
+    print(f"Your sample contains {len(illumina_cpgs)} CpGs which were also found in the manifest.")
 
-    deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['IlmnID', 'percentage']]
-    deconvolution_df_gl = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['site_id', 'percentage']]
+    illumina_deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['IlmnID', 'percentage']]
+    illumina_deconvolution_df_gl = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['site_id', 'percentage']]
+    uxm_deconvolution_df = methylation_df[['site_id', 'percentage']]
 
-    deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
-    deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
-    deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
-    deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
+    uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
+    uxm_deconvolution_df.to_csv("analysis/data_to_deconvolute_uxm.csv", index=False)
+    illumina_deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
+    illumina_deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
+    illumina_deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
+    illumina_deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
 
-    # deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
+    illumina_deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
+    '''
+    generate_aggregated_deconvolution_file("analysis/data_to_deconvolute_uxm.csv", range_atlas_file)
 
-    print(f"This is the first 5 rows (out of {len(deconvolution_df)} total) of the deconvolution dataframe:")
-    print(deconvolution_df.head())
+    #print(f"This is the first 5 rows (out of {len(illumina_deconvolution_df)} total) of the deconvolution dataframe:")
+    #print(illumina_deconvolution_df.head())
 
     print("We are done preparing the data for deconvolution.")
 
-def generate_aggregated_deconvolution_file(methylation_df, range_atlas_file):
+
+
+def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file):
     '''
     Assigns each CpG site from the methylation data to a region from the
     atlas.
@@ -91,6 +96,28 @@ def generate_aggregated_deconvolution_file(methylation_df, range_atlas_file):
                     col not in unneeded_cols]
     atlas_df = atlas_df[cols_to_keep]
 
+    # Read in chunks
+    # Actually process the entire thing in chunks, write to the file inside the loop.
+    chunk_size = 1000000
+
+    chunk_iterator = pd.read_csv(
+        methylation_file,
+        chunksize=chunk_size
+    )
+
+    processed_chunks = []
+
+    for i, chunk_df in enumerate(chunk_iterator):
+        print(f" - Processing chunk {i+1}...")
+        chunk_df[['chr', 'start']] = chunk_df['site_id'].str.split(':', expand=True)
+        processed_chunks.append(chunk_df)
+
+    print("Concatenating all processed chunks")
+    methylation_df = pd.concat(processed_chunks, ignore_index=True)
+
+
+    #methylation_df = pd.read_parquet(methylation_file)
+    #methylation_df[['chr', 'start']] = methylation_df['site_id'].str.split(':', expand=True)
     print("Top 5 rows deconvolution file:")
     print(methylation_df.head())
 
