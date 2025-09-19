@@ -1,8 +1,6 @@
 #!/bin/bash
 
 CONFIG_FILE=$1
-echo ${CONFIG_FILE}
-yq eval "${CONFIG_FILE}"
 
 ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
 ALIGNED_BAM_DIR=$(yq e '.paths.alignment_output_dir' "${CONFIG_FILE}")
