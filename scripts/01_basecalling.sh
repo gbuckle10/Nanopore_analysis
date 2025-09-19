@@ -3,8 +3,6 @@
 set -e
 
 CONFIG_FILE=$1
-echo ${CONFIG_FILE}
-yq eval "${CONFIG_FILE}"
 
 if [ ! -f "scripts/runtime_config.sh" ]; then
   echo "ERROR: runtime_config.sh not found. Please run 'setup' step first..."
