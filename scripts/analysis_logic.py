@@ -2,38 +2,27 @@ import pandas as pd
 import os
 import pybedtools
 
-def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atlas_file, chunk_size=1000000):
-    """
-    Filters the Nanopore methylation data, provided in a .bed file, to retain only the
-    methylation sites we can use to deconvolute. This is done by retaining only those
-    methylation sites which are present in the downloaded illumina manifest.
+def load_meth_df_from_bed(bed_dir):
+    print(f'Loading Nanopore methylation data from: {bed_dir} ... ')
 
-    """
-    '''
-    # Load the relevant information from the bed file.
-    print(f'--- Loading Nanopore methylation data from: {bed_file} ---')
-
-    methylation_df = pd.read_csv(
-        bed_file, sep='\t', header=None, usecols=[0, 1, 10], names=['chr', 'start', 'percentage'], nrows=50000000
+    meth_df = pd.read_csv(
+        bed_dir, sep='\t', header=None, usecols=[0, 1, 10], names=['chr', 'start', 'percentage']
     )
-    print("Loaded bed file into the dataframe")
-    methylation_df['percentage'] = methylation_df['percentage'] / 100.0
+    meth_df['percentage'] = meth_df['percentage'] / 100.0
 
-    methylation_df['site_id'] = methylation_df['chr'].astype(str) + ':' + methylation_df['start'].astype(str)
-    '''
+    meth_df['site_id'] = meth_df['chr'].astype(str) + ':' + meth_df['start'].astype(str)
 
-    '''
-    # --- MAYBE WE SHOULDN'T REMOVE THE COLUMNS WE DON'T NEED SO WE CAN MANUALLY QC ---
-    methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
+    print("Methylation dataframe loaded from the bed file.")
+    print("Here are the first 5 rows of our methylation dataframe:")
+    print(meth_df.head())
 
-    print("This is the first 5 rows of our methylation dataframe.")
-    print(methylation_df.head())
+    return meth_df
 
-
+def manifest_df_from_csv(manifest_dir):
     # Load the manifest to get the list of relevant sites
-    print(f"--- Loading manifest from: {manifest_file} ---")
+    print(f"--- Loading manifest from: {manifest_dir} ---")
     manifest_df = pd.read_csv(
-        manifest_file, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO'],
+        manifest_dir, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO'],
         dtype={'CHR': str}
     )
 
@@ -47,26 +36,61 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
     print("This is the first 5 rows of the manifest dataframe.")
     print(manifest_df.head())
 
-    # Find the sites that are in the manifest and in our data.
-    print(f"--- Finding common sites between your data and the manifest ---")
+    return manifest_df
 
-    # This filter and print is not necessary, it's only here for QC purposes atm.
-    illumina_cpgs = methylation_df[methylation_df.site_id.isin(manifest_df.site_id.unique().tolist())]
-    print(f"Your sample contains {len(illumina_cpgs)} CpGs which were also found in the manifest.")
+def generate_illumina_deconvolution_file(methylation_df, manifest_df):
+    '''
+    Generate a file to be deconvoluted with the meth_atlas deconvolution algorithm.
+    '''
 
-    illumina_deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['IlmnID', 'percentage']]
-    illumina_deconvolution_df_gl = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[['site_id', 'percentage']]
-    uxm_deconvolution_df = methylation_df[['site_id', 'percentage']]
+    illumina_deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[
+        ['IlmnID', 'percentage']]
 
-    uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
-    uxm_deconvolution_df.to_csv("analysis/data_to_deconvolute_uxm.csv", index=False)
-    illumina_deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
-    illumina_deconvolution_df.to_csv("analysis/data_to_deconvolute.csv", index=False)
-    illumina_deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
+    #illumina_deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
+    illumina_deconvolution_df.to_csv("analysis/data_to_deconvolute_illumina.csv", index=False)
+
+def generate_gc_illumina_deconvolution_file(methylation_df, manifest_df):
+    '''
+    Using an Illumina manifest and genome coordinate methylation dataframe, make a deconvolution-ready file
+    matching the Illumina probe IDs to genome locations.
+    '''
+
+    # Only keep the rows for which the location matches an Illumina probe
+    illumina_deconvolution_df_gl = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[
+        ['site_id', 'percentage']]
+    # illumina_deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
     illumina_deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
 
-    illumina_deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
-    '''
+def generate_uxm_deconvolution_file(methylation_df):
+
+    uxm_deconvolution_df = methylation_df[['site_id', 'percentage']]
+
+    #uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
+    uxm_deconvolution_df.to_csv("analysis/data_to_deconvolute_uxm.csv", index=False)
+
+def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atlas_file, chunk_size=1000000):
+    """
+    Filters the Nanopore methylation data, provided in a .bed file, to retain only the
+    methylation sites we can use to deconvolute. This is done by retaining only those
+    methylation sites which are present in the downloaded illumina manifest.
+
+    """
+    print("--- Generating files for deconvolution from the BED file ---")
+    # Load the relevant information from the bed file.
+
+    methylation_df = load_meth_df_from_bed(bed_file)
+    #methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
+
+    manifest_df = manifest_df_from_csv(manifest_file)
+
+    # Find the sites that are in the manifest and in our data.
+    print(f"--- Prepping files for deconvolution ---")
+
+    generate_illumina_deconvolution_file(methylation_df, manifest_df)
+
+    generate_uxm_deconvolution_file(methylation_df)
+
+
     generate_aggregated_deconvolution_file("analysis/data_to_deconvolute_uxm.csv", range_atlas_file, chunk_size)
 
     #print(f"This is the first 5 rows (out of {len(illumina_deconvolution_df)} total) of the deconvolution dataframe:")

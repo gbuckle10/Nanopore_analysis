@@ -97,6 +97,7 @@ paths:
   # Step 4: Analysis and Deconvolution outputs
   analysis_dir: "analysis/"
   atlas_dir: "data/atlas/"
+  deconvolution_dir: "analysis/deconvolution/"
   file_for_deconvolution: "data_to_deconvolute_.csv"
   file_for_deconvolution_geco: "data_to_deconvolute_geco.csv"
   illumina_manifest: "illumina_manifest.csv"
