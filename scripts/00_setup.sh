@@ -2,23 +2,28 @@
 
 set -e
 
-DORADO_VERSION=$1
-FAST5_DOWNLOAD_URL=$2
-FAST5_DESTINATION_DIR=$3
-NUM_FAST5_FILES=$4
-POD5_DIR=$5
-SHOULD_DOWNLOAD_FAST5_FILES=$6
-SHOULD_CONVERT_FAST5_TO_POD5=$7
+CONFIG_FILE=$1
+echo ${CONFIG_FILE}
+yq eval "${CONFIG_FILE}"
 
+
+DORADO_VERSION=$(yq e '.parameters.setup.dorado_version' "${CONFIG_FILE}")
+FAST5_DOWNLOAD_URL=$(yq e '.paths.fast5_download_url' "${CONFIG_FILE}")
+FAST5_DESTINATION_DIR=$(yq e '.paths.fast5_input_dir' "${CONFIG_FILE}")
+NUM_FAST5_FILES=$(yq e '.parameters.setup.num_fast5_files' "${CONFIG_FILE}")
+POD5_DIR=$(yq e '.paths.pod5_dir' "${CONFIG_FILE}")
+SHOULD_DOWNLOAD_FAST5_FILES=$(yq e '.pipeline_control.run_setup_tasks.download_fast5_data' "${CONFIG_FILE}")
+SHOULD_CONVERT_FAST5_TO_POD5=$(yq e '.pipeline_control.run_setup_tasks.convert_fast5_to_pod5' "${CONFIG_FILE}")
 RUNTIME_CONFIG="scripts/runtime_config.sh"
 
 make_directories() {
-  mkdir -p data
-  mkdir -p logs
-  mkdir -p models
-  mkdir -p reference_genomes
-  mkdir -p scripts
-  mkdir -p tools
+
+  DIRECTORIES_TO_CREATE=$(yq '.paths.core_directories[]' "$CONFIG_FILE")
+
+  for dir in ${DIRECTORIES_TO_CREATE}; do
+    echo "Creating directory: ${dir}" >&2
+    mkdir -p "${dir}"
+  done
 }
 
 install_dorado() {
@@ -99,12 +104,34 @@ download_fast5_data() {
   echo "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
   echo "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
-  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
-  | head -n "${NUM_FAST5_FILES}" \
-  | awk '{print $4}' \
-  | while read -r filename; do
-      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
-  done
+  # Build aws command
+  AWS_COMMAND=(
+    aws s3 cp
+    "${FAST5_DOWNLOAD_URL}"
+    "${FAST5_DESTINATION_DIR}"
+    --recursive
+    --no-sign-request
+    --exclude "*"
+    --include "*.fast5"
+  )
+
+  # Add the --max_items flag if necessary
+  if [[ "${NUM_FAST5_FILES}" != "all" ]]; then
+    AWS_COMMAND+=(--max_items "${NUM_FAST5_FILES}")
+    echo "INFO: Preparing to download the first ${NUM_FAST5_FILES} files." >&2
+  else
+    echo "INFO: Preparing to download all available files with command ${AWS_COMMAND}." >&2
+  fi
+
+  "${AWS_COMMAND[@]}"
+
+  #aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
+  #| head -n "${NUM_FAST5_FILES}" \
+  #| awk "{print $4}" \
+  #| while read -r filename; do
+  #    aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
+  #done
+
 
   echo "--- Fast5 input downloaded ---"
 
@@ -135,6 +162,10 @@ download_methylation_atlas_and_illumina_manifest(){
   echo "Downloading Illumina manifest."
   wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -O "data/atlas/illumina_manifest.csv"
   echo "Illumina manifest successfully downloaded."
+
+  echo "Downloading UXM atlas"
+  wget https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv -O "data/atlas/UXM_atlas.tsv"
+  echo "UXM atlas successfully downloaded."
 }
 
 make_directories

@@ -1,65 +1,109 @@
-# --- Environment Settings ---
+# ========================================================
+# Execution Environment
+# ========================================================
 conda_env_name: "nanopore_analysis"
 
-# --- General Parameters ---
-threads: "2"
-sort_memory_limit: "2G"
+# ========================================================
+# Pipeline Control
+# High-level control over which steps are to be done.
+# ========================================================
+pipeline_control:
+  run_steps:
+    #- setup
+    #- basecalling
+    #- align
+    #- align_qc
+    #- methylation_summary
+    - analysis
 
-# --- Dorado Models and Data ---
-dorado_version: "0.9.6"
+  run_setup_tasks:
+    download_fast5_data: false
+    convert_fast5_to_pod5: false
 
-# --- Run control ---
-run_steps:
-  #- setup
-  #- basecalling
-  #- align
-  #- align_qc
-  #- methylation_summary
-  - analysis
+# ========================================================
+# Parameters
+# Contains all of the variables and settings for tools.
+# ========================================================
+parameters:
+  general:
+    threads: "2"
+    sort_memory_limit: "2G"
+  setup:
+    dorado_version: "0.9.6"
+    num_fast5_files: "5"
+  basecalling:
+    # Use EITHER the model complex OR the explicit base/mod model names
+    # Method A: Model Complex
+    model_speed: "fast"
+    basecalling_modifications: "5mCG_5hmCG"
 
-run_setup_tasks:
-  download_fast5_data: false
-  convert_fast5_to_pod5: false
+    # Method B: Explicit Model Names
+    base_model_name: "dna_r9.4.1_e8_sup@v3.3"
+    mod_model_name: "dna_r9.4.1_e8_sup@v3.3_5mCG_5hmCG@v0"
 
-# Download data
-fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
-num_fast5_files: "5"
-reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
-reference_genome_name: "hg38.fa"
-indexed_ref_gen_name: "hg38.mmi"
+    # Other basecalling settings
+    batch_size: "64"
+  analysis:
+    methylation_aggregation_chunksize: '5000000'
 
-# Dorado models
-dorado_model_name: "dna_r9.4.1_e8_sup@v3.3"
-model_speed: "fast" # fast, hac or sup
-basecalling_modifications: "5mCG_5hmCG"
-basecalling_batch_size: "64"
+# ========================================================
+# Paths
+# All file and directory paths
+# ========================================================
 
-# Generated data
-unaligned_basecalled_name: "newcalls.bam"
-aligned_bam_name: "taken_alignment.bam"
-alignment_flagstat_name: "alignment.flagstat.txt"
-alignment_stats_name: "alignment.stats.txt"
-methylation_bed_name: "comfy.bed"
-methylation_log_file: "pileup_taken.log"
-file_for_deconvolution: "data_to_deconvolute.csv"
-illumina_manifest: "illumina_manifest.csv"
-deconvolution_results: "deconvoluted_output.csv"
-atlas_file: "full_atlas.csv"
+paths:
+  # --- Core Directories ---
+  core_directories:
+    - "reference_genomes/"
+    - "analysis/"
+    - "tools/"
+    - "models/"
+    - "results/"
+    - "data/"
+    - "logs/"
+    - "wow/"
 
-# Directories
-reference_genome_dir: "reference_genomes/"
-pod5_dir: "data/pod5_output/"
-alignment_output_dir: "data/alignment_output/"
-basecalled_output_dir: "data/basecalled_output/"
-fast5_input_dir: "data/fast5_input/"
-methylation_calls_dir: "data/methylation_calls/"
-pod5_output_dir: "data/pod5_output/"
-qc_dir: "data/alignment_qc/"
-methylation_dir: "data/methylation/"
-analysis_dir: "analysis/"
-atlas_dir: "data/atlas/"
 
-# Key files
-reference_fasta: "reference_genomes/hg38.fa"
-reference_index: "reference_genomes/hg38.mmi"
-unaligned_bam: "data/basecalled_output/calls.bam"
+  # --- External Data URLs ---
+  fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
+  reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
+  uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv"
+
+  # --- Data Processing Pipeline Paths ---
+  # Raw data
+  fast5_input_dir: "data/fast5_input/"
+  pod5_dir: "data/pod5_output/"
+
+  # Step 0: Setup output
+
+  # Step 1: Basecalling output
+  basecalled_output_dir: "data/basecalled_output/"
+
+  # Step 2: Alignment output
+  alignment_output_dir: "data/alignment_output/"
+  qc_dir: "data/alignment_qc/"
+  reference_genome_name: "hg38.fa"
+  indexed_ref_gen_name: "hg38.mmi"
+  unaligned_bam_name: "newcalls.bam"
+  aligned_bam_name: "taken_alignment.bam"
+  alignment_flagstat_name: "alignment.flagstat.txt"
+  alignment_stats_name: "alignment.stats.txt"
+
+  # Step 3: Methylation summary outputs
+  methylation_dir: "data/methylation/"
+  methylation_bed_name: "comfy.bed"
+  methylation_log_file: "pileup_taken.log"
+
+  # Step 4: Analysis and Deconvolution outputs
+  analysis_dir: "analysis/"
+  atlas_dir: "data/atlas/"
+  file_for_deconvolution: "data_to_deconvolute_.csv"
+  file_for_deconvolution_geco: "data_to_deconvolute_geco.csv"
+  illumina_manifest: "illumina_manifest.csv"
+  atlas_file_illumina: "full_atlas.csv"
+  atlas_file_genome_coordinate: "UXM_atlas.csv"
+  deconvolution_results: "deconvoluted_output.csv"
+  uxm_atlas_name: "UXM_atlas.csv"
+
+
+
