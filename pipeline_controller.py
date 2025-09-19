@@ -75,8 +75,8 @@ def run_and_log(config, command, log_path="logs/wowow.txt"):
 def run_deconvolution_submodule(config):
     print(">>> Starting the deconvolution process using the meth_atlas submodule")
 
-    atlas_file = "data/atlas/UXM_atlas.csv"
-    file_to_deconvolve = f"{config['paths']['analysis_dir']}{config['paths']['file_for_deconvolution']}"
+    atlas_file = "data/atlas/full_atlas_geco.csv"
+    file_to_deconvolve = "analysis/data_to_deconvolute_geco.csv"
     output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
     deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
     # deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
@@ -219,7 +219,6 @@ def run_analysis(config):
         deconvolution_path = config['paths']['deconvolution_dir']
         chunk_size = int(config['parameters']['analysis']['methylation_aggregation_chunksize'])
 
-
         generate_deconvolution_files(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
@@ -227,7 +226,6 @@ def run_analysis(config):
             range_atlas_file=uxm_atlas_file_path,
             chunk_size=chunk_size
         )
-
 
         '''
         convert_atlas_to_genome_coordinates(
@@ -237,9 +235,7 @@ def run_analysis(config):
         )
         '''
 
-        #format_atlas_file(atlas_file=uxm_atlas_file_path)
-
-        #generate_aggregated_deconvolution_file(file_for_decon_path, uxm_atlas_file_path)
+        # format_atlas_file(atlas_file=uxm_atlas_file_path)
 
         run_deconvolution_submodule(config)
 
