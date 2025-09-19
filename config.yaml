@@ -97,13 +97,13 @@ paths:
   # Step 4: Analysis and Deconvolution outputs
   analysis_dir: "analysis/"
   atlas_dir: "data/atlas/"
-  file_for_deconvolution: "data_to_deconvolute.csv"
+  file_for_deconvolution: "data_to_deconvolute_.csv"
   file_for_deconvolution_geco: "data_to_deconvolute_geco.csv"
   illumina_manifest: "illumina_manifest.csv"
   atlas_file_illumina: "full_atlas.csv"
-  atlas_file_genome_coordinate: "full_atlas_geco.csv"
+  atlas_file_genome_coordinate: "UXM_atlas.csv"
   deconvolution_results: "deconvoluted_output.csv"
-  uxm_atlas_name: "UXM_atlas.tsv"
+  uxm_atlas_name: "UXM_atlas.csv"
 
 
 
