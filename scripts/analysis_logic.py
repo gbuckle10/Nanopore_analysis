@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import pybedtools
 
+
 def load_meth_df_from_bed(bed_dir):
     print(f'Loading Nanopore methylation data from: {bed_dir} ... ')
 
@@ -16,7 +17,10 @@ def load_meth_df_from_bed(bed_dir):
     print("Here are the first 5 rows of our methylation dataframe:")
     print(meth_df.head())
 
+    meth_df.to_parquet("data/methylation/methylation_dataframe.parquet")
+
     return meth_df
+
 
 def manifest_df_from_csv(manifest_dir):
     # Load the manifest to get the list of relevant sites
@@ -38,6 +42,7 @@ def manifest_df_from_csv(manifest_dir):
 
     return manifest_df
 
+
 def generate_illumina_deconvolution_file(methylation_df, manifest_df):
     '''
     Generate a file to be deconvoluted with the meth_atlas deconvolution algorithm.
@@ -46,8 +51,9 @@ def generate_illumina_deconvolution_file(methylation_df, manifest_df):
     illumina_deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[
         ['IlmnID', 'percentage']]
 
-    #illumina_deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
+    # illumina_deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
     illumina_deconvolution_df.to_csv("analysis/data_to_deconvolute_illumina.csv", index=False)
+
 
 def generate_gc_illumina_deconvolution_file(methylation_df, manifest_df):
     '''
@@ -61,12 +67,23 @@ def generate_gc_illumina_deconvolution_file(methylation_df, manifest_df):
     # illumina_deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
     illumina_deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
 
-def generate_uxm_deconvolution_file(methylation_df):
 
+def generate_uxm_deconvolution_file(methylation_df):
     uxm_deconvolution_df = methylation_df[['site_id', 'percentage']]
 
-    #uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
+    # uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
     uxm_deconvolution_df.to_csv("analysis/data_to_deconvolute_uxm.csv", index=False)
+
+
+def generate_uxm_atlas_for_deconvolution(uxm_atlas_dir):
+    atlas_df = pd.read_csv(uxm_atlas_dir, sep='\t')
+    unnecessary_cols = ['chr', 'start', 'end', 'startCpG', 'endCpG', 'target', 'direction']
+    cols_to_keep = [col for col in atlas_df if
+                    col not in unnecessary_cols]
+    atlas_df = atlas_df[cols_to_keep]
+
+    atlas_df.to_csv("data/atlas/UXM_atlas.csv", index=False)
+
 
 def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atlas_file, chunk_size=1000000):
     """
@@ -79,7 +96,7 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
     # Load the relevant information from the bed file.
 
     methylation_df = load_meth_df_from_bed(bed_file)
-    #methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
+    # methylation_df = pd.read_parquet("data/methylation/methylation_dataframe.parquet")
 
     manifest_df = manifest_df_from_csv(manifest_file)
 
@@ -87,116 +104,110 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
     print(f"--- Prepping files for deconvolution ---")
 
     generate_illumina_deconvolution_file(methylation_df, manifest_df)
-
     generate_uxm_deconvolution_file(methylation_df)
-
-
     generate_aggregated_deconvolution_file("analysis/data_to_deconvolute_uxm.csv", range_atlas_file, chunk_size)
+    generate_uxm_atlas_for_deconvolution("data/atlas/UXM_atlas.tsv")
 
-    #print(f"This is the first 5 rows (out of {len(illumina_deconvolution_df)} total) of the deconvolution dataframe:")
-    #print(illumina_deconvolution_df.head())
+    # print(f"This is the first 5 rows (out of {len(illumina_deconvolution_df)} total) of the deconvolution dataframe:")
+    # print(illumina_deconvolution_df.head())
 
     print("We are done preparing the data for deconvolution.")
 
 
-
 def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file, chunk_size):
-        '''
-        Assigns each CpG site from the methylation data to a region from the
-        atlas.
+    '''
+    Assigns each CpG site from the methylation data to a region from the
+    atlas.
 
-        :param deconvolution_file: Methylation dataframe containing columns 'chr', 'loc' and 'percentage'
-        :param range_atlas_file:  Atlas file with location ranges
-        :return:
-        '''
+    :param deconvolution_file: Methylation dataframe containing columns 'chr', 'loc' and 'percentage'
+    :param range_atlas_file:  Atlas file with location ranges
+    :return:
+    '''
 
-        intermediate_file = "analysis/temp_mapped_methylation.tsv"
-        output_data_file = "analysis/aggregated_deconvolution_overview.csv"
-        output_deconvolution_file = "analysis/aggregated_deconvolution.csv"
-        print("--- Starting to make the aggregated deconvolution file ---")
-        atlas_df = pd.read_csv(range_atlas_file, sep='\t')
+    intermediate_file = "analysis/temp_mapped_methylation.tsv"
+    output_data_file = "analysis/aggregated_deconvolution_overview.csv"
+    output_deconvolution_file = "analysis/aggregated_deconvolution.csv"
+    print("--- Starting to make the aggregated deconvolution file ---")
+    atlas_df = pd.read_csv(range_atlas_file, sep='\t')
 
-        all_columns = atlas_df.columns.tolist()
-        unneeded_cols = ['startCpG', 'endCpG', 'target', 'direction']
-        cols_to_keep = [col for col in all_columns if
-                        col not in unneeded_cols]
-        atlas_df = atlas_df[cols_to_keep]
-        print("Top 5 rows atlas file:")
-        print(atlas_df.head)
+    all_columns = atlas_df.columns.tolist()
+    unneeded_cols = ['startCpG', 'endCpG', 'target', 'direction']
+    cols_to_keep = [col for col in all_columns if
+                    col not in unneeded_cols]
+    atlas_df = atlas_df[cols_to_keep]
+    print("Top 5 rows atlas file:")
+    print(atlas_df.head())
 
-        atlas_regions = atlas_df[['chr', 'start', 'end', 'name']]
-        atlas_bed = pybedtools.BedTool.from_dataframe(atlas_regions)
+    atlas_regions = atlas_df[['chr', 'start', 'end', 'name']]
+    atlas_bed = pybedtools.BedTool.from_dataframe(atlas_regions)
 
-        # Read in chunks
-        print(f"Reading methylation file in chunks of size {chunk_size}")
+    # Read in chunks
+    print(f"Reading methylation file in chunks of size {chunk_size}")
 
-        chunk_iterator = pd.read_csv(
-            methylation_file,
-            chunksize=chunk_size
-        )
+    chunk_iterator = pd.read_csv(
+        methylation_file,
+        chunksize=chunk_size
+    )
 
-        header_written = False
-        for i, chunk_df in enumerate(chunk_iterator):
-            print(f" - Processing chunk {i + 1} - row {i * chunk_size} to {(i + 1) * chunk_size}...")
-            chunk_df[['chr', 'start']] = chunk_df['site_id'].str.split(':', expand=True)
-            chunk_df['end'] = chunk_df['start'].astype(int) + 1
-            chunk_df_pbt = chunk_df[['chr', 'start', 'end', 'percentage']]
-            chunk_bed = pybedtools.BedTool.from_dataframe(chunk_df_pbt)
+    header_written = False
+    for i, chunk_df in enumerate(chunk_iterator):
+        print(f" - Processing chunk {i + 1} - row {i * chunk_size} to {(i + 1) * chunk_size}...")
+        chunk_df[['chr', 'start']] = chunk_df['site_id'].str.split(':', expand=True)
+        chunk_df['end'] = chunk_df['start'].astype(int) + 1
+        chunk_df_pbt = chunk_df[['chr', 'start', 'end', 'percentage']]
+        chunk_bed = pybedtools.BedTool.from_dataframe(chunk_df_pbt)
 
-            mapped_chunk_bed = chunk_bed.intersect(atlas_bed, wa=True, wb=True)
+        mapped_chunk_bed = chunk_bed.intersect(atlas_bed, wa=True, wb=True)
 
-            if len(mapped_chunk_bed) > 0:
-                map_cols = ['meth_chr', 'meth_start', 'meth_end', 'percentage',
-                            'atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
-                mapped_df = mapped_chunk_bed.to_dataframe(names=map_cols)
+        if len(mapped_chunk_bed) > 0:
+            map_cols = ['meth_chr', 'meth_start', 'meth_end', 'percentage',
+                        'atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
+            mapped_df = mapped_chunk_bed.to_dataframe(names=map_cols)
 
-                if not header_written:
-                    mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True)
-                    header_written = True
-                else:
-                    mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=False, mode='a')
+            if not header_written:
+                mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True)
+                header_written = True
+            else:
+                mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=False, mode='a')
 
-        print("--- All chunks processed ---")
-        if not os.path.exists(intermediate_file):
-            print("No overlaps found. Exiting...")
-            open(output_data_file, 'w').close()
-        else:
-            final_mapped_df = pd.read_csv(intermediate_file, sep='\t')
-            print(f"we did it! First few rows of the final mapped df (out of {len(final_mapped_df)}:")
-            print(final_mapped_df.head())
+    print("--- All chunks processed ---")
+    if not os.path.exists(intermediate_file):
+        print("No overlaps found. Exiting...")
+        open(output_data_file, 'w').close()
+    else:
+        final_mapped_df = pd.read_csv(intermediate_file, sep='\t')
+        print(f"we did it! First few rows of the final mapped df (out of {len(final_mapped_df)}:")
+        print(final_mapped_df.head())
 
-            aggregated_df = final_mapped_df.groupby(
-                ['atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
-            ).agg(
-                mean_methylation=('percentage', 'mean'),
-                cpg_count=('percentage', 'count')
-            ).reset_index()
+        aggregated_df = final_mapped_df.groupby(
+            ['atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
+        ).agg(
+            mean_methylation=('percentage', 'mean'),
+            cpg_count=('percentage', 'count')
+        ).reset_index()
 
-            aggregated_df.rename(columns={'percentage': 'mean_methylation'}, inplace=True)
+        aggregated_df.rename(columns={'percentage': 'mean_methylation'}, inplace=True)
 
-            print("--- Formatting final output and cleaning up ---")
-            aggregated_df['site_id'] = aggregated_df['atlas_chr'].astype(str) + ':' + aggregated_df[
-                'atlas_start'].astype(str) + '-' + aggregated_df['atlas_end'].astype(str)
+        print("--- Formatting final output and cleaning up ---")
+        aggregated_df['site_id'] = aggregated_df['atlas_chr'].astype(str) + ':' + aggregated_df[
+            'atlas_start'].astype(str) + '-' + aggregated_df['atlas_end'].astype(str)
 
-            print("Aggregated df head:")
-            print(aggregated_df.head())
+        print("Aggregated df head:")
+        print(aggregated_df.head())
 
-            final_df = aggregated_df[['site_id', 'atlas_name', 'mean_methylation', 'cpg_count', 'atlas_chr', 'atlas_start', 'atlas_end']]
-            final_deconvolution_df = aggregated_df[['atlas_name', 'mean_methylation']]
+        final_df = aggregated_df[
+            ['site_id', 'atlas_name', 'mean_methylation', 'cpg_count', 'atlas_chr', 'atlas_start', 'atlas_end']]
+        final_deconvolution_df = aggregated_df[['atlas_name', 'mean_methylation']]
 
-            print(f"Top 5 rows of final aggregated data (out of {len(final_df)}:")
-            print(final_df.head())
+        print(f"Top 5 rows of final aggregated data (out of {len(final_df)}:")
+        print(final_df.head())
 
-            # Save final aggregrated result
-            final_df.to_csv(output_data_file, sep=',', index=False)
-            print(f"Final aggregated data saved to {output_data_file}")
+        # Save final aggregrated result
+        final_df.to_csv(output_data_file, sep=',', index=False)
+        print(f"Final aggregated data saved to {output_data_file}")
 
-            final_deconvolution_df.to_csv(output_deconvolution_file, sep=',', index=False)
-            print(f"Final aggregated deconvolution file saved to {output_deconvolution_file}")
-
-
-
-
+        final_deconvolution_df.to_csv(output_deconvolution_file, sep=',', index=False)
+        print(f"Final aggregated deconvolution file saved to {output_deconvolution_file}")
 
 
 def format_atlas_file(atlas_file, sep='\t'):
@@ -219,11 +230,13 @@ def format_atlas_file(atlas_file, sep='\t'):
     print(atlas_df.head())
 
     all_columns = atlas_df.columns.tolist()
-    cols_to_keep = [col for col in all_columns if col not in ['chr', 'start', 'end', 'startCpG', 'endCpG', 'target', 'direction']]
+    cols_to_keep = [col for col in all_columns if
+                    col not in ['chr', 'start', 'end', 'startCpG', 'endCpG', 'target', 'direction']]
 
     atlas_df = atlas_df[cols_to_keep]
 
     atlas_df.to_csv("data/atlas/UXM_atlas_decon_ready.csv", index=False)
+
 
 def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
     """

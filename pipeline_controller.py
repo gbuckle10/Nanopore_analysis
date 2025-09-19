@@ -75,7 +75,7 @@ def run_and_log(config, command, log_path="logs/wowow.txt"):
 def run_deconvolution_submodule(config):
     print(">>> Starting the deconvolution process using the meth_atlas submodule")
 
-    atlas_file = f"{config['paths']['atlas_dir']}{config['paths']['uxm_atlas_name']}"
+    atlas_file = "data/atlas/UXM_atlas.csv"
     file_to_deconvolve = f"{config['paths']['analysis_dir']}{config['paths']['file_for_deconvolution']}"
     output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
     deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
