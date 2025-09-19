@@ -43,6 +43,8 @@ parameters:
 
     # Other basecalling settings
     batch_size: "64"
+  analysis:
+    methylation_aggregation_chunksize: '5000000'
 
 # ========================================================
 # Paths

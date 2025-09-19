@@ -216,13 +216,14 @@ def run_analysis(config):
         illumina_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_illumina']
         geco_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_genome_coordinate']
         uxm_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['uxm_atlas_name']
-
+        chunk_size = int(config['parameters']['analysis']['methylation_aggregation_chunksize'])
 
         generate_deconvolution_files(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
             output_file=file_for_decon_path,
-            range_atlas_file=uxm_atlas_file_path
+            range_atlas_file=uxm_atlas_file_path,
+            chunk_size=chunk_size
         )
 
 

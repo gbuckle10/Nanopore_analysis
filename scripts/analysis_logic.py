@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import pybedtools
 
-def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atlas_file):
+def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atlas_file, chunk_size=1000000):
     """
     Filters the Nanopore methylation data, provided in a .bed file, to retain only the
     methylation sites we can use to deconvolute. This is done by retaining only those
@@ -67,7 +67,7 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
 
     illumina_deconvolution_df = pd.read_parquet("data/methylation/data_to_deconvolute.parquet")
     '''
-    generate_aggregated_deconvolution_file("analysis/data_to_deconvolute_uxm.csv", range_atlas_file)
+    generate_aggregated_deconvolution_file("analysis/data_to_deconvolute_uxm.csv", range_atlas_file, chunk_size)
 
     #print(f"This is the first 5 rows (out of {len(illumina_deconvolution_df)} total) of the deconvolution dataframe:")
     #print(illumina_deconvolution_df.head())
@@ -76,7 +76,7 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
 
 
 
-def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file):
+def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file, chunk_size):
         '''
         Assigns each CpG site from the methylation data to a region from the
         atlas.
@@ -87,7 +87,8 @@ def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file):
         '''
 
         intermediate_file = "analysis/temp_mapped_methylation.tsv"
-        output_file = "analysis/aggregated_methylation.tsv"
+        output_data_file = "analysis/aggregated_deconvolution_overview.csv"
+        output_deconvolution_file = "analysis/aggregated_deconvolution.csv"
         print("--- Starting to make the aggregated deconvolution file ---")
         atlas_df = pd.read_csv(range_atlas_file, sep='\t')
 
@@ -103,15 +104,12 @@ def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file):
         atlas_bed = pybedtools.BedTool.from_dataframe(atlas_regions)
 
         # Read in chunks
-        # Actually process the entire thing in chunks, write to the file inside the loop.
-        chunk_size = 1000000
+        print(f"Reading methylation file in chunks of size {chunk_size}")
 
         chunk_iterator = pd.read_csv(
             methylation_file,
             chunksize=chunk_size
         )
-
-        all_chunks = []
 
         header_written = False
         for i, chunk_df in enumerate(chunk_iterator):
@@ -132,75 +130,49 @@ def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file):
                     mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True)
                     header_written = True
                 else:
-                    mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True, mode='a')
+                    mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=False, mode='a')
 
         print("--- All chunks processed ---")
         if not os.path.exists(intermediate_file):
             print("No overlaps found. Exiting...")
-            open(output_file, 'w').close()
+            open(output_data_file, 'w').close()
         else:
             final_mapped_df = pd.read_csv(intermediate_file, sep='\t')
-            print("we did it! First few rows:")
+            print(f"we did it! First few rows of the final mapped df (out of {len(final_mapped_df)}:")
             print(final_mapped_df.head())
 
             aggregated_df = final_mapped_df.groupby(
-                ['chr', 'start', 'end', 'atlas_name']
-            )['percentage'].mean().reset_index()
+                ['atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
+            ).agg(
+                mean_methylation=('percentage', 'mean'),
+                cpg_count=('percentage', 'count')
+            ).reset_index()
 
             aggregated_df.rename(columns={'percentage': 'mean_methylation'}, inplace=True)
 
             print("--- Formatting final output and cleaning up ---")
-            aggregated_df['site_id'] = aggregated_df['chr'].astype(str) + ':' + aggregated_df[
-                'start'].astype(str) + '-' + aggregated_df['end'].astype(str)
-            final_df = aggregated_df[['site_id', 'atlas_name', 'mean_methylation', 'atlas_chr', 'atlas_start', 'atlas_end']]
-            print(f"Top 5 rows of final aggregated data:")
+            aggregated_df['site_id'] = aggregated_df['atlas_chr'].astype(str) + ':' + aggregated_df[
+                'atlas_start'].astype(str) + '-' + aggregated_df['atlas_end'].astype(str)
+
+            print("Aggregated df head:")
+            print(aggregated_df.head())
+
+            final_df = aggregated_df[['site_id', 'atlas_name', 'mean_methylation', 'cpg_count', 'atlas_chr', 'atlas_start', 'atlas_end']]
+            final_deconvolution_df = aggregated_df[['atlas_name', 'mean_methylation']]
+
+            print(f"Top 5 rows of final aggregated data (out of {len(final_df)}:")
             print(final_df.head())
 
             # Save final aggregrated result
-            final_df.to_csv(output_file, sep='\t', index=False)
-            print(f"Final aggregated data saved to {output_file}")
+            final_df.to_csv(output_data_file, sep=',', index=False)
+            print(f"Final aggregated data saved to {output_data_file}")
 
-            # Remove intermediate file
-            os.remove(intermediate_file)
-            print(f"Removed intermediate file: {intermediate_file}")
-
-        '''
-        print("Top  5 rows deconvolution file:")
-        print(methylation_df.head())
-    
-    
-        print("--- Converting dataframes to BedTool objects --- ")
-    
-        print("--- Aggregating single-point methylation data into atlas regions ---")
-        aggregated_bed = atlas_bed.map(decon_bed, c=4, o='mean', null='NaN')
-    
-        mapped_bed = decon_bed.intersect(atlas_bed, wa=True, wb=True)
-    
-        map_cols = ['decon_chr', 'decon_start', 'decon_end', 'percentage', 'atlas_chr', 'atlas_start', 'atlas_end']
-        mapped_df = mapped_bed.to_dataframe(names=map_cols)
-    
-        print(f"Top 5 rows of mapped dataframe (there are {len(mapped_df)} samples mapped")
-        print(mapped_df.head())
-    
-        aggregated_df = aggregated_bed.to_dataframe(
-            names=['chr', 'start', 'end', 'mean_methylation']
-        )
-    
-        aggregated_df['site_id'] = aggregated_df['chr'].astype(str) + ':' + aggregated_df['start'].astype(str) + '-' + aggregated_df['end'].astype(str)
-    
-        all_columns = aggregated_df.columns.tolist()
-        cell_type_columns = [col for col in all_columns if col not in ['site_id']]
-        new_column_order = ['site_id'] + cell_type_columns
-        aggregated_df = aggregated_df[new_column_order]
-        aggregated_df.dropna(subset=['mean_methylation'], inplace=True)
-        '''
+            final_deconvolution_df.to_csv(output_deconvolution_file, sep=',', index=False)
+            print(f"Final aggregated deconvolution file saved to {output_deconvolution_file}")
 
 
 
-        #print(f"Top 5 rows of aggregated dataframe (where there are {len(aggregated_df)} total rows")
-        #print(aggregated_df.head())
 
-        #aggregated_df.to_csv("analysis/aggregated_deconvolution_t.csv", index=False)
 
 
 def format_atlas_file(atlas_file, sep='\t'):
