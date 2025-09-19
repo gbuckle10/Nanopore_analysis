@@ -77,93 +77,130 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, range_atl
 
 
 def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file):
-    '''
-    Assigns each CpG site from the methylation data to a region from the
-    atlas.
+        '''
+        Assigns each CpG site from the methylation data to a region from the
+        atlas.
 
-    :param deconvolution_file: Methylation dataframe containing columns 'chr', 'loc' and 'percentage'
-    :param range_atlas_file:  Atlas file with location ranges
-    :return:
-    '''
+        :param deconvolution_file: Methylation dataframe containing columns 'chr', 'loc' and 'percentage'
+        :param range_atlas_file:  Atlas file with location ranges
+        :return:
+        '''
 
-    print("--- Starting to make the aggregated deconvolution file ---")
+        intermediate_file = "analysis/temp_mapped_methylation.tsv"
+        output_file = "analysis/aggregated_methylation.tsv"
+        print("--- Starting to make the aggregated deconvolution file ---")
+        atlas_df = pd.read_csv(range_atlas_file, sep='\t')
 
-    atlas_df = pd.read_csv(range_atlas_file, sep='\t')
+        all_columns = atlas_df.columns.tolist()
+        unneeded_cols = ['startCpG', 'endCpG', 'target', 'direction']
+        cols_to_keep = [col for col in all_columns if
+                        col not in unneeded_cols]
+        atlas_df = atlas_df[cols_to_keep]
+        print("Top 5 rows atlas file:")
+        print(atlas_df.head)
 
-    all_columns = atlas_df.columns.tolist()
-    unneeded_cols = ['startCpG', 'endCpG', 'target', 'direction']
-    cols_to_keep = [col for col in all_columns if
-                    col not in unneeded_cols]
-    atlas_df = atlas_df[cols_to_keep]
+        atlas_regions = atlas_df[['chr', 'start', 'end', 'name']]
+        atlas_bed = pybedtools.BedTool.from_dataframe(atlas_regions)
 
-    # Read in chunks
-    # Actually process the entire thing in chunks, write to the file inside the loop.
-    chunk_size = 1000000
+        # Read in chunks
+        # Actually process the entire thing in chunks, write to the file inside the loop.
+        chunk_size = 1000000
 
-    chunk_iterator = pd.read_csv(
-        methylation_file,
-        chunksize=chunk_size
-    )
+        chunk_iterator = pd.read_csv(
+            methylation_file,
+            chunksize=chunk_size
+        )
 
-    processed_chunks = []
+        all_chunks = []
 
-    for i, chunk_df in enumerate(chunk_iterator):
-        print(f" - Processing chunk {i+1}...")
-        chunk_df[['chr', 'start']] = chunk_df['site_id'].str.split(':', expand=True)
-        processed_chunks.append(chunk_df)
+        header_written = False
+        for i, chunk_df in enumerate(chunk_iterator):
+            print(f" - Processing chunk {i + 1} - row {i * chunk_size} to {(i + 1) * chunk_size}...")
+            chunk_df[['chr', 'start']] = chunk_df['site_id'].str.split(':', expand=True)
+            chunk_df['end'] = chunk_df['start'].astype(int) + 1
+            chunk_df_pbt = chunk_df[['chr', 'start', 'end', 'percentage']]
+            chunk_bed = pybedtools.BedTool.from_dataframe(chunk_df_pbt)
 
-    print("Concatenating all processed chunks")
-    methylation_df = pd.concat(processed_chunks, ignore_index=True)
+            mapped_chunk_bed = chunk_bed.intersect(atlas_bed, wa=True, wb=True)
+
+            if len(mapped_chunk_bed) > 0:
+                map_cols = ['meth_chr', 'meth_start', 'meth_end', 'percentage',
+                            'atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
+                mapped_df = mapped_chunk_bed.to_dataframe(names=map_cols)
+
+                if not header_written:
+                    mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True)
+                    header_written = True
+                else:
+                    mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True, mode='a')
+
+        print("--- All chunks processed ---")
+        if not os.path.exists(intermediate_file):
+            print("No overlaps found. Exiting...")
+            open(output_file, 'w').close()
+        else:
+            final_mapped_df = pd.read_csv(intermediate_file, sep='\t')
+            print("we did it! First few rows:")
+            print(final_mapped_df.head())
+
+            aggregated_df = final_mapped_df.groupby(
+                ['chr', 'start', 'end', 'atlas_name']
+            )['percentage'].mean().reset_index()
+
+            aggregated_df.rename(columns={'percentage': 'mean_methylation'}, inplace=True)
+
+            print("--- Formatting final output and cleaning up ---")
+            aggregated_df['site_id'] = aggregated_df['chr'].astype(str) + ':' + aggregated_df[
+                'start'].astype(str) + '-' + aggregated_df['end'].astype(str)
+            final_df = aggregated_df[['site_id', 'atlas_name', 'mean_methylation', 'atlas_chr', 'atlas_start', 'atlas_end']]
+            print(f"Top 5 rows of final aggregated data:")
+            print(final_df.head())
+
+            # Save final aggregrated result
+            final_df.to_csv(output_file, sep='\t', index=False)
+            print(f"Final aggregated data saved to {output_file}")
+
+            # Remove intermediate file
+            os.remove(intermediate_file)
+            print(f"Removed intermediate file: {intermediate_file}")
+
+        '''
+        print("Top  5 rows deconvolution file:")
+        print(methylation_df.head())
+    
+    
+        print("--- Converting dataframes to BedTool objects --- ")
+    
+        print("--- Aggregating single-point methylation data into atlas regions ---")
+        aggregated_bed = atlas_bed.map(decon_bed, c=4, o='mean', null='NaN')
+    
+        mapped_bed = decon_bed.intersect(atlas_bed, wa=True, wb=True)
+    
+        map_cols = ['decon_chr', 'decon_start', 'decon_end', 'percentage', 'atlas_chr', 'atlas_start', 'atlas_end']
+        mapped_df = mapped_bed.to_dataframe(names=map_cols)
+    
+        print(f"Top 5 rows of mapped dataframe (there are {len(mapped_df)} samples mapped")
+        print(mapped_df.head())
+    
+        aggregated_df = aggregated_bed.to_dataframe(
+            names=['chr', 'start', 'end', 'mean_methylation']
+        )
+    
+        aggregated_df['site_id'] = aggregated_df['chr'].astype(str) + ':' + aggregated_df['start'].astype(str) + '-' + aggregated_df['end'].astype(str)
+    
+        all_columns = aggregated_df.columns.tolist()
+        cell_type_columns = [col for col in all_columns if col not in ['site_id']]
+        new_column_order = ['site_id'] + cell_type_columns
+        aggregated_df = aggregated_df[new_column_order]
+        aggregated_df.dropna(subset=['mean_methylation'], inplace=True)
+        '''
 
 
-    #methylation_df = pd.read_parquet(methylation_file)
-    #methylation_df[['chr', 'start']] = methylation_df['site_id'].str.split(':', expand=True)
-    print("Top 5 rows deconvolution file:")
-    print(methylation_df.head())
 
-    print("Top 5 rows atlas file:")
-    print(atlas_df.head)
+        #print(f"Top 5 rows of aggregated dataframe (where there are {len(aggregated_df)} total rows")
+        #print(aggregated_df.head())
 
-    print("--- Converting dataframes to BedTool objects --- ")
-
-    decon_points_df = methylation_df.copy()
-    decon_points_df['end'] = decon_points_df['start'].astype(int) + 1
-    decon_points_df = decon_points_df[['chr', 'start', 'end', 'percentage']]
-    decon_bed = pybedtools.BedTool.from_dataframe(decon_points_df)
-
-    atlas_regions = atlas_df[['chr', 'start', 'end']]
-    atlas_bed = pybedtools.BedTool.from_dataframe(atlas_regions)
-
-    print("--- Aggregating single-point methylation data into atlas regions ---")
-    aggregated_bed = atlas_bed.map(decon_bed, c=4, o='mean', null='NaN')
-
-    mapped_bed = decon_bed.intersect(atlas_bed, wa=True, wb=True)
-
-    map_cols = ['decon_chr', 'decon_start', 'decon_end', 'percentage', 'atlas_chr', 'atlas_start', 'atlas_end']
-    mapped_df = mapped_bed.to_dataframe(names=map_cols)
-
-    print(f"Top 5 rows of mapped dataframe (there are {len(mapped_df)} samples mapped")
-    print(mapped_df.head())
-
-    aggregated_df = aggregated_bed.to_dataframe(
-        names=['chr', 'start', 'end', 'mean_methylation']
-    )
-
-    aggregated_df['site_id'] = aggregated_df['chr'].astype(str) + ':' + aggregated_df['start'].astype(str) + '-' + aggregated_df['end'].astype(str)
-
-    all_columns = aggregated_df.columns.tolist()
-    cell_type_columns = [col for col in all_columns if col not in ['site_id']]
-    new_column_order = ['site_id'] + cell_type_columns
-    aggregated_df = aggregated_df[new_column_order]
-    aggregated_df.dropna(subset=['mean_methylation'], inplace=True)
-
-
-
-
-    print(f"Top 5 rows of aggregated dataframe (where there are {len(aggregated_df)} total rows")
-    print(aggregated_df.head())
-
-    aggregated_df.to_csv("analysis/aggregated_deconvolution.csv", index=False)
+        #aggregated_df.to_csv("analysis/aggregated_deconvolution_t.csv", index=False)
 
 
 def format_atlas_file(atlas_file, sep='\t'):
