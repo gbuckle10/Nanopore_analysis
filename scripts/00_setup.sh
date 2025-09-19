@@ -102,26 +102,28 @@ download_fast5_data() {
   echo "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
   echo "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
-  if [[ "${NUM_FAST5_FILES}" == "all" ]]; then
-    echo "INFO: Preparing to download all available .fast5 files" >&2
-    aws s3 cp ${FAST5_DOWNLOAD_URL} ${FAST5_DESTINATION_DIR} --recursive --no-sign-request --exclude "*" --include "*.fast5"
-  else
-    echo "INFO: Downloading the first ${NUM_FAST5_FILES} .fast5 files" >&2
-      aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
-    | head -n "${NUM_FAST5_FILES}" \
-    | awk "{print $4}" \
-    | while read -r filename; do
-        aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
-    done
-  fi
+<<<<<<< HEAD
+  #if [[ "${NUM_FAST5_FILES}" == "all" ]]; then
+  #  echo "INFO: Preparing to download all available .fast5 files" >&2
+  #  aws s3 cp ${FAST5_DOWNLOAD_URL} ${FAST5_DESTINATION_DIR} --recursive --no-sign-request --exclude "*" --include "*.fast5"
+  #else
+  #  echo "INFO: Downloading the first ${NUM_FAST5_FILES} .fast5 files" >&2
+  #  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
+  #  | head -n "${NUM_FAST5_FILES}" \
+  #  | awk "{print $4}" \
+  #  | while read -r filename; do
+  #      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
+  #  done
+  #fi
 
 
-  #aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
-  #| head -n "${NUM_FAST5_FILES}" \
-  #| awk "{print $4}" \
-  #| while read -r filename; do
-  #    aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
-  #done
+  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
+  | head -n "${NUM_FAST5_FILES}" \
+  | awk '{print $4}' \
+  | while read -r filename; do
+      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}" --no-sign-request || true
+  done
+
 
 
   echo "--- Fast5 input downloaded ---"
@@ -161,7 +163,7 @@ download_methylation_atlas_and_illumina_manifest(){
 
 make_directories
 install_dorado
-download_methylation_atlas_and_illumina_manifest
+#download_methylation_atlas_and_illumina_manifest
 if [[ "$SHOULD_DOWNLOAD_FAST5_FILES" == "true" ]]; then
   download_fast5_data
 fi
