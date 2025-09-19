@@ -129,14 +129,9 @@ def run_basecalling(config):
     """ Executes the basecalling script using the 01_basecalling.sh script """
     print(">>> Starting step 1: Basecalling")
     script_path = "scripts/01_basecalling.sh"
+    config_file = "config.yaml"
 
-    command = [
-        "bash", script_path,
-        config['dorado_model_name'],
-        config['model_speed'],
-        config['basecalling_modifications'],
-        config['basecalling_batch_size']
-    ]
+    command = ["bash", script_path, config_file]
 
     run_and_log(config, command)
 
@@ -145,20 +140,9 @@ def run_alignment(config):
     """ Executes the alignment script: 02_alignment.sh """
     print(">>> Starting step 2: Alignment and Indexing")
     script_path = "scripts/02_alignment.sh"
+    config_file = "config.yaml"
 
-    command = [
-        "bash", script_path,
-        config['reference_genome_dir'],
-        config['reference_genome_url'],
-        config['reference_genome_name'],
-        config['indexed_ref_gen_name'],
-        config['basecalled_output_dir'],
-        config['unaligned_bam_name'],
-        config['alignment_output_dir'],
-        config['aligned_bam_name'],
-        config['threads'],
-        config['sort_memory_limit']
-    ]
+    command = ["bash", script_path, config_file]
 
     run_and_log(config, command)
 
@@ -166,15 +150,9 @@ def run_alignment(config):
 def run_alignment_qc(config):
     print(">>> Running QC on aligned and indexed data")
     script_path = "scripts/03_alignment_qc.sh"
+    config_file = "config.yaml"
 
-    command = [
-        "bash", script_path,
-        config['alignment_output_dir'],
-        config['aligned_bam_name'],
-        config['qc_dir'],
-        config['alignment_flagstat_name'],
-        config['alignment_stats_name']
-    ]
+    command = ["bash", script_path, config_file]
 
     run_and_log(config, command)
 
@@ -182,18 +160,9 @@ def run_alignment_qc(config):
 def run_methylation_summary(config):
     print(">>> Running methylation calling")
     script_path = "scripts/04_methylation_summary.sh"
+    config_file = "config.yaml"
 
-    command = [
-        "bash", script_path,
-        config['aligned_bam_name'],
-        config['alignment_output_dir'],
-        config['methylation_bed_name'],
-        config['reference_fasta'],
-        config['threads'],
-        config['methylation_dir'],
-        config['methylation_log_file'],
-        config['reference_fasta']
-    ]
+    command = ["bash", script_path, config_file]
 
     run_and_log(config, command)
 

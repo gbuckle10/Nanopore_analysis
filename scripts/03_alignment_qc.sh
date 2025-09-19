@@ -1,10 +1,16 @@
 #!/bin/bash
 
-ALIGNED_OUTPUT_DIR=$1
-ALIGNED_BAM_NAME=$2
-QC_DIR=$3
-FLAGSTAT_NAME=$4
-ALIGNMENT_STATS_NAME=$5
+set -e
+
+CONFIG_FILE=$1
+echo ${CONFIG_FILE}
+yq eval "${CONFIG_FILE}"
+
+ALIGNED_OUTPUT_DIR=$(yq e '.paths.alignment_output_dir' "${CONFIG_FILE}")
+ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
+QC_DIR=$(yq e '.paths.qc_dir' "${CONFIG_FILE}")
+FLAGSTAT_NAME=$(yq e '.paths.alignment_flagstat_name' "${CONFIG_FILE}")
+ALIGNMENT_STATS_NAME=$(yq e '.paths.alignment_stats_name' "${CONFIG_FILE}")
 
 alignment_qc() {
   local ALIGNED_BAM="${ALIGNED_OUTPUT_DIR}${ALIGNED_BAM_NAME}"

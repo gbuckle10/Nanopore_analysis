@@ -22,6 +22,7 @@ def load_meth_df_from_bed(bed_dir):
     print(meth_df.head())
 
     meth_df.to_parquet("data/methylation/methylation_dataframe.parquet")
+    meth_df.to_csv("data/methylation/methylation_dataframe.csv", index=False)
 
     return meth_df
 

@@ -1,13 +1,16 @@
 #!/bin/bash
 
-ALIGNED_BAM_NAME=$1
-ALIGNED_BAM_DIR=$2
-METHYLATION_BED=$3
-REFERENCE_FASTA=$4
-THREADS=$5
-METHYLATION_DIR=$6
-LOG_FILE=$7
-REFERENCE_FASTA=$8
+CONFIG_FILE=$1
+echo ${CONFIG_FILE}
+yq eval "${CONFIG_FILE}"
+
+ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
+ALIGNED_BAM_DIR=$(yq e '.paths.alignment_output_dir' "${CONFIG_FILE}")
+METHYLATION_BED=$(yq e '.paths.methylation_bed_name' "${CONFIG_FILE}")
+REFERENCE_FASTA=$(yq e '.paths.reference_genome_name' "${CONFIG_FILE}")
+THREADS=$(yq e '.parameters.general.threads' "${CONFIG_FILE}")
+METHYLATION_DIR=$(yq e '.paths.methylation_dir' "${CONFIG_FILE}")
+LOG_FILE=$(yq e '.paths.methylation_log_file' "${CONFIG_FILE}")
 
 if [[ -z "${ALIGNED_BAM_NAME}" || -z "$METHYLATION_BED" || -z "$REFERENCE_FASTA" || -z "$THREADS" ]]; then
   echo "ERROR: Missing one or more required arguments." >&2

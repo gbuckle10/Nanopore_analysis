@@ -1,15 +1,19 @@
 #!/bin/bash
 
-REFERENCE_GENOME_DIR=$1
-REFERENCE_GENOME_URL=$2
-REFERENCE_GENOME_NAME=$3
-REFERENCE_GENOME_INDEX=$4
-BASECALLED_OUTPUT_DIR=$5
-UNALIGNED_BAM_NAME=$6
-ALIGNED_OUTPUT_DIR=$7
-ALIGNED_BAM_NAME=$8
-THREADS=$9
-SORT_MEMORY_LIMIT=${10}
+
+CONFIG_FILE=$1
+echo ${CONFIG_FILE}
+yq eval "${CONFIG_FILE}"
+
+REFERENCE_GENOME_URL=$(yq e '.paths.reference_genome_url' "${CONFIG_FILE}")
+REFERENCE_GENOME_NAME=$(yq e '.paths.reference_genome_name' "${CONFIG_FILE}")
+REFERENCE_GENOME_INDEX=$(yq e '.paths.indexed_ref_gen_name' "${CONFIG_FILE}")
+BASECALLED_OUTPUT_DIR=$(yq e '.paths.basecalled_output_dir' "${CONFIG_FILE}")
+UNALIGNED_BAM_NAME=$(yq e '.paths.unaligned_bam_name' "${CONFIG_FILE}")
+ALIGNED_OUTPUT_DIR=$(yq e '.paths.aligned_output_dir' "${CONFIG_FILE}")
+ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
+THREADS=$(yq e '.parameters.general.threads' "${CONFIG_FILE}")
+SORT_MEMORY_LIMIT=$(yq e '.parameters.general.sort_memory_limit' "${CONFIG_FILE}")
 
 if [ ! -f "scripts/runtime_config.sh" ]; then
   echo "ERROR: runtime_config.sh not found. Please run 'setup' step first..."

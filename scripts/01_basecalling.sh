@@ -2,17 +2,20 @@
 
 set -e
 
+CONFIG_FILE=$1
+echo ${CONFIG_FILE}
+yq eval "${CONFIG_FILE}"
+
 if [ ! -f "scripts/runtime_config.sh" ]; then
   echo "ERROR: runtime_config.sh not found. Please run 'setup' step first..."
   exit 1
 fi
 source "scripts/runtime_config.sh"
 
-# --- Arguments from python controller ---
-DORADO_MODEL_NAME=$1
-MODEL_SPEED=$2
-BASECALLING_MODIFICATIONS=$3
-BATCHSIZE=$4
+DORADO_MODEL_NAME=$(yq e '.parameters.basecalling.base_model_name' "${CONFIG_FILE}")
+MODEL_SPEED=$(yq e '.parameters.basecalling.model_speed' "${CONFIG_FILE}")
+BASECALLING_MODIFICATIONS=$(yq e '.parameters.basecalling.basecalling_modifications' "${CONFIG_FILE}")
+BATCHSIZE=$(yq e '.parameters.analysis.batch_size' "${CONFIG_FILE}")
 MODEL_DIR="models/"
 
 # --- Main script ---
