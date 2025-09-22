@@ -31,11 +31,10 @@ def run_and_capture(config, command):
         raise
 
 
-def run_and_log(config, command, log_path="logs/wowow.txt"):
+def run_and_log(config, command, log_path):
     """ Runs a command inside the conda environment and streams the output """
     conda_env = config['conda_env_name']
     full_command = ["conda", "run", "-n", conda_env] + command
-
     print(f"--- Running : {' '.join(full_command)} --- ")
 
     with open(log_path, 'w') as log_file:
@@ -59,17 +58,6 @@ def run_and_log(config, command, log_path="logs/wowow.txt"):
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
             print("--- Command successful ---\n")
-
-    '''
-    try:
-        subprocess.run(full_command, check=True, text=True)
-    except subprocess.CalledProcessError as e:
-        print(f"--- ERROR IN COMMAND ---")
-        print(f"Exit code: {e.returncode}")
-        print(f"STDOUT:\n{e.stdout}")
-        print(f"STDERR:\n{e.stderr}")
-        raise
-    '''
 
 
 def run_deconvolution_submodule(config):
@@ -114,8 +102,9 @@ def run_setup(config):
     config_file = "config.yaml"
 
     command = ["bash", script_path, config_file]
+    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command)
+    run_and_log(config, command, log_filepath)
 
     # if not dorado_path or not os.path.exists(dorado_path):
     #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
@@ -132,8 +121,9 @@ def run_basecalling(config):
     config_file = "config.yaml"
 
     command = ["bash", script_path, config_file]
+    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command)
+    run_and_log(config, command, log_filepath)
 
 
 def run_alignment(config):
@@ -143,8 +133,9 @@ def run_alignment(config):
     config_file = "config.yaml"
 
     command = ["bash", script_path, config_file]
+    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command)
+    run_and_log(config, command, log_filepath)
 
 
 def run_alignment_qc(config):
@@ -153,8 +144,9 @@ def run_alignment_qc(config):
     config_file = "config.yaml"
 
     command = ["bash", script_path, config_file]
+    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command)
+    run_and_log(config, command, log_filepath)
 
 
 def run_methylation_summary(config):
@@ -163,8 +155,9 @@ def run_methylation_summary(config):
     config_file = "config.yaml"
 
     command = ["bash", script_path, config_file]
+    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command)
+    run_and_log(config, command, log_filepath)
 
 
 def run_analysis(config):

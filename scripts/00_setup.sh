@@ -116,7 +116,7 @@ download_fast5_data() {
   #fi
 
 
-  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
+  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request --quiet \
   | head -n "${NUM_FAST5_FILES}" \
   | awk '{print $4}' \
   | while read -r filename; do
