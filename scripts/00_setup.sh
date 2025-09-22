@@ -102,7 +102,6 @@ download_fast5_data() {
   echo "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
   echo "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
-<<<<<<< HEAD
   #if [[ "${NUM_FAST5_FILES}" == "all" ]]; then
   #  echo "INFO: Preparing to download all available .fast5 files" >&2
   #  aws s3 cp ${FAST5_DOWNLOAD_URL} ${FAST5_DESTINATION_DIR} --recursive --no-sign-request --exclude "*" --include "*.fast5"
