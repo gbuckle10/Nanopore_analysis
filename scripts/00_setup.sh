@@ -102,28 +102,40 @@ download_fast5_data() {
   echo "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
   echo "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
-  #if [[ "${NUM_FAST5_FILES}" == "all" ]]; then
-  #  echo "INFO: Preparing to download all available .fast5 files" >&2
-  #  aws s3 cp ${FAST5_DOWNLOAD_URL} ${FAST5_DESTINATION_DIR} --recursive --no-sign-request --exclude "*" --include "*.fast5"
-  #else
-  #  echo "INFO: Downloading the first ${NUM_FAST5_FILES} .fast5 files" >&2
-  #  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
-  #  | head -n "${NUM_FAST5_FILES}" \
-  #  | awk "{print $4}" \
-  #  | while read -r filename; do
-  #      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}""$filename" --no-sign-request || true
-  #  done
-  #fi
+  echo "INFO: Getting list of available files from s3." >&2
+  ALL_S3_FILENAMES=$(aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request | grep '\.fast5' | awk '{print $4}')
 
+  if [["${NUM_FAST5_FILES}" == "all" ]]; then
+    echo "INFO: Preparing to download all available files." >&2
+    filenames_to_download="${ALL_S3_FILES}"
+  else
+    echo "INFO: Preparing to download the first ${NUM_FAST5_FILES} files." >&2
+    filenames_to_download=$(echo "${ALL_S3_FILENAMES}" | head -n "${NUM_FAST5_FILES}")
+  fi
 
-  aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request --quiet \
-  | head -n "${NUM_FAST5_FILES}" \
-  | awk '{print $4}' \
-  | while read -r filename; do
-      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}" --no-sign-request || true
+  echo "INFO: Starting download process..." >&2
+  echo "${filenames_to_download}" | while read -r filename; do
+    # skip any empty lines
+    if [[ -z "$filename" ]]; then
+      continue
+    fi
+
+    local destination = "${FAST5_DESTINATION_DIR}"
+    if [ ! -f "$destination" ]; then
+      echo "Downloading ${filename}..." >&2
+      aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${destination}" --no-sign-request --quiet
+    else
+      echo "Skipping ${filename}, already exists." >&2
+    fi
   done
 
 
+  #aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
+  #| head -n "${NUM_FAST5_FILES}" \
+  #| awk '{print $4}' \
+  #| while read -r filename; do
+  #    aws s3 cp "${FAST5_DOWNLOAD_URL}${filename}" "${FAST5_DESTINATION_DIR}" --no-sign-request --quiet || true
+  #done
 
   echo "--- Fast5 input downloaded ---"
 
@@ -134,7 +146,7 @@ convert_fast5_to_pod5() {
 
   mkdir -p "${POD5_DIR}"
 
-  pod5 convert fast5 "${FAST5_DESTINATION_DIR}" --output "${POD5_DIR}/all_reads.pod5" --force-overwrite
+  pod5 convert fast5 "${FAST5_DESTINATION_DIR}" --output "${POD5_DIR}/all_pod.pod5" --force-overwrite
 }
 
 download_methylation_atlas_and_illumina_manifest(){
@@ -169,4 +181,3 @@ fi
 if [[ "$SHOULD_CONVERT_FAST5_TO_POD5" == "true" ]]; then
   convert_fast5_to_pod5
 fi
-

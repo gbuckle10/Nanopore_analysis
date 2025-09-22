@@ -2,15 +2,13 @@
 
 
 CONFIG_FILE=$1
-echo ${CONFIG_FILE}
-yq eval "${CONFIG_FILE}"
 
 REFERENCE_GENOME_URL=$(yq e '.paths.reference_genome_url' "${CONFIG_FILE}")
 REFERENCE_GENOME_NAME=$(yq e '.paths.reference_genome_name' "${CONFIG_FILE}")
 REFERENCE_GENOME_INDEX=$(yq e '.paths.indexed_ref_gen_name' "${CONFIG_FILE}")
 BASECALLED_OUTPUT_DIR=$(yq e '.paths.basecalled_output_dir' "${CONFIG_FILE}")
+ALIGNED_OUTPUT_DIR=$(yq e '.paths.alignment_output_dir' "${CONFIG_FILE}")
 UNALIGNED_BAM_NAME=$(yq e '.paths.unaligned_bam_name' "${CONFIG_FILE}")
-ALIGNED_OUTPUT_DIR=$(yq e '.paths.aligned_output_dir' "${CONFIG_FILE}")
 ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
 THREADS=$(yq e '.parameters.general.threads' "${CONFIG_FILE}")
 SORT_MEMORY_LIMIT=$(yq e '.parameters.general.sort_memory_limit' "${CONFIG_FILE}")
@@ -29,7 +27,7 @@ download_reference_genome() {
 
   echo "Checking for reference genome"
 
-  REF_FASTA="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_NAME}"
+  REF_FASTA="reference_genomes/${REFERENCE_GENOME_NAME}"
 
 
   # Check to see whether the file already exists.
@@ -52,8 +50,8 @@ download_reference_genome() {
 }
 
 index_reference_genome() {
-  REF_FASTA="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_NAME}"
-  REF_MMI="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_INDEX}"
+  REF_FASTA="reference_genomes/${REFERENCE_GENOME_NAME}"
+  REF_MMI="reference_genomes/${REFERENCE_GENOME_INDEX}"
 
   echo "Checking for reference index at ${REF_MMI}"
   if [ ! -f "${REF_MMI}" ]; then
@@ -68,7 +66,7 @@ index_reference_genome() {
 align_and_index() {
   # In the end it'd be good to have the option to align and basecall at once, or optionally do the two separately.
   local UNALIGNED_BAM="${BASECALLED_OUTPUT_DIR}/${UNALIGNED_BAM_NAME}"
-  local REFERENCE_INDEX="${REFERENCE_GENOME_DIR}/${REFERENCE_GENOME_INDEX}"
+  local REFERENCE_INDEX="reference_genomes/${REFERENCE_GENOME_INDEX}"
   local ALIGNED_BAM="${ALIGNED_OUTPUT_DIR}/${ALIGNED_BAM_NAME}"
 
 
@@ -85,7 +83,7 @@ align_and_index() {
   echo "INFO: Alignment and indexing finished successfully."
 
   # To make sure the alignment worked well, you can use something like
-  # samtools view data/alignment_output/aligned.sorted.bam | grep 'Mm:Z:' | head -n 5
+  # samtools view data/alignment_output/aligned.sorted.bam | grep 'MM:Z:' | head -n 5
 
 
 }

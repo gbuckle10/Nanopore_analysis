@@ -10,15 +10,15 @@ conda_env_name: "nanopore_analysis"
 pipeline_control:
   run_steps:
     #- setup
-    - basecalling
-    #- align
+    #- basecalling
+    - align
     #- align_qc
     #- methylation_summary
-    - analysis
+    #- analysis
 
   run_setup_tasks:
-    download_fast5_data: true
-    convert_fast5_to_pod5: true
+    download_fast5_data: false
+    convert_fast5_to_pod5: false
 
 # ========================================================
 # Parameters
@@ -28,7 +28,7 @@ parameters:
   general:
     threads: "2"
     sort_memory_limit: "2G"
-    log_name: "test_log.txt"
+    log_name: "twy_log.txt"
   setup:
     dorado_version: "0.9.6"
     num_fast5_files: "5"
@@ -62,7 +62,6 @@ paths:
     - "results/"
     - "data/"
     - "logs/"
-    - "wow/"
 
 
   # --- External Data URLs ---
@@ -85,8 +84,8 @@ paths:
   qc_dir: "data/alignment_qc/"
   reference_genome_name: "hg38.fa"
   indexed_ref_gen_name: "hg38.mmi"
-  unaligned_bam_name: "newcalls.bam"
-  aligned_bam_name: "taken_alignment.bam"
+  unaligned_bam_name: "newcalls2.bam"
+  aligned_bam_name: "alignment_2.bam"
   alignment_flagstat_name: "alignment.flagstat.txt"
   alignment_stats_name: "alignment.stats.txt"
 

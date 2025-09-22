@@ -37,7 +37,7 @@ def run_and_log(config, command, log_path):
     full_command = ["conda", "run", "-n", conda_env] + command
     print(f"--- Running : {' '.join(full_command)} --- ")
 
-    with open(log_path, 'w') as log_file:
+    with open(log_path, 'a') as log_file:
         process = subprocess.Popen(
             full_command,
             stdout=subprocess.PIPE,
@@ -227,7 +227,7 @@ def main():
         run_setup(config)
     if 'basecalling' in steps_to_run:
         run_basecalling(config)
-    if 'alignment' in steps_to_run:
+    if 'align' in steps_to_run:
         run_alignment(config)
     if 'methylation_summary' in steps_to_run:
         run_methylation_summary(config)
@@ -238,4 +238,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

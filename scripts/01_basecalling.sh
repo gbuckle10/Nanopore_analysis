@@ -51,7 +51,7 @@ download_dorado_model() {
 
 basecalling_pod5() {
   echo "Adding dorado to the path"
-  local POD5_INPUT="data/pod5_output/all_reads.pod5"
+  local POD5_INPUT="data/pod5_output/all_pod.pod5"
   local BASECALLED_OUTPUT="data/basecalled_output/calls.bam"
 
   # ---- You need to add the download_dorado_model here
@@ -59,14 +59,14 @@ basecalling_pod5() {
   # ---- You could also make it so that the alignment and basecalling is done at once. That should be the next thing to test.
 
   #"${DORADO_EXECUTABLE}" basecaller "${MODEL_SPEED},${BASECALLING_MODIFICATIONS}" --modified-bases "${BASECALLING_MODIFICATIONS}" --batchsize "${BATCHSIZE}" data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
-  "${DORADO_EXECUTABLE}" basecaller fast,5mCG_5hmCG data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
+  "${DORADO_EXECUTABLE}" basecaller fast,5mCG_5hmCG data/pod5_output/all_pod.pod5 --batchsize 64  > data/basecalled_output/newcalls2.bam
   #"${DORADO_EXECUTABLE}" basecaller fast --mpd5mCG_5hmCG --batchsize 64 data/pod5_output/all_reads.pod5 > data/basecalled_output/newcalls.bam
 
   # Output bam file can be checked out with samtools - if we want to see whether there's any methylation in the bam file use
-  # samtools view path/to/file | grep 'Mm:Z:' | head -n 5
+  # samtools view path/to/file | grep 'MM:Z:' | head -n 5
 
 }
 
 
-download_dorado_model
+#download_dorado_model
 basecalling_pod5
