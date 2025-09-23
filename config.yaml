@@ -9,12 +9,12 @@ conda_env_name: "nanopore_analysis"
 # ========================================================
 pipeline_control:
   run_steps:
-    #- setup
-    #- basecalling
+    - setup
+    - basecalling
     #- align
     #- align_qc
     #- methylation_summary
-    - analysis
+    #- analysis
 
   run_setup_tasks:
     download_fast5_data: false
