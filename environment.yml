@@ -24,12 +24,10 @@ dependencies:
     - pandas
     - scipy
     - matplotlib
+    - colorlog
   # --- Conda Packages ---
   - minimap2
   - samtools
   - pod5
   - typing-extensions
   - modkit
-
-
-

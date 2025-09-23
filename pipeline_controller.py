@@ -1,8 +1,9 @@
 import subprocess
 import sys
 import yaml
+import logging
 from scripts.analysis_logic import *
-
+from scripts.utils.logger import setup_logger
 
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
@@ -31,34 +32,39 @@ def run_and_capture(config, command):
         raise
 
 
-def run_and_log(config, command, log_path):
-    """ Runs a command inside the conda environment and streams the output """
+def run_and_log(config, command):
+    """
+    Runs a command inside the conda environment, captures the output in real time and logs it using the
+    'pipeline' logger
+    """
+    # Load the logger
+    logger = logging.getLogger("pipeline")
+
+    # Build command with the conda wrapper
     conda_env = config['conda_env_name']
     full_command = ["conda", "run", "-n", conda_env] + command
-    print(f"--- Running : {' '.join(full_command)} --- ")
+    logger.info(f"Executing command: {' '.join(full_command)}")
 
-    with open(log_path, 'a') as log_file:
-        process = subprocess.Popen(
+    try:
+        with subprocess.Popen(
             full_command,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
             universal_newlines=True
-        )
+        ) as process:
+            if process.stdout:
+                for line in iter(process.stdout.readline, ''):
+                    logger.info(line.strip())
 
-        for line in process.stdout:
-            log_file.write(line)
-            print(line, end='')
-            sys.stdout.flush()
-
-        process.wait()
         if process.returncode != 0:
-            print(f"\n--- ERROR in command. Check log for details: {log_path} ---")
+            print(f"\n--- ERROR in command. Check log for details ---")
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
-            print("--- Command successful ---\n")
-
+            logger.info("Command completed successfully")
+    except FileNotFoundError:
+        logger.error(f"Command not found: {full_command[0]}. Ensure conda is installed and in PATH")
 
 def run_deconvolution_submodule(config):
     print(">>> Starting the deconvolution process using the meth_atlas submodule")
@@ -97,14 +103,15 @@ def run_deconvolution_submodule(config):
 
 def run_setup(config):
     """ Executes the 00_setup.sh script """
-    print(">>> Starting step 0: Setup")
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting Step 0: Setup")
+
     script_path = "scripts/00_setup.sh"
     config_file = "config.yaml"
-
     command = ["bash", script_path, config_file]
-    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command, log_filepath)
+    run_and_log(config, command)
 
     # if not dorado_path or not os.path.exists(dorado_path):
     #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
@@ -116,48 +123,51 @@ def run_setup(config):
 
 def run_basecalling(config):
     """ Executes the basecalling script using the 01_basecalling.sh script """
-    print(">>> Starting step 1: Basecalling")
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting step 1: Basecalling")
+
     script_path = "scripts/01_basecalling.sh"
     config_file = "config.yaml"
-
     command = ["bash", script_path, config_file]
-    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command, log_filepath)
-
+    run_and_log(config, command)
 
 def run_alignment(config):
     """ Executes the alignment script: 02_alignment.sh """
-    print(">>> Starting step 2: Alignment and Indexing")
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting step 2: Alignment and Indexing")
+
     script_path = "scripts/02_alignment.sh"
     config_file = "config.yaml"
-
     command = ["bash", script_path, config_file]
-    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command, log_filepath)
+    run_and_log(config, command)
 
 
 def run_alignment_qc(config):
-    print(">>> Running QC on aligned and indexed data")
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Running QC on aligned and indexed data")
+
     script_path = "scripts/03_alignment_qc.sh"
     config_file = "config.yaml"
-
     command = ["bash", script_path, config_file]
-    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command, log_filepath)
+    run_and_log(config, command)
 
 
 def run_methylation_summary(config):
-    print(">>> Running methylation calling")
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting step 4: Methylation Summary")
+
     script_path = "scripts/04_methylation_summary.sh"
     config_file = "config.yaml"
-
     command = ["bash", script_path, config_file]
-    log_filepath = "logs/" + config['parameters']['general']['log_name']
 
-    run_and_log(config, command, log_filepath)
+    run_and_log(config, command)
 
 
 def run_analysis(config):
@@ -166,8 +176,9 @@ def run_analysis(config):
     arrange the data in the bed file in such a way that it can be compared to the
     meth_atlas.
     """
-
-    print(">>> Starting analysis workflow")
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting analysis workflow")
 
     try:
 
@@ -210,6 +221,9 @@ def main():
     """ Main entry point for the pipeline controller """
     config = load_config()
 
+    LOG_FILE = 'logs/'+config['parameters']['general']['log_name']
+    logger = setup_logger(log_file=LOG_FILE)
+
     try:
         steps_to_run = config['pipeline_control']['run_steps']
     except (FileNotFoundError, KeyError) as e:
@@ -221,7 +235,8 @@ def main():
         print("Error, there aren't any steps for me to run. Check config.yaml.")
         sys.exit(1)
 
-    print(f"--- Pipeline will execute the following steps: {steps_to_run} ---")
+    logger.info('--- Pipeline Started ---')
+    logger.info(f"--- Pipeline will execute the following steps: {steps_to_run} ---")
 
     if 'setup' in steps_to_run:
         run_setup(config)
