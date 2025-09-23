@@ -73,6 +73,7 @@ paths:
   # Raw data
   fast5_input_dir: "data/fast5_input/"
   pod5_dir: "data/pod5_output/"
+  pod5_name: "all_reads.pod5"
 
   # Step 0: Setup output
 
