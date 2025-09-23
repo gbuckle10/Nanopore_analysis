@@ -75,8 +75,8 @@ align_and_index() {
 
   index_reference_genome
 
-  "${DORADO_EXECUTABLE}" aligner -t 1 "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
-  | samtools sort -@ ${THREADS} -m ${SORT_MEMORY_LIMIT} -o "${ALIGNED_BAM}"
+  "${DORADO_EXECUTABLE}" aligner -t "${THREADS}" "${REFERENCE_INDEX}" "${UNALIGNED_BAM}" \
+  | samtools sort -@ "${THREADS}" -m "${SORT_MEMORY_LIMIT}" -o "${ALIGNED_BAM}"
 
   samtools index "${ALIGNED_BAM}"
 

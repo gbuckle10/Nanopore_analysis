@@ -21,12 +21,14 @@ echo "INFO: Starting modkit pileup to summarise methylation frequencies..." >&2
 mkdir -p "$(dirname "${METHYLATION_BED}")"
 
 index_genome() {
-  if [ -f "${REFERENCE_FASTA}.fai" ]; then
+
+  echo "Looking for reference file at reference_genomes/${REFERENCE_FASTA}.fai".
+  if [ -f "reference_genomes/${REFERENCE_FASTA}.fai" ]; then
     echo "Reference file ${REFERENCE_FASTA}.fai already exists, so we will skip the download"
     return 0
   fi
   echo "Indexing genome to an fai file."
-  samtools faidx "$REFERENCE_FASTA"
+  samtools faidx "reference_genomes/$REFERENCE_FASTA"
 }
 
 methylation_pileup() {

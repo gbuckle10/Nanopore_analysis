@@ -71,6 +71,9 @@ def generate_gc_illumina_deconvolution_file(methylation_df, manifest_df):
 
 def generate_uxm_deconvolution_file(methylation_df):
 
+    print("Generating uxm deconvolution file from dataframe.")
+    print("Top 5 rows of methylation dataframe:")
+    print(methylation_df.head())
     uxm_deconvolution_df = methylation_df[['site_id', 'percentage']]
 
     #uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
