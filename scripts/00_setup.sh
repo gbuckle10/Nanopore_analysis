@@ -30,14 +30,21 @@ check_vars \
   "SHOULD_CONVERT_FAST5_TO_POD5"
 
 make_directories() {
-  log_info "--- Creating directories ---"
-  DIRECTORIES_TO_CREATE=$(yq '.paths.core_directories[]' "$CONFIG_FILE")
+  log_info "--- Creating core directory structure ---"
+
+  # Read the list of directories from the config file into an array
+  mapfile -d DIRECTORIES_TO_CREATE < <(yq '.paths.core_directories[]' "$CONFIG_FILE")
+
+  if [ ${#DIRECTORIES_TO_CREATE[@]} -eq 0 ]; then
+    log_error "Could not read core_directories from config file. Aborting."
+    exit 1
+  fi
 
   for dir in ${DIRECTORIES_TO_CREATE}; do
     mkdir -p "${dir}"
   done
 
-  log_info "Created top level directories"
+  log_info "Created core directory structure."
 
 
 }

@@ -39,8 +39,6 @@ if [[ -z "${ALIGNED_BAM_NAME}" || -z "$METHYLATION_BED" || -z "$REFERENCE_FASTA"
   exit 1
 fi
 
-mkdir -p "$(dirname "${METHYLATION_BED}")"
-
 index_genome() {
 
   log_info "Looking for reference file at ${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}.fai".
@@ -81,8 +79,8 @@ methylation_pileup() {
     --filter-threshold 0.667
     --cpg
     --force-allow-implicit
-    --ref "${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}"
-    --log-filepath "${LOG_FILE}"
+    --ref "${REFERENCE_GENOME_DIR}$REFERENCE_FASTA"
+    --log-filepath "logs/${LOG_FILE}"
   )
   log_info "Generating bedMethyl file with command: ${pileup_cmd[*]}"
 

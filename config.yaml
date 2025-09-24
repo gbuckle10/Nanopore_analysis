@@ -60,6 +60,12 @@ paths:
     - "models/"
     - "results/"
     - "data/"
+    - "data/alignment_output/"
+    - "data/atlas/"
+    - "data/basecalled_output/"
+    - "data/fast5_input/"
+    - "data/methylation/"
+    - "data/pod5_output/"
     - "logs/"
 
 

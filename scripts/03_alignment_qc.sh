@@ -32,9 +32,6 @@ check_vars \
 alignment_qc() {
   local ALIGNED_BAM="${ALIGNED_OUTPUT_DIR}${ALIGNED_BAM_NAME}"
 
-  # Make QC output directory
-  mkdir -p "${QC_DIR}"
-
   # --- Summary with flagstat ---
   local flagstat_report="${QC_DIR}${FLAGSTAT_NAME}"
   log_info "Alignment summary will be saved to ${flagstat_report}"

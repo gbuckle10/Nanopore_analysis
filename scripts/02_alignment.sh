@@ -93,7 +93,6 @@ align_and_index() {
 
 
   log_info "--- Starting alignment ---"
-  mkdir -p "data/alignment_output"
 
   index_reference_genome
 
