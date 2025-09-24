@@ -1,34 +1,56 @@
 #!/bin/bash
+# Exit on error
+set -e
+
+# Check to make sure that the runtime_config is there.
+if [ ! -f "scripts/runtime_config.sh" ]; then
+  log_error "ERROR: runtime_config.sh not found. Please run 'setup' step first..."
+  exit 1
+fi
+
+# Source the logging utility and runtime_config
+# Assumes that logging.sh is in the utils folder of the current folder.
+source "$(dirname "$0")/utils/logging.sh"
+source "scripts/runtime_config.sh"
 
 CONFIG_FILE=$1
-
 ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
 ALIGNED_BAM_DIR=$(yq e '.paths.alignment_output_dir' "${CONFIG_FILE}")
 METHYLATION_BED=$(yq e '.paths.methylation_bed_name' "${CONFIG_FILE}")
 REFERENCE_FASTA=$(yq e '.paths.reference_genome_name' "${CONFIG_FILE}")
 THREADS=$(yq e '.parameters.general.threads' "${CONFIG_FILE}")
 METHYLATION_DIR=$(yq e '.paths.methylation_dir' "${CONFIG_FILE}")
+REFERENCE_GENOME_DIR="reference_genomes/"
 LOG_FILE=$(yq e '.paths.methylation_log_file' "${CONFIG_FILE}")
 
 if [[ -z "${ALIGNED_BAM_NAME}" || -z "$METHYLATION_BED" || -z "$REFERENCE_FASTA" || -z "$THREADS" ]]; then
-  echo "ERROR: Missing one or more required arguments." >&2
-  echo "Usage: $0 <aligned_bam> <output_bed> <ref_fasta> <threads> [log_file]" >&2
+  log_error "Missing one or more required arguments." >&2
+  log_error "Usage: $0 <aligned_bam> <output_bed> <ref_fasta> <threads> [log_file]" >&2
   exit 1
 fi
-
-echo "INFO: Starting modkit pileup to summarise methylation frequencies..." >&2
 
 mkdir -p "$(dirname "${METHYLATION_BED}")"
 
 index_genome() {
 
-  echo "Looking for reference file at reference_genomes/${REFERENCE_FASTA}.fai".
-  if [ -f "reference_genomes/${REFERENCE_FASTA}.fai" ]; then
-    echo "Reference file ${REFERENCE_FASTA}.fai already exists, so we will skip the download"
+  log_info "Looking for reference file at ${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}.fai".
+  if [ -f "${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}.fai" ]; then
+    log_info "Reference file ${REFERENCE_FASTA}.fai already exists, so we will skip the download"
     return 0
   fi
-  echo "Indexing genome to an fai file."
-  samtools faidx "reference_genomes/$REFERENCE_FASTA"
+  log_info "Indexing genome to ${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}.fai."
+
+
+  local index_cmd=(
+    "samtools"
+    "faidx"
+    "${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}"
+  )
+
+  log_info "Executing indexing command: ${index_cmd[*]}"
+  "${index_cmd[@]}"
+
+  log_info "Index created at ${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}.fai"
 }
 
 methylation_pileup() {
@@ -37,13 +59,27 @@ methylation_pileup() {
   PATH_TO_OUTPUT_BED="${METHYLATION_DIR}${METHYLATION_BED}"
 
 
-  echo "Running methylation pileup on ${PATH_TO_ALIGNED_BAM}"
-  echo "Sending data to ${PATH_TO_OUTPUT_BED}"
+  log_info "Running methylation pileup on ${PATH_TO_ALIGNED_BAM}"
+  log_info "Sending data to ${PATH_TO_OUTPUT_BED}"
 
-  # --filter-threshold 0.667 is the same as -a 0.333 -b 0.667 in modbam2bed
-  modkit pileup "${PATH_TO_ALIGNED_BAM}" "${PATH_TO_OUTPUT_BED}" --filter-threshold 0.667 --cpg --force-allow-implicit --ref "$REFERENCE_FASTA" --log-filepath "${LOG_FILE}"
+  # Define command
+  local pileup_cmd=(
+    "modkit"
+    "pileup"
+    "${PATH_TO_ALIGNED_BAM}"
+    "${PATH_TO_OUTPUT_BED}"
+    --filter-threshold 0.667
+    --cpg
+    --force-allow-implicit
+    --ref "$REFERENCE_FASTA"
+    --log-filepath "${LOG_FILE}"
+  )
+  log_info "Generating bedMethyl file with command: ${pileup_cmd[*]}"
 
-  echo "modkit done with methylation summary"
+  # Run command
+  "${pileup_cmd[@]}"
+
+  log_info "Pileup completed"
 }
 
 index_genome
