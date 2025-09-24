@@ -2,12 +2,6 @@
 
 # scripts/utils/logging.sh
 
-# ANSI colour codes
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
 # Print a formatted log message to stderr
 log_info() {
   #local message="$1"
@@ -22,3 +16,14 @@ log_warn() {
 log_error() {
   echo "[Bash] ERROR: $1" >&2
 }
+
+handle_error() {
+  local exit_code=$?
+  local line_number=$1
+  local failed_command="${BASH_COMMAND}"
+
+  log_error "Command failed on line ${line_number} with exit code ${exit_code}"
+  log_error "Command that failed: '${failed_command}'"
+}
+
+trap 'handle_error $LINENO' ERR

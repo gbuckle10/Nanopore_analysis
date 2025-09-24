@@ -58,14 +58,19 @@ def run_and_log(config, command):
             if process.stdout:
                 for line in iter(process.stdout.readline, ''):
                     logger.info(line.strip())
-
         if process.returncode != 0:
-            print(f"\n--- ERROR in command. Check log for details ---")
+            logger.error(f"Bash script failed. See logs above for specific error.")
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
             logger.info("Command completed successfully")
+    except subprocess.CalledProcessError as e:
+        raise e
     except FileNotFoundError:
-        logger.error(f"Command not found: {full_command[0]}. Ensure conda is installed and in PATH")
+        logger.critical(f"Command not found: {full_command[0]}. Ensure conda is installed and in PATH")
+        raise
+    except Exception as e:
+        logger.critical(f"An unexpected error occurred while running subprocess: {e}")
+        raise
 
 def run_deconvolution_submodule(config):
     print(">>> Starting the deconvolution process using the meth_atlas submodule")

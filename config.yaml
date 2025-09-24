@@ -11,14 +11,14 @@ pipeline_control:
   run_steps:
     - setup
     - basecalling
-    #- align
-    #- align_qc
-    #- methylation_summary
+    - align
+    - align_qc
+    - methylation_summary
     #- analysis
 
   run_setup_tasks:
-    download_fast5_data: false
-    convert_fast5_to_pod5: false
+    download_fast5_data: true
+    convert_fast5_to_pod5: true
 
 # ========================================================
 # Parameters
