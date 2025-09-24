@@ -81,7 +81,7 @@ methylation_pileup() {
     --filter-threshold 0.667
     --cpg
     --force-allow-implicit
-    --ref "$REFERENCE_FASTA"
+    --ref "${REFERENCE_GENOME_DIR}${REFERENCE_FASTA}"
     --log-filepath "${LOG_FILE}"
   )
   log_info "Generating bedMethyl file with command: ${pileup_cmd[*]}"
