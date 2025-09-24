@@ -2,6 +2,7 @@ import subprocess
 import sys
 import yaml
 import logging
+from collections import deque
 from datetime import datetime
 from scripts.analysis_logic import *
 from scripts.utils.logger import setup_logger
@@ -10,27 +11,6 @@ def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
     with open(config_file, 'r') as f:
         return yaml.safe_load(f)
-
-
-def run_and_capture(config, command):
-    """ Runs a command inside the conda environment and stores the output as a variable"""
-    conda_env = config['conda_env_name']
-
-    full_command = ["conda", "run", "-n", conda_env] + command
-
-    print(f"--- Running : {' '.join(full_command)} --- ")
-
-    try:
-        result = subprocess.run(full_command, check=True, capture_output=True, text=True)
-        if result.stderr:
-            print(result.stderr.strip())
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"--- ERROR IN COMMAND ---")
-        print(f"Exit code: {e.returncode}")
-        print(f"STDOUT:\n{e.stdout}")
-        print(f"STDERR:\n{e.stderr}")
-        raise
 
 
 def run_and_log(config, command):
@@ -46,6 +26,8 @@ def run_and_log(config, command):
     full_command = ["conda", "run", "-n", conda_env] + command
     logger.info(f"Executing command: {' '.join(full_command)}")
 
+    last_n_lines = deque(maxlen=20)
+
     try:
         with subprocess.Popen(
             full_command,
@@ -57,9 +39,16 @@ def run_and_log(config, command):
         ) as process:
             if process.stdout:
                 for line in iter(process.stdout.readline, ''):
-                    logger.info(line.strip())
+                    clean_line = line.strip()
+                    logger.info(clean_line)
+                    last_n_lines.append(clean_line)
         if process.returncode != 0:
-            logger.error(f"Bash script failed. See logs above for specific error.")
+            logger.error(f"Bash script failed with exit code {process.returncode}.")
+            logger.error("--- Start of error output ---")
+            for line in last_n_lines:
+                logger.error(line)
+            logger.error("--- End of error output ---")
+
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
             logger.info("Command completed successfully")
