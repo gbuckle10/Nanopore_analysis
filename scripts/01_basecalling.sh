@@ -49,6 +49,8 @@ basecalling_pod5() {
   local POD5_INPUT="${POD5_DIR}${POD5_NAME}"
   local BASECALLED_OUTPUT="${BASECALLING_DIR}${BASECALLED_FILE}"
 
+  mkdir -p "${BASECALLING_DIR}"
+
   #  download_dorado_model
   # ---- You could also make it so that the alignment and basecalling is done at once. That should be the next thing to test.
 
