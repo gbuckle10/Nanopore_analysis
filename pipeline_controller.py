@@ -4,7 +4,7 @@ import yaml
 import logging
 from collections import deque
 from datetime import datetime
-from scripts.analysis_logic import *
+from scripts.deconvolution_prep import *
 from scripts.utils.logger import setup_logger
 
 def load_config(config_file="config.yaml"):
@@ -191,7 +191,7 @@ def run_analysis(config):
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
             output_file=file_for_decon_path,
-            range_atlas_file=uxm_atlas_file_path,
+            uxm_atlas_file=uxm_atlas_file_path,
             chunk_size=chunk_size
         )
 
