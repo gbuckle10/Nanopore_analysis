@@ -68,11 +68,11 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, uxm_atlas
     output_dir = Path("data/processed/")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    illumina_deconvolution_path = "data/processed/data_to_deconvolute_illumina.csv"
-    gc_illumina_deconvolution_path = "data/processed/data_to_deconvolute_geco.csv"
-    uxm_deconvolution_path = "data/processed/data_to_deconvolute_uxm.csv"
-    uxm_aggregated_path = "data/processed/data_to_deconvolute_uxm_aggregated.csv"
-    uxm_aggregated_intermediate = "data/processed/temp_uxm_intersections.tsv"
+    illumina_deconvolution_path = output_dir / "data_to_deconvolute_illumina.csv"
+    gc_illumina_deconvolution_path = output_dir / "data_to_deconvolute_geco.csv"
+    uxm_deconvolution_path = output_dir / "data_to_deconvolute_uxm.csv"
+    uxm_aggregated_path = output_dir / "data_to_deconvolute_uxm_aggregated.csv"
+    uxm_aggregated_intermediate = output_dir / "temp_uxm_intersections.tsv"
 
     all_results = {"illumina": [], "geco": []}
 
