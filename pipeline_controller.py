@@ -244,6 +244,8 @@ def main():
         run_basecalling(config)
     if 'align' in steps_to_run:
         run_alignment(config)
+    if 'align_qc' in steps_to_run:
+        run_alignment_qc(config)
     if 'methylation_summary' in steps_to_run:
         run_methylation_summary(config)
     if 'analysis' in steps_to_run:
