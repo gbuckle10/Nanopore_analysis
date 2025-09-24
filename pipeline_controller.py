@@ -2,6 +2,7 @@ import subprocess
 import sys
 import yaml
 import logging
+from datetime import datetime
 from scripts.analysis_logic import *
 from scripts.utils.logger import setup_logger
 
@@ -219,20 +220,27 @@ def run_analysis(config):
 
 def main():
     """ Main entry point for the pipeline controller """
-    config = load_config()
 
-    LOG_FILE = 'logs/'+config['parameters']['general']['log_name']
-    logger = setup_logger(log_file=LOG_FILE)
+    run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
+    logger = setup_logger(log_file=log_file_path)
+
+    logger.info(f"PIPELINE RUN STARTED AT: {run_timestamp}")
+    logger.info(f"The log for this run will be saved to: {log_file_path}")
+    logger.info("="*80)
+
+
 
     try:
+        config = load_config()
         steps_to_run = config['pipeline_control']['run_steps']
     except (FileNotFoundError, KeyError) as e:
-        print(f"FATAL ERROR: Could not load required configuration.")
-        print(f"Details: {e}")
+        logger.error(f"FATAL ERROR: Could not load required configuration.")
+        logger.error(f"Details: {e}")
         sys.exit(1)
 
     if not steps_to_run:
-        print("Error, there aren't any steps for me to run. Check config.yaml.")
+        logger.error("Error, there aren't any steps for me to run. Check config.yaml.")
         sys.exit(1)
 
     logger.info('--- Pipeline Started ---')

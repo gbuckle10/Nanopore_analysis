@@ -138,13 +138,13 @@ download_methylation_atlas_and_illumina_manifest(){
 
   if ! [ -f "data/atlas/illumina_manifest.csv" ]; then
     log_info "The illumina manifest doesn't already exist, so we will download it."
-    wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -O "data/atlas/illumina_manifest.csv"
+    wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -q -O "data/atlas/illumina_manifest.csv"
   else
     log_info "The illumina manifest is already there so won't be re-downloaded."
   fi
   if ! [ -f "data/atlas/full_atlas.csv" ]; then
     log_info "The methylation atlas doesn't already exist, so we will download it."
-    wget https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz -O "data/atlas/full_atlas.csv.gz"
+    wget https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz -q -O "data/atlas/full_atlas.csv.gz"
     gunzip -v "data/atlas/full_atlas.csv.gz"
     #rm "data/atlas/full_atlas.csv.gz"
   else
@@ -152,7 +152,7 @@ download_methylation_atlas_and_illumina_manifest(){
   fi
   if ! [ -f "data/atlas/UXM_atlas.tsv" ]; then
     log_info "The UXM atlas doesn't already exist, so we'll download it."
-    wget https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv -O "data/atlas/UXM_atlas.tsv"
+    wget https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv -q -O "data/atlas/UXM_atlas.tsv"
   else
     log_info "The UXM atlas is already there so won't be re-downloaded."
   fi

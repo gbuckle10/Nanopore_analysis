@@ -28,7 +28,6 @@ parameters:
   general:
     threads: "4"
     sort_memory_limit: "2G"
-    log_name: "twy_log.txt"
   setup:
     dorado_version: "0.9.6"
     num_fast5_files: "5"
