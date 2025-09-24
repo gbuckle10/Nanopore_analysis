@@ -140,7 +140,19 @@ convert_fast5_to_pod5() {
 
   mkdir -p "${POD5_DIR}"
 
-  pod5 convert fast5 "${FAST5_DESTINATION_DIR}" --output "${POD5_DIR}/${POD5_FILE}" --force-overwrite
+  local pod5_cmd=(
+    "pod5"
+    "convert"
+    "fast5"
+    "${FAST5_DESTINATION_DIR}"
+    "--output"
+    "${POD5_DIR}/${POD5_FILE}"
+    "--force-overwrite"
+  )
+
+  log_info "Converting fast5 to pod5, command: ${pod5_cmd[*]}"
+
+  "${pod5_cmd[@]}" 2>/dev/null # Suppress progress bar.
 }
 
 download_methylation_atlas_and_illumina_manifest(){
