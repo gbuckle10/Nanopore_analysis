@@ -14,6 +14,7 @@ fi
 source "$(dirname "$0")/utils/logging.sh"
 source "scripts/runtime_config.sh"
 
+CONFIG_FILE=$1
 DORADO_MODEL_NAME=$(yq e '.parameters.basecalling.base_model_name' "${CONFIG_FILE}")
 MODEL_SPEED=$(yq e '.parameters.basecalling.model_speed' "${CONFIG_FILE}")
 BASECALLING_MODIFICATIONS=$(yq e '.parameters.basecalling.basecalling_modifications' "${CONFIG_FILE}")
