@@ -8,15 +8,25 @@ set -e
 source "$(dirname "$0")/utils/logging.sh"
 
 # Read config values
-CONFIG_FILE="config.yaml"
+CONFIG_FILE=$1
 DORADO_VERSION=$(yq e '.parameters.setup.dorado_version' "${CONFIG_FILE}")
 FAST5_DOWNLOAD_URL=$(yq e '.paths.fast5_download_url' "${CONFIG_FILE}")
 FAST5_DESTINATION_DIR=$(yq e '.paths.fast5_input_dir' "${CONFIG_FILE}")
 NUM_FAST5_FILES=$(yq e '.parameters.setup.num_fast5_files' "${CONFIG_FILE}")
 POD5_DIR=$(yq e '.paths.pod5_dir' "${CONFIG_FILE}")
+POD5_FILE=$(yq e '.paths.pod5_name' "${CONFIG_FILE}")
 SHOULD_DOWNLOAD_FAST5_FILES=$(yq e '.pipeline_control.run_setup_tasks.download_fast5_data' "${CONFIG_FILE}")
 SHOULD_CONVERT_FAST5_TO_POD5=$(yq e '.pipeline_control.run_setup_tasks.convert_fast5_to_pod5' "${CONFIG_FILE}")
-RUNTIME_CONFIG="scripts/runtime_config.sh"
+
+check_vars \
+  "DORADO_VERSION" \
+  "FAST5_DOWNLOAD_URL" \
+  "FAST5_DESTINATION_DIR" \
+  "NUM_FAST5_FILES" \
+  "POD5_DIR" \
+  "POD5_FILE" \
+  "SHOULD_DOWNLOAD_FAST5_FILES" \
+  "SHOULD_CONVERT_FAST5_TO_POD5"
 
 make_directories() {
   log_info "--- Creating directories ---"
@@ -57,9 +67,9 @@ install_dorado() {
   else
     log_info "Downloading dorado version ${DORADO_VERSION} for ${os_type} from ${download_url}" >&2
     curl -o tools/${archive_filename}  "$download_url"
-  
+
     log_info "Download complete. Unzipping and setting up." >&2
-  
+
     case ${os_type} in
       "linux-x64")
         tar -xzvf "tools/${archive_filename}" -C "tools/"
@@ -73,7 +83,7 @@ install_dorado() {
     log_info "Unzipping complete, removing ${folder_to_remove}"
     rm "${folder_to_remove}"
   fi
-  
+
   LOCAL_DORADO_BIN="${DORADO_DIR}/bin"
   export PATH="$LOCAL_DORADO_BIN:$PATH"
   log_info "The local dorado binary is in ${LOCAL_DORADO_BIN}"
@@ -130,7 +140,7 @@ convert_fast5_to_pod5() {
 
   mkdir -p "${POD5_DIR}"
 
-  pod5 convert fast5 "${FAST5_DESTINATION_DIR}" --output "${POD5_DIR}/all_pod.pod5" --force-overwrite
+  pod5 convert fast5 "${FAST5_DESTINATION_DIR}" --output "${POD5_DIR}/${POD5_FILE}" --force-overwrite
 }
 
 download_methylation_atlas_and_illumina_manifest(){

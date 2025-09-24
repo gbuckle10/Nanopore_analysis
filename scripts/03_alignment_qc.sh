@@ -14,11 +14,20 @@ fi
 source "$(dirname "$0")/utils/logging.sh"
 source "scripts/runtime_config.sh"
 
+CONFIG_FILE=$1
 ALIGNED_OUTPUT_DIR=$(yq e '.paths.alignment_output_dir' "${CONFIG_FILE}")
 ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
 QC_DIR=$(yq e '.paths.qc_dir' "${CONFIG_FILE}")
 FLAGSTAT_NAME=$(yq e '.paths.alignment_flagstat_name' "${CONFIG_FILE}")
 ALIGNMENT_STATS_NAME=$(yq e '.paths.alignment_stats_name' "${CONFIG_FILE}")
+
+check_vars \
+  "ALIGNED_OUTPUT_DIR" \
+  "ALIGNED_BAM_NAME" \
+  "QC_DIR" \
+  "FLAGSTAT_NAME" \
+  "ALIGNMENT_STATS_NAME"
+
 
 alignment_qc() {
   local ALIGNED_BAM="${ALIGNED_OUTPUT_DIR}${ALIGNED_BAM_NAME}"

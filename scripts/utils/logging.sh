@@ -25,5 +25,13 @@ handle_error() {
   log_error "Command failed on line ${line_number} with exit code ${exit_code}"
   log_error "Command that failed: '${failed_command}'"
 }
-
 trap 'handle_error $LINENO' ERR
+
+check_variables() {
+  for var in "$@"; do
+    if [[ -z "${!var}" ]]; then
+      log_error "Required variable '${var_name}' is not set or is empty. Please check config.yaml"
+      exit 1
+    fi
+  done
+}

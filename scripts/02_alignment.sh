@@ -14,6 +14,7 @@ fi
 source "$(dirname "$0")/utils/logging.sh"
 source "scripts/runtime_config.sh"
 
+CONFIG_FILE=$1
 REFERENCE_GENOME_URL=$(yq e '.paths.reference_genome_url' "${CONFIG_FILE}")
 REFERENCE_GENOME_NAME=$(yq e '.paths.reference_genome_name' "${CONFIG_FILE}")
 REFERENCE_GENOME_INDEX=$(yq e '.paths.indexed_ref_gen_name' "${CONFIG_FILE}")
@@ -24,6 +25,18 @@ ALIGNED_BAM_NAME=$(yq e '.paths.aligned_bam_name' "${CONFIG_FILE}")
 THREADS=$(yq e '.parameters.general.threads' "${CONFIG_FILE}")
 REFERENCE_GENOME_DIR='reference_genomes/'
 SORT_MEMORY_LIMIT=$(yq e '.parameters.general.sort_memory_limit' "${CONFIG_FILE}")
+
+check_vars \
+  "REFERENCE_GENOME_URL" \
+  "REFERENCE_GENOME_NAME" \
+  "REFERENCE_GENOME_INDEX" \
+  "BASECALLED_OUTPUT_DIR" \
+  "ALIGNED_OUTPUT_DIR" \
+  "UNALIGNED_BAM_NAME" \
+  "ALIGNED_BAM_NAME" \
+  "THREADS" \
+  "REFERENCE_GENOME_DIR" \
+  "SORT_MEMORY_LIMIT"
 
 if [ ! -f "scripts/runtime_config.sh" ]; then
   echo "ERROR: runtime_config.sh not found. Please run 'setup' step first..."
@@ -100,8 +113,6 @@ align_and_index() {
     -o "${ALIGNED_BAM}"
   )
 
-  local
-
   log_info "Executing command: ${alignment_cmd[*]} | ${sort_cmd[*]}" # [*] expands the array into a single string for printing
 
   # Execute the pipeline
@@ -118,7 +129,7 @@ align_and_index() {
 
   log_info "Executing indexing command: ${index_cmd[*]}"
 
-  samtools index "${ALIGNED_BAM}"
+  "${index_cmd[@]}"
 
   log_info "Indexing complete."
 

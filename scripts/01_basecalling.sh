@@ -17,12 +17,22 @@ source "scripts/runtime_config.sh"
 DORADO_MODEL_NAME=$(yq e '.parameters.basecalling.base_model_name' "${CONFIG_FILE}")
 MODEL_SPEED=$(yq e '.parameters.basecalling.model_speed' "${CONFIG_FILE}")
 BASECALLING_MODIFICATIONS=$(yq e '.parameters.basecalling.basecalling_modifications' "${CONFIG_FILE}")
-BATCHSIZE=$(yq e '.parameters.analysis.batch_size' "${CONFIG_FILE}")
+BATCHSIZE=$(yq e '.parameters.basecalling.batch_size' "${CONFIG_FILE}")
 POD5_DIR=$(yq e '.paths.pod5_dir' "${CONFIG_FILE}")
 POD5_NAME=$(yq e '.paths.pod5_name' "${CONFIG_FILE}")
 BASECALLING_DIR=$(yq e '.paths.basecalled_output_dir' "${CONFIG_FILE}")
 BASECALLED_FILE=$(yq e '.paths.unaligned_bam_name' "${CONFIG_FILE}")
 MODEL_DIR="models/"
+
+check_vars \
+  "DORADO_MODEL_NAME" \
+  "MODEL_SPEED" \
+  "BASECALLING_MODIFICATIONS" \
+  "BATCHSIZE" \
+  "POD5_DIR" \
+  "POD5_NAME" \
+  "BASECALLING_DIR" \
+  "BASECALLED_FILE"
 
 # --- Main script ---
 log_info "Using Dorado executable at ${DORADO_EXECUTABLE}" >&2

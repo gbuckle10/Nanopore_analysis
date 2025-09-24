@@ -23,6 +23,16 @@ METHYLATION_DIR=$(yq e '.paths.methylation_dir' "${CONFIG_FILE}")
 REFERENCE_GENOME_DIR="reference_genomes/"
 LOG_FILE=$(yq e '.paths.methylation_log_file' "${CONFIG_FILE}")
 
+check_vars \
+  "ALIGNED_BAM_NAME" \
+  "ALIGNED_BAM_DIR" \
+  "METHYLATION_BED" \
+  "REFERENCE_FASTA" \
+  "THREADS" \
+  "METHYLATION_DIR" \
+  "REFERENCE_GENOME_DIR" \
+  "LOG_FILE"
+
 if [[ -z "${ALIGNED_BAM_NAME}" || -z "$METHYLATION_BED" || -z "$REFERENCE_FASTA" || -z "$THREADS" ]]; then
   log_error "Missing one or more required arguments." >&2
   log_error "Usage: $0 <aligned_bam> <output_bed> <ref_fasta> <threads> [log_file]" >&2
