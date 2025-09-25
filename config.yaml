@@ -14,7 +14,7 @@ pipeline_control:
     #- align
     #- align_qc
     #- methylation_summary
-    - deconvolution_prep
+    #- deconvolution_prep
     - deconvolution
 
   run_setup_tasks:
@@ -110,10 +110,12 @@ paths:
   deconvolution_dir: "analysis/deconvolution/"
   file_for_deconvolution_ilmn: "deconvolution_illumina.csv"
   file_for_deconvolution_gc: "deconvolution_geco.csv"
+  file_for_deconvolution_uxm: "deconvolution_uxm.csv"
+  atlas_file_ilmn: "full_atlas.csv"
+  atlas_file_gc: "full_atlas_gc.csv"
+  atlas_file_uxm: "UXM_atlas_deconvolution.csv"
   illumina_manifest: "illumina_manifest.csv"
   processed_illumina_manifest: "illumina_manifest.parquet"
-  atlas_file_ilmn: "full_atlas.csv"
-  atlas_file_gc: "UXM_atlas_deconvolution.csv"
   deconvolution_results: "deconvoluted_output.csv"
   uxm_atlas_name: "UXM_atlas.tsv"
 

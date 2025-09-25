@@ -117,8 +117,11 @@ def generate_deconvolution_files(bed_file, manifest_file, uxm_atlas_file, chunk_
                     mapped_df.to_csv(uxm_aggregated_intermediate, sep='\t', index=False, header=False, mode='a')
 
     finalise_outputs(all_results, output_dir, uxm_aggregated_intermediate)
+    # ----- ADD A CHECK HERE TO SEE WHETHER THE FILES EXIST
 
-    format_atlas_file("data/atlas/UXM_atlas.tsv")
+    format_atlas_file("data/atlas/UXM_atlas.tsv", "data/atlas/UXM_atlas_deconvolution.csv")
+    convert_atlas_to_genome_coordinates("data/atlas/full_atlas_gc.csv", "data/atlas/full_atlas.csv",
+                                        "data/atlas/illumina_manifest.csv")
 
 
 def finalise_outputs(results, output_dir, agg_intermediate_file):
@@ -139,7 +142,7 @@ def finalise_outputs(results, output_dir, agg_intermediate_file):
         logger.info("Aggregating UXM intersection data.")
 
         overview_path = "data/processed/uxm_overview.csv"
-        deconvolution_path = "data/processed/uxm_deconvolution.csv"
+        deconvolution_path = "data/processed/deconvolution_uxm.csv"
 
         mapped_df = pd.read_csv(agg_intermediate_file, sep='\t')
 
@@ -442,7 +445,7 @@ def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file, c
         print(f"Final aggregated deconvolution file saved to {output_deconvolution_file}")
 
 
-def format_atlas_file(atlas_file, sep='\t'):
+def format_atlas_file(atlas_file, new_atlas_file, sep='\t'):
     """
     Takes an atlas file and formats the first column to work with the meth_atlas algorithm.
 
@@ -454,8 +457,8 @@ def format_atlas_file(atlas_file, sep='\t'):
     """
 
     logger = logging.getLogger('pipeline')
-    logger.log_info("Formatting the genome coordinate atlas for deconvolution")
-    logger.log_info(f"Atlas saved to {atlas_file}")
+    logger.info("Formatting the genome coordinate atlas for deconvolution")
+    logger.info(f"Atlas saved to {atlas_file}")
 
     atlas_df = pd.read_csv(
         atlas_file,
@@ -468,9 +471,9 @@ def format_atlas_file(atlas_file, sep='\t'):
 
     atlas_df = atlas_df[cols_to_keep]
 
-    atlas_df.to_csv(atlas_file, index=False)
+    atlas_df.to_csv(new_atlas_file, index=False)
 
-    logger.log_info(f"Atlas for genome coordinate deconvoluted saved to {atlas_file}.")
+    logger.info(f"Atlas for genome coordinate deconvoluted saved to {atlas_file}.")
 
 
 def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
@@ -480,6 +483,11 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
     :param output_file: The methylation atlas file indexed by genome coordinates.
 
     """
+
+    logger = logging.getLogger('pipeline')
+
+    logger.info(
+        f"Converting Illumina atlas {atlas_file} to genome coordinate atlas {output_file} based on manifest file {manifest_file}")
 
     # Load the atlas and Illumina manifest
     atlas_df = pd.read_csv(
@@ -491,6 +499,7 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
         manifest_file, sep=',', skiprows=7, usecols=['IlmnID', 'CHR', 'MAPINFO'],
         dtype={'CHR': str}
     )
+
     # Remove the decimal point from MAPINFO points.
     manifest_df = manifest_df.dropna(subset=['MAPINFO'])
     manifest_df['MAPINFO'] = manifest_df['MAPINFO'].astype(int)
@@ -498,25 +507,13 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
     manifest_df['site_id'] = 'chr' + manifest_df['CHR'].astype(str) + ':' + manifest_df['MAPINFO'].astype(str)
     manifest_df.drop(['CHR', 'MAPINFO'], axis=1, inplace=True)
 
-    print("The top 5 rows of the atlas file:")
-    print(atlas_df.head())
-
-    print("The top 5 rows of the manifest file:")
-    print(manifest_df.head())
-
-    print(f"The atlas currently contains {len(atlas_df)} rows")
-    print(f"The manifest df currently contains {len(manifest_df)} rows")
-
     geco_atlas = pd.merge(atlas_df, manifest_df, on='IlmnID', how='inner')
     all_columns = geco_atlas.columns.tolist()
     cell_type_columns = [col for col in all_columns if col not in ['IlmnID', 'site_id']]
     new_column_order = ['site_id'] + cell_type_columns
     geco_atlas = geco_atlas[new_column_order]
 
-    print("The top 5 rows of the genomic location atlas:")
-    print(geco_atlas.head())
-
-    print(f"The genome location manifest currently contains {len(geco_atlas)} rows")
+    logger.info("The Illumina IDs in the atlas have been converted to genome locations")
 
     geco_atlas.to_csv(output_file, index=False)
 

@@ -68,15 +68,15 @@ def run_deconvolution_submodule(config):
 
     logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
 
-    atlas_file = f"data/atlas/{config['paths']['atlas_file_gc']}"
-    file_to_deconvolve = f"data/processed/{config['paths']['file_for_deconvolution_ilmn']}"
+    atlas_file = f"data/atlas/{config['paths']['atlas_file_uxm']}"
+    file_to_deconvolve = f"data/processed/{config['paths']['file_for_deconvolution_uxm']}"
     output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
 
     logger.info(f"Deconvolving file {file_to_deconvolve} using atlas file {atlas_file}")
     logger.info(f"Deconvolution results will be found in {output_file}")
 
-    # deconvolve_script = "externals/meth_atlas/deconvolve.py"
     deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
+    #deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
 
     command = [
         "python",
