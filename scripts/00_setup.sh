@@ -194,8 +194,14 @@ download_methylation_atlas_and_illumina_manifest(){
     log_info "The UXM atlas doesn't already exist, so we'll download it."
     wget https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv -q -O "data/atlas/UXM_atlas.tsv"
   else
-    log_info "The UXM atlas is already there so won't be re-downloaded."
+    log_info "The UXM atlas tsv file is already there so won't be re-downloaded."
   fi
+  if [ -f "data/raw/UXM_atlas.tsv" ] && [ ! -f "data/raw/UXM_atlas.csv" ]; then
+    log_info "The UXM atlas doesn't exist as a csv file, so we'll use the .tsv file to make it."
+    tr '\t' ',' < "data/raw/UXM_atlas.tsv" > "data/raw/UXM_atlas.csv"
+  else
+    log_info "The UXM atlas csv file is already there so won't be re-downloaded."
+
 
 }
 
