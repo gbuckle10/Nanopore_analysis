@@ -7,6 +7,7 @@ from datetime import datetime
 from scripts.deconvolution_prep import *
 from scripts.utils.logger import setup_logger
 
+
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
     with open(config_file, 'r') as f:
@@ -30,12 +31,12 @@ def run_and_log(config, command):
 
     try:
         with subprocess.Popen(
-            full_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            universal_newlines=True
+                full_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
         ) as process:
             if process.stdout:
                 for line in iter(process.stdout.readline, ''):
@@ -61,14 +62,21 @@ def run_and_log(config, command):
         logger.critical(f"An unexpected error occurred while running subprocess: {e}")
         raise
 
-def run_deconvolution_submodule(config):
-    print(">>> Starting the deconvolution process using the meth_atlas submodule")
 
-    atlas_file = "data/atlas/full_atlas_geco.csv"
-    file_to_deconvolve = "analysis/data_to_deconvolute_geco.csv"
+def run_deconvolution_submodule(config):
+    logger = logging.getLogger('pipeline')
+
+    logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
+
+    atlas_file = f"data/atlas/{config['paths']['atlas_file_illumina']}"
+    file_to_deconvolve = f"data/processed/{config['paths']['file_for_deconvolution']}"
     output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
+
+    logger.info(f"Deconvolving file {file_to_deconvolve} using atlas file {atlas_file}")
+    logger.info(f"Deconvolution results will be found in {output_file}")
+
+    # deconvolve_script = "externals/meth_atlas/deconvolve.py"
     deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
-    # deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
 
     command = [
         "python",
@@ -79,21 +87,21 @@ def run_deconvolution_submodule(config):
         "--out_dir", config['paths']['analysis_dir']
     ]
 
-    print(f"--- Running : {' '.join(command)} --- ")
+    logger.info(f"--- Running : {' '.join(command)} --- ")
 
     try:
         result = subprocess.run(command, check=True, capture_output=False, text=True)
         if result.stderr:
-            print(result.stderr.strip())
+            logger.error(result.stderr.strip())
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"--- ERROR IN COMMAND ---")
-        print(f"Exit code: {e.returncode}")
-        print(f"STDOUT:\n{e.stdout}")
-        print(f"STDERR:\n{e.stderr}")
+        logger.error(f"--- ERROR IN COMMAND ---")
+        logger.error(f"Exit code: {e.returncode}")
+        logger.error(f"STDOUT:\n{e.stdout}")
+        logger.error(f"STDERR:\n{e.stderr}")
         raise
     except Exception as error:
-        print(error)
+        logger.error(error)
 
 
 def run_setup(config):
@@ -127,6 +135,7 @@ def run_basecalling(config):
     command = ["bash", script_path, config_file]
 
     run_and_log(config, command)
+
 
 def run_alignment(config):
     """ Executes the alignment script: 02_alignment.sh """
@@ -205,7 +214,7 @@ def run_analysis(config):
 
         # format_atlas_file(atlas_file=uxm_atlas_file_path)
 
-        run_deconvolution_submodule(config)
+        # run_deconvolution_submodule(config)
 
     except Exception as e:
         print(f"--- ERROR during deconvolution prep: {e} ---")
@@ -221,9 +230,7 @@ def main():
 
     logger.info(f"PIPELINE RUN STARTED AT: {run_timestamp}")
     logger.info(f"The log for this run will be saved to: {log_file_path}")
-    logger.info("="*80)
-
-
+    logger.info("=" * 80)
 
     try:
         config = load_config()
@@ -250,8 +257,10 @@ def main():
         run_alignment_qc(config)
     if 'methylation_summary' in steps_to_run:
         run_methylation_summary(config)
-    if 'analysis' in steps_to_run:
+    if 'deconvolution_prep' in steps_to_run:
         run_analysis(config)
+    if 'deconvolution' in steps_to_run:
+        run_deconvolution_submodule(config)
 
 
 if __name__ == '__main__':
