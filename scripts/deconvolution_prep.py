@@ -48,13 +48,13 @@ def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
     # return an empty dataframe to avoid an error.
     return {
         "illumina": merged_chunk[['IlmnID', 'beta_value']] if not merged_chunk.empty else pd.DataFrame(),
-        "geco": merged_chunk[['IlmnID', 'beta_value']] if not merged_chunk.empty else pd.DataFrame(),
+        "geco": merged_chunk[['site_id', 'beta_value']] if not merged_chunk.empty else pd.DataFrame(),
         "point_methylations": chunk_df[['site_id', 'beta_value']],
         "uxm_intersections": intersections
     }
 
 
-def generate_deconvolution_files(bed_file, manifest_file, output_file, uxm_atlas_file, chunk_size=1000000):
+def generate_deconvolution_files(bed_file, manifest_file, uxm_atlas_file, chunk_size=1000000):
     """
     Filters the Nanopore methylation data, provided in a .bed file, to retain only the
     methylation sites we can use to deconvolute. This is done by retaining only those
@@ -117,6 +117,8 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, uxm_atlas
                     mapped_df.to_csv(uxm_aggregated_intermediate, sep='\t', index=False, header=False, mode='a')
 
     finalise_outputs(all_results, output_dir, uxm_aggregated_intermediate)
+
+    format_atlas_file("data/atlas/UXM_atlas.tsv")
 
 
 def finalise_outputs(results, output_dir, agg_intermediate_file):
@@ -450,14 +452,15 @@ def format_atlas_file(atlas_file, sep='\t'):
     :param atlas_file: File path to the atlas file.
     :return:
     """
-    print("Formatting the atlas file to include site_id as the first column.")
+
+    logger = logging.getLogger('pipeline')
+    logger.log_info("Formatting the genome coordinate atlas for deconvolution")
+    logger.log_info(f"Atlas saved to {atlas_file}")
 
     atlas_df = pd.read_csv(
         atlas_file,
         sep=sep
     )
-
-    print(atlas_df.head())
 
     all_columns = atlas_df.columns.tolist()
     cols_to_keep = [col for col in all_columns if
@@ -465,7 +468,9 @@ def format_atlas_file(atlas_file, sep='\t'):
 
     atlas_df = atlas_df[cols_to_keep]
 
-    atlas_df.to_csv("data/atlas/UXM_atlas_decon_ready.csv", index=False)
+    atlas_df.to_csv(atlas_file, index=False)
+
+    logger.log_info(f"Atlas for genome coordinate deconvoluted saved to {atlas_file}.")
 
 
 def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):

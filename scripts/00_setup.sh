@@ -33,7 +33,9 @@ make_directories() {
   log_info "--- Creating core directory structure ---"
 
   # Read the list of directories from the config file into an array
-  mapfile -d DIRECTORIES_TO_CREATE < <(yq '.paths.core_directories[]' "$CONFIG_FILE")
+  mapfile -t DIRECTORIES_TO_CREATE < <(yq '.paths.core_directories[]' "$CONFIG_FILE")
+
+  declare -p DIRECTORIES_TO_CREATE
 
   if [ ${#DIRECTORIES_TO_CREATE[@]} -eq 0 ]; then
     log_error "Could not read core_directories from config file. Aborting."
@@ -196,12 +198,13 @@ download_methylation_atlas_and_illumina_manifest(){
   else
     log_info "The UXM atlas tsv file is already there so won't be re-downloaded."
   fi
-  if [ -f "data/raw/UXM_atlas.tsv" ] && [ ! -f "data/raw/UXM_atlas.csv" ]; then
+  if [ -f "data/atlas/UXM_atlas.tsv" ] && [ ! -f "data/atlas/UXM_atlas.csv" ]; then
     log_info "The UXM atlas doesn't exist as a csv file, so we'll use the .tsv file to make it."
-    tr '\t' ',' < "data/raw/UXM_atlas.tsv" > "data/raw/UXM_atlas.csv"
+    tr '\t' ',' < "data/atlas/UXM_atlas.tsv" > "data/atlas/UXM_atlas.csv"
+    log_info "csv file created."
   else
     log_info "The UXM atlas csv file is already there so won't be re-downloaded."
-
+  fi
 
 }
 

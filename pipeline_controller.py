@@ -68,8 +68,8 @@ def run_deconvolution_submodule(config):
 
     logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
 
-    atlas_file = f"data/atlas/{config['paths']['atlas_file_illumina']}"
-    file_to_deconvolve = f"data/processed/{config['paths']['file_for_deconvolution']}"
+    atlas_file = f"data/atlas/{config['paths']['atlas_file_gc']}"
+    file_to_deconvolve = f"data/processed/{config['paths']['file_for_deconvolution_ilmn']}"
     output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
 
     logger.info(f"Deconvolving file {file_to_deconvolve} using atlas file {atlas_file}")
@@ -189,9 +189,8 @@ def run_analysis(config):
         # One day change this so that the yaml structure mirrors the file structure. config['paths']['methylation_dir']['methylation_bed_name']
         bed_file_path = config['paths']['methylation_dir'] + config['paths']['methylation_bed_name']
         manifest_file_path = config['paths']['atlas_dir'] + config['paths']['illumina_manifest']
-        file_for_decon_path = config['paths']['analysis_dir'] + config['paths']['file_for_deconvolution']
-        illumina_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_illumina']
-        geco_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_genome_coordinate']
+        illumina_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_ilmn']
+        geco_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_gc']
         uxm_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['uxm_atlas_name']
         deconvolution_path = config['paths']['deconvolution_dir']
         chunk_size = int(config['parameters']['analysis']['methylation_aggregation_chunksize'])
@@ -199,7 +198,6 @@ def run_analysis(config):
         generate_deconvolution_files(
             bed_file=bed_file_path,
             manifest_file=manifest_file_path,
-            output_file=file_for_decon_path,
             uxm_atlas_file=uxm_atlas_file_path,
             chunk_size=chunk_size
         )

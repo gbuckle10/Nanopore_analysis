@@ -14,12 +14,12 @@ pipeline_control:
     #- align
     #- align_qc
     #- methylation_summary
-    #- deconvolution_prep
+    - deconvolution_prep
     - deconvolution
 
   run_setup_tasks:
-    download_fast5_data: true
-    convert_fast5_to_pod5: true
+    download_fast5_data: false
+    convert_fast5_to_pod5: false
 
 # ========================================================
 # Parameters
@@ -101,19 +101,19 @@ paths:
 
   # Step 3: Methylation summary outputs
   methylation_dir: "data/methylation/"
-  methylation_bed_name: "methylation_sample.bed"
+  methylation_bed_name: "methylation.bed"
   methylation_log_file: "pileup_wowow.log"
 
   # Step 4: Analysis and Deconvolution outputs
   analysis_dir: "analysis/"
   atlas_dir: "data/atlas/"
   deconvolution_dir: "analysis/deconvolution/"
-  file_for_deconvolution: "deconvolution_illumina.csv"
-  file_for_deconvolution_geco: "data_to_deconvolute_geco.csv"
+  file_for_deconvolution_ilmn: "deconvolution_illumina.csv"
+  file_for_deconvolution_gc: "deconvolution_geco.csv"
   illumina_manifest: "illumina_manifest.csv"
   processed_illumina_manifest: "illumina_manifest.parquet"
-  atlas_file_illumina: "full_atlas.csv"
-  atlas_file_genome_coordinate: "UXM_atlas.csv"
+  atlas_file_ilmn: "full_atlas.csv"
+  atlas_file_gc: "UXM_atlas_deconvolution.csv"
   deconvolution_results: "deconvoluted_output.csv"
   uxm_atlas_name: "UXM_atlas.tsv"
 
