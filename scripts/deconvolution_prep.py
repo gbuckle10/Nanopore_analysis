@@ -20,6 +20,7 @@ def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
     # Prepare chunk
     chunk_df = chunk_df[chunk_df['mod'].str.contains('m')].copy()
     if chunk_df.empty:
+        logger.warning("The current chunk is empty.")
         return None
 
     # Beta value should be between 0 and 1.
@@ -30,9 +31,8 @@ def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
     logger.info("Here are the first 5 rows of this chunk:")
     logger.info(chunk_df.head())
 
-    logger.info("Merging the chunk dataframe with the Illumina manifest for the meth_atlas deconvolution")
-
     # --- Illumina merges ---
+    logger.info("Merging the chunk dataframe with the Illumina manifest for the meth_atlas deconvolution")
     merged_chunk = pd.merge(chunk_df, manifest_df, on='site_id', how='inner')
 
     logger.info(f"The chunk dataframe has been merged with the illumina manifest. Final size: {len(merged_chunk)}")
@@ -49,7 +49,7 @@ def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
     return {
         "illumina": merged_chunk[['IlmnID', 'beta_value']] if not merged_chunk.empty else pd.DataFrame(),
         "geco": merged_chunk[['IlmnID', 'beta_value']] if not merged_chunk.empty else pd.DataFrame(),
-        "uxm_raw": chunk_df[['site_id', 'beta_value']],
+        "point_methylations": chunk_df[['site_id', 'beta_value']],
         "uxm_intersections": intersections
     }
 
@@ -102,8 +102,8 @@ def generate_deconvolution_files(bed_file, manifest_file, output_file, uxm_atlas
         if chunk_results:
             all_results["illumina"].append(chunk_results["illumina"])
             all_results["geco"].append(chunk_results["geco"])
-            chunk_results["uxm_raw"].to_csv("data/processed/deconvolution_uxm_raw.csv", mode='a', header=False,
-                                            index=False)
+            chunk_results["point_methylations"].to_csv("data/processed/single_site_methylations.csv", mode='a',
+                                                       header=False, index=False)
 
             intersections = chunk_results["uxm_intersections"]
             if len(intersections) > 0:
