@@ -1,3 +1,21 @@
+Process to install WGBS Tools:
+    - At the moment this will be done seprately, but will be folded into the main project eventually.
+    - Open conda and go to the directory you want to clone the repository into.
+    - Run "git clone https://github.com/nloyfer/wgbs_tools.git" and do "cd wgbs_tools"
+    - Make a new wgbs_tools conda environment:
+        - conda create -n wgbs_build python=3.9
+        - conda activate wgbs_build
+        - conda install -c conda-forge gxx_linux-64
+        - conda install -c conda-forge numpy pandas
+    - You should be able to run python setup.py, but there is a good chance it won't work. If "which g++" gives you no output,
+    you can fix it like so:
+        - cd /home/{USERNAME}/miniconda3/envs/wgbs_build/bin/  (otherwise find out where your environments are).
+        - ln -s x86_64-conda-linux-gnu-g++ g++
+        - ln -s x86_64-conda-linux-gnu-gcc gcc
+        - ln -s x86_64-conda-linux-gnu-cpp cpp
+        - ln -s x86_64-conda-linux-gnu-c++ c++
+    - The above commands point the g++, gcc, cpp and c++ commands to the relevant executables.
+
 
 Before running the programme, activate the conda environment:
     conda activate nanopore_analysis
@@ -62,5 +80,3 @@ Setup for WSL:
                         \+ - tells find to add all of the filenames
                         ; - end of the line.
 
-Useful base calling models:
-    -
