@@ -2,6 +2,7 @@
 
 # Exit on error
 set -e
+set -o pipefail
 
 # Check to make sure that the runtime_config is there.
 if [ ! -f "scripts/runtime_config.sh" ]; then
@@ -71,3 +72,5 @@ alignment_qc() {
 }
 
 alignment_qc
+
+trap 'handle_error $LINENO' ERR

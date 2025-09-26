@@ -1,6 +1,7 @@
 #!/bin/bash
 # Exit on error
 set -e
+set -o pipefail
 
 # Check to make sure that the runtime_config is there.
 if [ ! -f "scripts/runtime_config.sh" ]; then
@@ -92,3 +93,5 @@ methylation_pileup() {
 
 index_genome
 methylation_pileup
+
+trap 'handle_error $LINENO' ERR

@@ -2,6 +2,7 @@
 
 # Exit on error
 set -e
+set -o pipefail
 
 # Source the logging utility
 # Assumes that logging.sh is in the utils folder of the current folder.
@@ -214,3 +215,5 @@ fi
 if [[ "$SHOULD_CONVERT_FAST5_TO_POD5" == "true" ]]; then
   convert_fast5_to_pod5
 fi
+
+trap 'handle_error $LINENO' ERR

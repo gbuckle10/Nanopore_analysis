@@ -2,6 +2,7 @@
 
 # Exit on error
 set -e
+set -o pipefail
 
 # Check to make sure that the runtime_config is there.
 if [ ! -f "scripts/runtime_config.sh" ]; then
@@ -74,7 +75,7 @@ basecalling_pod5() {
   # samtools view path/to/file | grep 'MM:Z:' | head -n 5
 
 }
-
-
 #download_dorado_model
 basecalling_pod5
+
+trap 'handle_error $LINENO' ERR

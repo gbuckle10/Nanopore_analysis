@@ -2,6 +2,7 @@
 
 # Exit on error
 set -e
+set -o pipefail
 
 # Check to make sure that the runtime_config is there.
 if [ ! -f "scripts/runtime_config.sh" ]; then
@@ -136,7 +137,7 @@ align_and_index() {
   # samtools view data/alignment_output/aligned.sorted.bam | grep 'MM:Z:' | head -n 5
 
 }
-
-
 download_reference_genome
 align_and_index
+
+trap 'handle_error $LINENO' ERR
