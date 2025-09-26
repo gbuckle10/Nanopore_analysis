@@ -27,8 +27,6 @@ def run_and_log(config, command):
     full_command = ["conda", "run", "-n", conda_env] + command
     logger.info(f"Executing command: {' '.join(full_command)}")
 
-    last_n_lines = deque(maxlen=20)
-
     try:
         with subprocess.Popen(
                 full_command,
@@ -42,18 +40,15 @@ def run_and_log(config, command):
                 for line in iter(process.stdout.readline, ''):
                     clean_line = line.strip()
                     logger.info(clean_line)
-                    last_n_lines.append(clean_line)
         if process.returncode != 0:
             logger.error(f"Bash script failed with exit code {process.returncode}.")
-            logger.error("--- Start of error output ---")
-            for line in last_n_lines:
-                logger.error(line)
-            logger.error("--- End of error output ---")
+            logger.error("See the output above for the full error details.")
 
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
             logger.info("Command completed successfully")
     except subprocess.CalledProcessError as e:
+        logger.critical(f"Pipeline halting due to command failure: {' '.join(e.cmd)}")
         raise e
     except FileNotFoundError:
         logger.critical(f"Command not found: {full_command[0]}. Ensure conda is installed and in PATH")
@@ -70,13 +65,11 @@ def run_deconvolution_submodule(config):
 
     atlas_file = f"data/atlas/{config['paths']['atlas_file_uxm']}"
     file_to_deconvolve = f"data/processed/{config['paths']['file_for_deconvolution_uxm']}"
-    output_file = f"{config['paths']['analysis_dir']}{config['paths']['deconvolution_results']}"
 
     logger.info(f"Deconvolving file {file_to_deconvolve} using atlas file {atlas_file}")
-    logger.info(f"Deconvolution results will be found in {output_file}")
 
     deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
-    #deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
+    # deconvolve_script = "externals/meth_atlas/deconvolve.py"
 
     command = [
         "python",
@@ -90,18 +83,29 @@ def run_deconvolution_submodule(config):
     logger.info(f"--- Running : {' '.join(command)} --- ")
 
     try:
-        result = subprocess.run(command, check=True, capture_output=False, text=True)
-        if result.stderr:
-            logger.error(result.stderr.strip())
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        logger.error(f"--- ERROR IN COMMAND ---")
-        logger.error(f"Exit code: {e.returncode}")
-        logger.error(f"STDOUT:\n{e.stdout}")
-        logger.error(f"STDERR:\n{e.stderr}")
+        with subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+        ) as process:
+            if process.stdout:
+                for line in iter(process.stdout.readline, ''):
+                    logger.info(f"[Subprocess] {line.strip()}")
+
+        if process.returncode != 0:
+            logger.error(f"Deconvolution script failed with exit code {process.returncode}.")
+            raise subprocess.CalledProcessError(process.returncode, process.args)
+
+        logger.info("Deconvolution script completed successfully.")
+    except FileNotFoundError:
+        logger.error(f"Command not found: {command[0]}. Make sure python is in PATH")
         raise
-    except Exception as error:
-        logger.error(error)
+    except subprocess.CalledProcessError as e:
+        logger.critical("Halting process due to deconvolution script failure.")
+        raise e
 
 
 def run_setup(config):

@@ -35,14 +35,12 @@ make_directories() {
   # Read the list of directories from the config file into an array
   mapfile -t DIRECTORIES_TO_CREATE < <(yq '.paths.core_directories[]' "$CONFIG_FILE")
 
-  declare -p DIRECTORIES_TO_CREATE
-
   if [ ${#DIRECTORIES_TO_CREATE[@]} -eq 0 ]; then
     log_error "Could not read core_directories from config file. Aborting."
     exit 1
   fi
 
-  for dir in ${DIRECTORIES_TO_CREATE}; do
+  for dir in ${DIRECTORIES_TO_CREATE[@]}; do
     mkdir -p "${dir}"
   done
 
@@ -124,7 +122,7 @@ download_fast5_data() {
 
   if [[ "${NUM_FAST5_FILES}" == "all" ]]; then
     log_info "Preparing to download all available files."
-    filenames_to_download="${ALL_S3_FILES}"
+    filenames_to_download="${ALL_S3_FILENAMES}"
   else
     log_info "INFO: Preparing to download the first ${NUM_FAST5_FILES} files."
     filenames_to_download=$(echo "${ALL_S3_FILENAMES}" | head -n "${NUM_FAST5_FILES}")
@@ -177,22 +175,21 @@ convert_fast5_to_pod5() {
 
 download_methylation_atlas_and_illumina_manifest(){
   mkdir -p "data/atlas/"
-
   if ! [ -f "data/atlas/illumina_manifest.csv" ]; then
     log_info "The illumina manifest doesn't already exist, so we will download it."
-    wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -q -O "data/raw/illumina_manifest.csv"
+    wget https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv -q -O "data/atlas/illumina_manifest.csv"
   else
     log_info "The illumina manifest is already there so won't be re-downloaded."
   fi
   if ! [ -f "data/atlas/full_atlas.csv" ]; then
     log_info "The methylation atlas doesn't already exist, so we will download it."
-    wget https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz -q -O "data/raw/full_atlas.csv.gz"
-    gunzip -v "data/raw/full_atlas.csv.gz"
+    wget https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz -q -O "data/atlas/full_atlas.csv.gz"
+    gunzip -v "data/atlas/full_atlas.csv.gz"
     #rm "data/atlas/full_atlas.csv.gz"
   else
     log_info "The methylation atlas is already there so won't be re-downloaded."
   fi
-  if ! [ -f "data/raw/UXM_atlas.tsv" ]; then
+  if ! [ -f "data/atlas/UXM_atlas.tsv" ]; then
     log_info "The UXM atlas doesn't already exist, so we'll download it."
     wget https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv -q -O "data/atlas/UXM_atlas.tsv"
   else
