@@ -18,7 +18,7 @@ pipeline_control:
     - deconvolution
 
   run_setup_tasks:
-    download_fast5_data: true
+    download_fast5_data: false
     convert_fast5_to_pod5: true
 
 # ========================================================
@@ -31,7 +31,7 @@ parameters:
     sort_memory_limit: "2G"
   setup:
     dorado_version: "0.9.6"
-    num_fast5_files: "all"
+    num_fast5_files: "10"
   basecalling:
     # Use EITHER the model complex OR the explicit base/mod model names
     # Method A: Model Complex
@@ -82,7 +82,7 @@ paths:
   # Raw data
   fast5_input_dir: "data/fast5_input/"
   pod5_dir: "data/pod5_output/"
-  pod5_name: "all_reads.pod5"
+  pod5_name: "all_pods.pod5"
 
   # Step 0: Setup output
 

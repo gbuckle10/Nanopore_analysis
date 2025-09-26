@@ -4,58 +4,72 @@ import yaml
 import logging
 from collections import deque
 from datetime import datetime
-from scripts.deconvolution_prep import *
+from scripts.utils.runner import load_config, run_command
 from scripts.utils.logger import setup_logger
 
 
-def load_config(config_file="config.yaml"):
-    """ Loads the pipeline config from a YAML file """
-    with open(config_file, 'r') as f:
-        return yaml.safe_load(f)
 
-
-def run_and_log(config, command):
-    """
-    Runs a command inside the conda environment, captures the output in real time and logs it using the
-    'pipeline' logger
-    """
-    # Load the logger
+def run_setup(config):
+    """ Executes the 00_setup.sh script """
     logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting Step 0: Setup")
 
-    # Build command with the conda wrapper
-    conda_env = config['conda_env_name']
-    full_command = ["conda", "run", "-n", conda_env] + command
-    logger.info(f"Executing command: {' '.join(full_command)}")
+    script_path = "scripts/00_setup.sh"
+    config_file = "config.yaml"
+    command = ["bash", script_path, config_file]
 
-    try:
-        with subprocess.Popen(
-                full_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                universal_newlines=True
-        ) as process:
-            if process.stdout:
-                for line in iter(process.stdout.readline, ''):
-                    clean_line = line.strip()
-                    logger.info(clean_line)
-        if process.returncode != 0:
-            logger.error(f"Bash script failed with exit code {process.returncode}.")
-            logger.error("See the output above for the full error details.")
+    run_command(config, command)
 
-            raise subprocess.CalledProcessError(process.returncode, process.args)
-        else:
-            logger.info("Command completed successfully")
-    except subprocess.CalledProcessError as e:
-        logger.critical(f"Pipeline halting due to command failure: {' '.join(e.cmd)}")
-        raise e
-    except FileNotFoundError:
-        logger.critical(f"Command not found: {full_command[0]}. Ensure conda is installed and in PATH")
-        raise
-    except Exception as e:
-        logger.critical(f"An unexpected error occurred while running subprocess: {e}")
-        raise
+def run_basecalling(config):
+    """ Executes the basecalling script using the 01_basecalling.sh script """
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting step 1: Basecalling")
+
+    script_path = "scripts/01_basecalling.sh"
+    config_file = "config.yaml"
+    command = ["bash", script_path, config_file]
+
+    run_command(config, command)
+
+
+def run_alignment(config):
+    """ Executes the alignment script: 02_alignment.sh """
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting step 2: Alignment and Indexing")
+
+    script_path = "scripts/02_alignment.sh"
+    config_file = "config.yaml"
+    command = ["bash", script_path, config_file]
+
+    run_command(config, command)
+
+
+def run_alignment_qc(config):
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Running QC on aligned and indexed data")
+
+    script_path = "scripts/03_alignment_qc.sh"
+    config_file = "config.yaml"
+    command = ["bash", script_path, config_file]
+
+    run_command(config, command)
+
+
+def run_methylation_summary(config):
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting step 4: Methylation Summary")
+
+    script_path = "scripts/04_methylation_summary.sh"
+    config_file = "config.yaml"
+    command = ["bash", script_path, config_file]
+
+    run_command(config, command)
+
 
 
 def run_deconvolution_submodule(config):
@@ -108,74 +122,7 @@ def run_deconvolution_submodule(config):
         raise e
 
 
-def run_setup(config):
-    """ Executes the 00_setup.sh script """
-    logger = logging.getLogger("pipeline")
-    logger.info("=" * 80)
-    logger.info(">>> Starting Step 0: Setup")
 
-    script_path = "scripts/00_setup.sh"
-    config_file = "config.yaml"
-    command = ["bash", script_path, config_file]
-
-    run_and_log(config, command)
-
-    # if not dorado_path or not os.path.exists(dorado_path):
-    #    raise FileNotFoundError(f"Setup script failed to return a valid path.")
-
-    # print(f"--- Successfully found Dorado executable at: {dorado_path} ---\n ")
-
-    # return dorado_path
-
-
-def run_basecalling(config):
-    """ Executes the basecalling script using the 01_basecalling.sh script """
-    logger = logging.getLogger("pipeline")
-    logger.info("=" * 80)
-    logger.info(">>> Starting step 1: Basecalling")
-
-    script_path = "scripts/01_basecalling.sh"
-    config_file = "config.yaml"
-    command = ["bash", script_path, config_file]
-
-    run_and_log(config, command)
-
-
-def run_alignment(config):
-    """ Executes the alignment script: 02_alignment.sh """
-    logger = logging.getLogger("pipeline")
-    logger.info("=" * 80)
-    logger.info(">>> Starting step 2: Alignment and Indexing")
-
-    script_path = "scripts/02_alignment.sh"
-    config_file = "config.yaml"
-    command = ["bash", script_path, config_file]
-
-    run_and_log(config, command)
-
-
-def run_alignment_qc(config):
-    logger = logging.getLogger("pipeline")
-    logger.info("=" * 80)
-    logger.info(">>> Running QC on aligned and indexed data")
-
-    script_path = "scripts/03_alignment_qc.sh"
-    config_file = "config.yaml"
-    command = ["bash", script_path, config_file]
-
-    run_and_log(config, command)
-
-
-def run_methylation_summary(config):
-    logger = logging.getLogger("pipeline")
-    logger.info("=" * 80)
-    logger.info(">>> Starting step 4: Methylation Summary")
-
-    script_path = "scripts/04_methylation_summary.sh"
-    config_file = "config.yaml"
-    command = ["bash", script_path, config_file]
-
-    run_and_log(config, command)
 
 
 def run_analysis(config):

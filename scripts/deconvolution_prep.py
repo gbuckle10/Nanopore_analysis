@@ -3,7 +3,7 @@ import os
 import pybedtools
 import logging
 from pathlib import Path
-from scripts.utils.file_conversion import *
+from scripts.utils.runner import *
 
 
 def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
