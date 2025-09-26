@@ -1,5 +1,6 @@
 import logging
 import colorlog
+from pathlib import Path
 
 def setup_logger(name='pipeline', log_file='logs/pipeline.log'):
     """
@@ -29,6 +30,8 @@ def setup_logger(name='pipeline', log_file='logs/pipeline.log'):
     color_handler.setFormatter(color_format)
 
     # Create file handler
+    log_path = Path(log_file)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     file_handler = logging.FileHandler(log_file, mode='w')
     file_format = logging.Formatter(
         '%(asctime)s - %(levelname)-8s - %(message)s',
