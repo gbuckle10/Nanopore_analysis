@@ -197,22 +197,15 @@ install_wgbstools() {
   log_info "Compiling wgbstools"
 
   local wgbs_tools_dir="externals/wgbs_tools"
-  local wgbs_executable="${wgbs_tools_dir}/wgbstools"
 
-  if [ -x "${wgbs_executable}" ]; then
-    log_info "wgbstools executable already found. Skipping installation."
-    return 0
-  fi
+  log_info "Running command cd externals/wgbstools && python setup.py"
+  (cd externals/wgbs_tools && python setup.py)
 
-  log_info "wgbstools not found or not executable. Starting installation process."
-
-  (
-    cd "${wgbs_tools_dir}" && python setup.py install
-  )
+  log_info "python setup script was run"
 }
 
 setup_submodules
-setup_wgbstools
+install_wgbstools
 make_directories
 install_dorado
 download_methylation_atlas_and_illumina_manifest
