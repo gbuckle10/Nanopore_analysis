@@ -18,7 +18,7 @@ dependencies:
   - go-yq
   - bedtools
   - pybedtools
-  - conda_forge:gcc
+  - conda_forge:gxx
   - pip
   - pip:
     - pyyaml
