@@ -1,4 +1,7 @@
 [submodule "externals/meth_atlas"]
 	path = externals/meth_atlas
 	url = https://github.com/gbuckle10/meth_atlas
-    branch = changes
+	branch = changes
+[submodule "externals/wgbs_tools"]
+	path = externals/wgbs_tools
+	url = https://github.com/gbuckle10/wgbs_tools

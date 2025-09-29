@@ -203,9 +203,41 @@ download_methylation_atlas_and_illumina_manifest(){
   else
     log_info "The UXM atlas csv file is already there so won't be re-downloaded."
   fi
-
 }
 
+setup_submodules() {
+  log_info "Setting up submodules"
+
+  if [ ! -f ".gitmodules" ]; then
+    log_warning "No .gitmodules file found. Skipping submodule setup."
+    return 0
+  fi
+
+  log_info "Initialising and updating submodules (cloning if necessary)"
+  git submodule update --init --recursive
+  log_info "All submodules are synchronised and ready to go."
+}
+
+install_wgbstools() {
+  log_info "Compiling wgbstools"
+
+  local wgbs_tools_dir="externals/wgbs_tools"
+  local wgbs_executable="${wgbs_tools_dir}/wgbstools"
+
+  if [ -x "${wgbs_executable}" ]; then
+    log_info "wgbstools executable already found. Skipping installation."
+    return 0
+  fi
+
+  log_info "wgbstools not found or not executable. Starting installation process."
+
+  (
+    cd "${wgbs_tools_dir}" && python setup.py install
+  )
+}
+
+install_submodules
+install_wgbstools
 make_directories
 install_dorado
 download_methylation_atlas_and_illumina_manifest
