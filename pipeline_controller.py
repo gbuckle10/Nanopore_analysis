@@ -6,7 +6,7 @@ from collections import deque
 from datetime import datetime
 from scripts.utils.runner import load_config, run_command
 from scripts.utils.logger import setup_logger
-
+from scripts.deconvolution_prep import generate_deconvolution_files
 
 
 def run_setup(config):
@@ -19,7 +19,7 @@ def run_setup(config):
     config_file = "config.yaml"
     command = ["bash", script_path, config_file]
 
-    run_command(config, command)
+    run_command(command, config)
 
 def run_basecalling(config):
     """ Executes the basecalling script using the 01_basecalling.sh script """
@@ -31,7 +31,7 @@ def run_basecalling(config):
     config_file = "config.yaml"
     command = ["bash", script_path, config_file]
 
-    run_command(config, command)
+    run_command(command, config)
 
 
 def run_alignment(config):
@@ -44,7 +44,7 @@ def run_alignment(config):
     config_file = "config.yaml"
     command = ["bash", script_path, config_file]
 
-    run_command(config, command)
+    run_command(command, config)
 
 
 def run_alignment_qc(config):
@@ -56,7 +56,7 @@ def run_alignment_qc(config):
     config_file = "config.yaml"
     command = ["bash", script_path, config_file]
 
-    run_command(config, command)
+    run_command(command, config)
 
 
 def run_methylation_summary(config):
@@ -68,7 +68,7 @@ def run_methylation_summary(config):
     config_file = "config.yaml"
     command = ["bash", script_path, config_file]
 
-    run_command(config, command)
+    run_command(command, config)
 
 
 

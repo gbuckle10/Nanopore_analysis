@@ -176,7 +176,8 @@ def finalise_outputs(results, output_dir, agg_intermediate_file):
 
         final_deconvolution_df.to_csv(deconvolution_path, sep=',', index=False)
         logger.info(f"Final aggregated deconvolution file saved to {deconvolution_path}")
-
+    else:
+        logger.error(f"Intermediate file {agg_intermediate_file} doesn't exist...")
 
 def load_meth_df_from_bed(bed_dir):
     '''

@@ -15,6 +15,7 @@ Process to install WGBS Tools:
         - ln -s x86_64-conda-linux-gnu-cpp cpp
         - ln -s x86_64-conda-linux-gnu-c++ c++
     - The above commands point the g++, gcc, cpp and c++ commands to the relevant executables.
+    - Now you can run setup.py and compile everything. Once setup.py is done you need to make wgbstools executable.
 
 
 Before running the programme, activate the conda environment:
@@ -80,3 +81,14 @@ Setup for WSL:
                         \+ - tells find to add all of the filenames
                         ; - end of the line.
 
+
+With wgbs_tools:
+    - To your aligned bam file, use bam2pat to generate pat and beta files
+    - View any region you're interested in with:
+        - wgbstools view -r chr1:910433-910476 path/to/file.pat.gz
+        - wgbstools view -r chr1:910433-910476 --genome hg19 path/to/file.beta
+    - Visualise with:
+        - wgbstools vis *.beta -r chr1:22517933-22519650
+        - wgbstools vis *.beta -r chr1:22517933-22519650 --heatmap
+    - Visualise methylation patterns with:
+        - wgbstools vis path/to/file.pat.gz -r chr1:22517933-22519650

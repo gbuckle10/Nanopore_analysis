@@ -17,7 +17,7 @@ def load_config(config_file="config.yaml"):
         raise
 
 
-def run_command(command: list, config: dict, use_conda: bool):
+def run_command(command: list, config: dict, use_conda: bool=True):
     '''
     Runs the commands for each step, logs the outputs in real time and handles errors.
     '''
