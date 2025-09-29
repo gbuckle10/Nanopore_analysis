@@ -211,8 +211,8 @@ install_wgbstools() {
   )
 }
 
-install_submodules
-install_wgbstools
+setup_submodules
+setup_wgbstools
 make_directories
 install_dorado
 download_methylation_atlas_and_illumina_manifest

@@ -27,7 +27,7 @@ handle_error() {
 }
 trap 'handle_error $LINENO' ERR
 
-check_variables() {
+check_vars() {
   for var in "$@"; do
     if [[ -z "${!var}" ]]; then
       log_error "Required variable '${var_name}' is not set or is empty. Please check config.yaml"
