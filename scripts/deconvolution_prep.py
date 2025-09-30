@@ -3,7 +3,8 @@ import os
 import pybedtools
 import logging
 from pathlib import Path
-from scripts.utils.runner import *
+import sys
+import argparse
 
 
 def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
@@ -119,7 +120,7 @@ def generate_deconvolution_files(bed_file, manifest_file, uxm_atlas_file, chunk_
     finalise_outputs(all_results, output_dir, uxm_aggregated_intermediate)
     # ----- ADD A CHECK HERE TO SEE WHETHER THE FILES EXIST
 
-    format_atlas_file("data/atlas/UXM_atlas.tsv", "data/atlas/UXM_atlas_deconvolution.csv")
+    #format_atlas_file("data/atlas/UXM_atlas.tsv", "data/atlas/UXM_atlas_deconvolution.csv")
     convert_atlas_to_genome_coordinates("data/atlas/full_atlas_gc.csv", "data/atlas/full_atlas.csv",
                                         "data/atlas/illumina_manifest.csv")
 
@@ -179,89 +180,6 @@ def finalise_outputs(results, output_dir, agg_intermediate_file):
     else:
         logger.error(f"Intermediate file {agg_intermediate_file} doesn't exist...")
 
-def load_meth_df_from_bed(bed_dir):
-    '''
-        Loads a bed or bedmethyl file into a pandas dataframe for further processing.
-        :param bed_dir: filepath of bed(methyl) file to be loaded
-        :return:
-    '''
-    logger = logging.getLogger('pipeline')
-    logger.info(f"Loading and filtering Nanopore methylation data from: {bed_dir}...")
-    # Load into a dataframe. Col 3 is taken so that we can filter out everything apart from "m" modification.
-    # This needs to be more selective, it only works if we have a bedmethyl file but if it's a different type of bed
-    # file it won't work.
-
-    bed_cols = ['chr', 'start', 'mod', 'beta_value']
-    chunk_size = 5_000_000
-
-    chunk_iterator = pd.read_csv(
-        bed_dir,
-        sep='\t',
-        header=None,
-        usecols=[0, 1, 3, 10],  # read only chr, start, mod and beta value
-        names=bed_cols,
-        chunksize=chunk_size
-    )
-
-    filtered_chunks = []
-    for i, chunk in enumerate(chunk_iterator):
-        logger.info(f" - Processing chunk {i + 1}...")
-        filtered_chunk = chunk[chunk['mod'].str.contains('m')]
-        filtered_chunks.append(filtered_chunk)
-
-    logger.info("Combining filtered chunks...")
-    meth_df = pd.concat(filtered_chunks, ignore_index=True)
-
-    # Beta value should be between 0 and 1
-    meth_df['beta_value'] = meth_df['beta_value'] / 100.0
-    meth_df['site_id'] = meth_df['chr'].astype(str) + ':' + meth_df['start'].astype(str)
-
-    logger.info(f"Methylation dataframe loaded and filtered. Final size: {len(meth_df)} rows.")
-    logger.info("Here are the first 5 rows of our methylation dataframe:")
-    logger.info(meth_df.head())
-
-    logger.info("Saving meth_df to csv and parquet...")
-
-    meth_df.to_parquet("data/methylation/methylation_dataframe.parquet")
-    meth_df.to_csv("data/methylation/methylation_dataframe.csv", index=False)
-
-    return meth_df
-
-
-def load_meth_df_from_bed__(bed_dir):
-    '''
-    Loads a bed or bedmethyl file into a pandas dataframe for further processing.
-    :param bed_dir: filepath of bed(methyl) file to be loaded
-    :return:
-    '''
-
-    print(f'Loading Nanopore methylation data from: {bed_dir} ... ')
-    # Load into a dataframe. Col 3 is taken so that we can filter out everything apart from "m" modification.
-    # This needs to be more selective, it only works if we have a bedmethyl file but if it's a different type of bed
-    # file it won't work.
-
-    meth_df = pd.read_csv(
-        bed_dir, sep='\t', header=None, usecols=[0, 1, 3, 10], names=['chr', 'start', 'mod', 'beta_value']
-    )
-
-    # Only keep
-    meth_df = meth_df[meth_df['mod'] == 'm'].copy()
-    meth_df.drop(columns=['mod'], inplace=True
-                 )
-    meth_df['beta_value'] = meth_df['beta_value'] / 100.0
-
-    meth_df['site_id'] = meth_df['chr'].astype(str) + ':' + meth_df['start'].astype(str)
-
-    print("Methylation dataframe loaded from the bed file.")
-    print("Here are the first 5 rows of our methylation dataframe:")
-    print(meth_df.head())
-
-    meth_df.to_parquet("data/methylation/methylation_dataframe.parquet")
-    meth_df.to_csv("data/methylation/methylation_dataframe.csv", index=False)
-
-    return meth_df
-
-
 def get_or_create_manifest_df(manifest_csv_dir: str, processed_manifest_parquet: str) -> pd.DataFrame:
     '''
     Loads the processed manifest dataframe from a parquet file if it exists.
@@ -308,144 +226,6 @@ def get_or_create_manifest_df(manifest_csv_dir: str, processed_manifest_parquet:
 
     return manifest_df
 
-
-def generate_illumina_deconvolution_file(methylation_df, manifest_df):
-    '''
-    Generate a file to be deconvoluted with the meth_atlas deconvolution algorithm, in which the location is based on
-    Illumina ID.
-    The output file will contain 2 columns:
-        - IlmnID - The Illumina ID of the CpG location
-        - beta_value - The beta value for that specific CpG
-    '''
-
-    logger = logging.getLogger('pipeline')
-
-    illumina_deconvolution_df = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[
-        ['IlmnID', 'beta_value']]
-
-    # illumina_deconvolution_df.to_parquet("analysis/data_to_deconvolute.parquet", index=False)
-    illumina_deconvolution_df.to_csv("analysis/data_to_deconvolute_illumina.csv", index=False)
-
-
-def generate_gc_illumina_deconvolution_file(methylation_df, manifest_df):
-    '''
-    Using an Illumina manifest and genome coordinate methylation dataframe, make a deconvolution-ready file
-    matching the Illumina probe IDs to genome locations.
-    '''
-
-    # Only keep the rows for which the location matches an Illumina probe
-    illumina_deconvolution_df_gl = pd.merge(methylation_df, manifest_df, on="site_id", how='inner')[
-        ['site_id', 'beta_value']]
-    # illumina_deconvolution_df_gl.to_parquet("analysis/data_to_deconvolute_geco.parquet", index=False)
-    illumina_deconvolution_df_gl.to_csv("analysis/data_to_deconvolute_geco.csv", index=False)
-
-
-def generate_uxm_deconvolution_file(methylation_df):
-    print("Generating uxm deconvolution file from dataframe.")
-    print("Top 5 rows of methylation dataframe:")
-    print(methylation_df.head())
-    uxm_deconvolution_df = methylation_df[['site_id', 'beta_value']]
-
-    # uxm_deconvolution_df.to_parquet("analysis/data_to_deconvolute_uxm.parquet", index=False)
-    uxm_deconvolution_df.to_csv("analysis/data_to_deconvolute_big.csv", index=False)
-
-
-def generate_aggregated_deconvolution_file(methylation_file, range_atlas_file, chunk_size):
-    '''
-    Assigns each CpG site from the methylation data to a region from the
-    atlas.
-
-    :param deconvolution_file: Methylation dataframe containing columns 'chr', 'loc' and 'beta_value'
-    :param range_atlas_file:  Atlas file with location ranges
-    :return:
-    '''
-
-    intermediate_file = "analysis/temp_mapped_methylation.tsv"
-    output_data_file = "analysis/aggregated_deconvolution_overview.csv"
-    output_deconvolution_file = "analysis/aggregated_deconvolution.csv"
-    print("--- Starting to make the aggregated deconvolution file ---")
-    atlas_df = pd.read_csv(range_atlas_file, sep='\t')
-
-    all_columns = atlas_df.columns.tolist()
-    unneeded_cols = ['startCpG', 'endCpG', 'target', 'direction']
-    cols_to_keep = [col for col in all_columns if
-                    col not in unneeded_cols]
-    atlas_df = atlas_df[cols_to_keep]
-    print("Top 5 rows atlas file:")
-    print(atlas_df.head())
-
-    atlas_regions = atlas_df[['chr', 'start', 'end', 'name']]
-    atlas_bed = pybedtools.BedTool.from_dataframe(atlas_regions)
-
-    # Read in chunks
-    print(f"Reading methylation file in chunks of size {chunk_size}")
-
-    chunk_iterator = pd.read_csv(
-        methylation_file,
-        chunksize=chunk_size
-    )
-
-    header_written = False
-    for i, chunk_df in enumerate(chunk_iterator):
-        print(f" - Processing chunk {i + 1} - row {i * chunk_size} to {(i + 1) * chunk_size}...")
-        chunk_df[['chr', 'start']] = chunk_df['site_id'].str.split(':', expand=True)
-        chunk_df['end'] = chunk_df['start'].astype(int) + 1
-        chunk_df_pbt = chunk_df[['chr', 'start', 'end', 'beta_value']]
-        chunk_bed = pybedtools.BedTool.from_dataframe(chunk_df_pbt)
-
-        mapped_chunk_bed = chunk_bed.intersect(atlas_bed, wa=True, wb=True)
-
-        if len(mapped_chunk_bed) > 0:
-            map_cols = ['meth_chr', 'meth_start', 'meth_end', 'beta_value',
-                        'atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
-            mapped_df = mapped_chunk_bed.to_dataframe(names=map_cols)
-
-            if not header_written:
-                mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=True)
-                header_written = True
-            else:
-                mapped_df.to_csv(intermediate_file, sep='\t', index=False, header=False, mode='a')
-
-    print("--- All chunks processed ---")
-    if not os.path.exists(intermediate_file):
-        print("No overlaps found. Exiting...")
-        open(output_data_file, 'w').close()
-    else:
-        final_mapped_df = pd.read_csv(intermediate_file, sep='\t')
-        print(f"we did it! First few rows of the final mapped df (out of {len(final_mapped_df)}:")
-        print(final_mapped_df.head())
-
-        aggregated_df = final_mapped_df.groupby(
-            ['atlas_chr', 'atlas_start', 'atlas_end', 'atlas_name']
-        ).agg(
-            mean_methylation=('beta_value', 'mean'),
-            cpg_count=('beta_value', 'count')
-        ).reset_index()
-
-        aggregated_df.rename(columns={'beta_value': 'mean_methylation'}, inplace=True)
-
-        print("--- Formatting final output and cleaning up ---")
-        aggregated_df['site_id'] = aggregated_df['atlas_chr'].astype(str) + ':' + aggregated_df[
-            'atlas_start'].astype(str) + '-' + aggregated_df['atlas_end'].astype(str)
-
-        print("Aggregated df head:")
-        print(aggregated_df.head())
-
-        final_df = aggregated_df[
-            ['site_id', 'atlas_name', 'mean_methylation', 'cpg_count', 'atlas_chr', 'atlas_start', 'atlas_end']]
-        final_deconvolution_df = aggregated_df[['atlas_name', 'mean_methylation']]
-
-        print(f"Top 5 rows of final aggregated data (out of {len(final_df)}:")
-        print(final_df.head())
-
-        # Save final aggregrated result
-        final_df.to_csv(output_data_file, sep=',', index=False)
-        print(f"Final aggregated data saved to {output_data_file}")
-
-        final_deconvolution_df.to_csv(output_deconvolution_file, sep=',', index=False)
-        print(f"Final aggregated deconvolution file saved to {output_deconvolution_file}")
-
-
 def format_atlas_file(atlas_file, new_atlas_file, sep='\t'):
     """
     Takes an atlas file and formats the first column to work with the meth_atlas algorithm.
@@ -475,7 +255,6 @@ def format_atlas_file(atlas_file, new_atlas_file, sep='\t'):
     atlas_df.to_csv(new_atlas_file, index=False)
 
     logger.info(f"Atlas for genome coordinate deconvoluted saved to {atlas_file}.")
-
 
 def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
     """
@@ -518,3 +297,28 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
 
     geco_atlas.to_csv(output_file, index=False)
 
+
+def main():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
+
+    parser = argparse.ArgumentParser(description="Deconvolution Preparation")
+    parser.add_argument("--bed-file", required=True)
+    parser.add_argument("--manifest-file", required=True)
+    parser.add_argument("--uxm-atlas-file", required=True)
+    parser.add_argument("--chunk-size", required=True, type=int)
+
+    args = parser.parse_args()
+
+    try:
+        generate_deconvolution_files(
+            bed_file=args.bed_file,
+            manifest_file=args.manifest_file,
+            uxm_atlas_file=args.uxm_atlas_file,
+            chunk_size=args.chunk_size
+        )
+    except Exception as e:
+        logging.error(f"An error occurred during deconvolution prep: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

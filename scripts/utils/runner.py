@@ -1,7 +1,9 @@
+import signal
 import subprocess
 import logging
 import yaml
-
+import shlex
+import os
 
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
@@ -24,41 +26,61 @@ def run_command(command: list, config: dict, use_conda: bool=True):
 
     logger = logging.getLogger('pipeline')
 
-    if use_conda:
-        conda_env = config['conda_env_name']
-        full_command = ["conda", "run", "-n", conda_env] + command
-    else:
-        full_command = command
+    command_str = shlex.join(command)
+
+    full_command = [
+        "script",
+        "-q",
+        "--flush",
+        "-c", command_str,
+        "/dev/null"
+    ]
 
     logger.info(f"Executing command: {' '.join(full_command)}")
 
-    try:
-        with subprocess.Popen(
-                full_command,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                universal_newlines=True
-        ) as process:
-            if process.stdout:
-                for line in iter(process.stdout.readline, ''):
-                    logger.info(line.strip())
-        if process.returncode != 0:
-            logger.error(f"Bash script failed with exit code {process.returncode}.")
-            logger.error("See the output above for the full error details.")
+    process = None
 
+    try:
+        process = subprocess.Popen(
+            full_command,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+            preexec_fn=os.setsid
+        )
+        if process.stdout:
+            for line in iter(process.stdout.readline, ''):
+                logger.info(line.strip())
+
+        process.wait()
+
+        if process.returncode != 0:
+            logger.error(f"{process.returncode}")
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
             logger.info("Command completed successfully")
+
+    except KeyboardInterrupt:
+        logger.warning(">>> Keyboard interrupt")
+        if process:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        raise
     except subprocess.CalledProcessError as e:
-        logger.critical(f"Pipeline halting due to command failure: {' '.join(e.cmd)}")
+        logger.critical(' '.join(e.cmd))
         raise e
     except FileNotFoundError:
-        logger.critical(f"Command not found: {full_command[0]}. Ensure conda is installed and in PATH")
+        logger.critical(f"{full_command[0]}")
         raise
     except Exception as e:
-        logger.critical(f"An unexpected error occurred while running subprocess: {e}")
+        logger.critical(e)
+        if process:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         raise e
+
+
+
+
 
 
 

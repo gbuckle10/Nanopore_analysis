@@ -70,7 +70,41 @@ def run_methylation_summary(config):
 
     run_command(command, config)
 
+def run_deconvolution_prep(config):
+    """
+    Executes the full deconvolution analysis in two steps. The first step is to
+    arrange the data in the bed file in such a way that it can be compared to the
+    meth_atlas.
+    """
 
+    logger = logging.getLogger("pipeline")
+    logger.info("=" * 80)
+    logger.info(">>> Starting preparation for deconvolution.")
+
+
+    try:
+        # One day change this so that the yaml structure mirrors the file structure. config['paths']['methylation_dir']['methylation_bed_name']
+        bed_file_path = config['paths']['methylation_dir'] + config['paths']['methylation_bed_name']
+        manifest_file_path = config['paths']['atlas_dir'] + config['paths']['illumina_manifest']
+        uxm_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['uxm_atlas_name']
+        chunk_size = int(config['parameters']['analysis']['methylation_aggregation_chunksize'])
+
+        command = [
+            sys.executable,
+            "-u",
+            "scripts/deconvolution_prep.py",
+            "--bed-file", bed_file_path,
+            "--manifest-file", manifest_file_path,
+            "--uxm-atlas-file", uxm_atlas_file_path,
+            "--chunk-size", str(chunk_size)
+        ]
+
+        run_command(command, config, use_conda=False)
+
+
+    except Exception as e:
+        print(f"--- ERROR during deconvolution prep: {e} ---")
+        raise
 
 def run_deconvolution_submodule(config):
     logger = logging.getLogger('pipeline')
@@ -125,51 +159,6 @@ def run_deconvolution_submodule(config):
 
 
 
-def run_analysis(config):
-    """
-    Executes the full deconvolution analysis in two steps. The first step is to
-    arrange the data in the bed file in such a way that it can be compared to the
-    meth_atlas.
-    """
-    logger = logging.getLogger("pipeline")
-    logger.info("=" * 80)
-    logger.info(">>> Starting analysis workflow")
-
-    try:
-
-        # One day change this so that the yaml structure mirrors the file structure. config['paths']['methylation_dir']['methylation_bed_name']
-        bed_file_path = config['paths']['methylation_dir'] + config['paths']['methylation_bed_name']
-        manifest_file_path = config['paths']['atlas_dir'] + config['paths']['illumina_manifest']
-        illumina_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_ilmn']
-        geco_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['atlas_file_gc']
-        uxm_atlas_file_path = config['paths']['atlas_dir'] + config['paths']['uxm_atlas_name']
-        deconvolution_path = config['paths']['deconvolution_dir']
-        chunk_size = int(config['parameters']['analysis']['methylation_aggregation_chunksize'])
-
-        generate_deconvolution_files(
-            bed_file=bed_file_path,
-            manifest_file=manifest_file_path,
-            uxm_atlas_file=uxm_atlas_file_path,
-            chunk_size=chunk_size
-        )
-
-        '''
-        convert_atlas_to_genome_coordinates(
-            output_file=geco_atlas_file_path,
-            atlas_file=illumina_atlas_file_path,
-            manifest_file=manifest_file_path
-        )
-        '''
-
-        # format_atlas_file(atlas_file=uxm_atlas_file_path)
-
-        # run_deconvolution_submodule(config)
-
-    except Exception as e:
-        print(f"--- ERROR during deconvolution prep: {e} ---")
-        raise
-
-
 def main():
     """ Main entry point for the pipeline controller """
 
@@ -207,7 +196,7 @@ def main():
     if 'methylation_summary' in steps_to_run:
         run_methylation_summary(config)
     if 'deconvolution_prep' in steps_to_run:
-        run_analysis(config)
+        run_deconvolution_prep(config)
     if 'deconvolution' in steps_to_run:
         run_deconvolution_submodule(config)
 
