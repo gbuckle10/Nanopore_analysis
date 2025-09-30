@@ -90,6 +90,7 @@ install_dorado() {
 
   DORADO_EXECUTABLE_PATH=$(realpath "${LOCAL_DORADO_BIN}/dorado")
 
+  log_info "Adding dorado executable ${DORADO_EXECUTABLE_PATH} to runtime config ${RUNTIME_CONFIG}"
   echo "export DORADO_EXECUTABLE=\"${DORADO_EXECUTABLE_PATH}\"" > "${RUNTIME_CONFIG}"
   log_info "Dorado was successfully installed. Dorado path was saved to ${RUNTIME_CONFIG}" >&2
 }
@@ -202,10 +203,12 @@ install_wgbstools() {
   (cd externals/wgbs_tools && python setup.py)
 
   log_info "python setup script was run"
+
+  wgbstools
 }
 
 setup_submodules
-install_wgbstools
+#install_wgbstools
 make_directories
 install_dorado
 download_methylation_atlas_and_illumina_manifest
