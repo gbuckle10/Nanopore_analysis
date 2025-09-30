@@ -81,6 +81,7 @@ methylation_pileup() {
     --cpg
     --force-allow-implicit
     --ref "${REFERENCE_GENOME_DIR}$REFERENCE_FASTA"
+    --suppress-progress
     --log-filepath "logs/${LOG_FILE}"
   )
   log_info "Generating bedMethyl file with command: ${pileup_cmd[*]}"
