@@ -2,7 +2,9 @@
 	path = externals/meth_atlas
 	url = https://github.com/gbuckle10/meth_atlas
 	branch = changes
+	ignore=dirty
 [submodule "externals/wgbs_tools"]
 	path = externals/wgbs_tools
 	url = https://github.com/gbuckle10/wgbs_tools
 	branch = wgbs-fixes
+	ignore=dirty
