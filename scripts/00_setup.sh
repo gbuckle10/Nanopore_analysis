@@ -236,7 +236,7 @@ install_wgbstools() {
   )
 }
 
-install_submodules
+setup_submodules
 install_wgbstools
 make_directories
 install_dorado

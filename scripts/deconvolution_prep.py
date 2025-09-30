@@ -3,7 +3,8 @@ import os
 import pybedtools
 import logging
 from pathlib import Path
-from scripts.utils.runner import *
+import sys
+import argparse
 
 
 def process_chunk(chunk_df, manifest_df, uxm_atlas_bed):
@@ -255,7 +256,6 @@ def format_atlas_file(atlas_file, new_atlas_file, sep='\t'):
 
     logger.info(f"Atlas for genome coordinate deconvoluted saved to {atlas_file}.")
 
-
 def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
     """
     Given a methylation atlas indexed by Illumina IDs, output a methylation atlas indexed by
@@ -297,3 +297,28 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
 
     geco_atlas.to_csv(output_file, index=False)
 
+
+def main():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
+
+    parser = argparse.ArgumentParser(description="Deconvolution Preparation")
+    parser.add_argument("--bed-file", required=True)
+    parser.add_argument("--manifest-file", required=True)
+    parser.add_argument("--uxm-atlas-file", required=True)
+    parser.add_argument("--chunk-size", required=True, type=int)
+
+    args = parser.parse_args()
+
+    try:
+        generate_deconvolution_files(
+            bed_file=args.bed_file,
+            manifest_file=args.manifest_file,
+            uxm_atlas_file=args.uxm_atlas_file,
+            chunk_size=args.chunk_size
+        )
+    except Exception as e:
+        logging.error(f"An error occurred during deconvolution prep: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
