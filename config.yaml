@@ -17,8 +17,8 @@ pipeline_control:
     #- analysis
 
   run_setup_tasks:
-    download_fast5_data: true
-    convert_fast5_to_pod5: true
+    download_fast5_data: false
+    convert_fast5_to_pod5: false
 
 # ========================================================
 # Parameters
