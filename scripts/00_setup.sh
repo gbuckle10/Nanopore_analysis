@@ -19,6 +19,10 @@ POD5_DIR=$(yq e '.paths.pod5_dir' "${CONFIG_FILE}")
 POD5_FILE=$(yq e '.paths.pod5_name' "${CONFIG_FILE}")
 SHOULD_DOWNLOAD_FAST5_FILES=$(yq e '.pipeline_control.run_setup_tasks.download_fast5_data' "${CONFIG_FILE}")
 SHOULD_CONVERT_FAST5_TO_POD5=$(yq e '.pipeline_control.run_setup_tasks.convert_fast5_to_pod5' "${CONFIG_FILE}")
+REFERENCE_GENOME_DIR='reference_genomes/'
+REFERENCE_GENOME_URL=$(yq e '.paths.reference_genome_url' "${CONFIG_FILE}")
+REFERENCE_GENOME_NAME=$(yq e '.paths.reference_genome_name' "${CONFIG_FILE}")
+REFERENCE_GENOME_INDEX=$(yq e '.paths.indexed_ref_gen_name' "${CONFIG_FILE}")
 
 check_vars \
   "DORADO_VERSION" \
@@ -116,6 +120,43 @@ export DORADO_EXECUTABLE="${DORADO_EXECUTABLE_PATH}"
 EOL
 
   log_info "Dorado was successfully installed. Dorado path was saved to ${RUNTIME_CONFIG}" >&2
+}
+
+download_reference_genome() {
+
+  log_info "Checking for reference genome"
+
+  REF_FASTA="${REFERENCE_GENOME_DIR}${REFERENCE_GENOME_NAME}"
+
+
+  # Check to see whether the file already exists.
+  if [ -f "${REF_FASTA}" ]; then
+    log_info "Reference file ${REF_FASTA} already exists, so we will skip the download"
+    return 0
+  fi
+
+  log_info "--- Reference genome not found at ${REF_FASTA}. Downloading from ${REFERENCE_GENOME_URL} to ${REFERENCE_GENOME_DIR} ---"
+
+  aws s3 cp "${REFERENCE_GENOME_URL}" "${REF_FASTA}" --no-sign-request
+
+  log_info "Genome has been downloaded and indexed."
+
+  # The output of this should be in the format >chr1 >chr2 etc.
+  # grep ">" "${REF_FASTA}" | head -n 5
+}
+
+index_reference_genome() {
+  REF_FASTA="${REFERENCE_GENOME_DIR}${REFERENCE_GENOME_NAME}"
+  REF_MMI="${REFERENCE_GENOME_DIR}${REFERENCE_GENOME_INDEX}"
+
+  log_info "Checking for reference index at ${REF_MMI}"
+  if [ ! -f "${REF_MMI}" ]; then
+    log_info "Index not found, creating minimap2 index"
+    minimap2 -d "${REF_MMI}" "${REF_FASTA}"
+    log_info "Genome index created at ${REF_MMI}"
+  else
+    log_info "Index already exists, so we'll skip indexing."
+  fi
 }
 
 download_fast5_data() {
@@ -249,10 +290,12 @@ EOL
 }
 
 make_directories
+download_reference_genome
+index_reference_genome
 #setup_submodules
-install_wgbstools
+#install_wgbstools
 #install_dorado
-#download_methylation_atlas_and_illumina_manifest
+download_methylation_atlas_and_illumina_manifest
 if [[ "$SHOULD_DOWNLOAD_FAST5_FILES" == "true" ]]; then
   download_fast5_data
 fi
