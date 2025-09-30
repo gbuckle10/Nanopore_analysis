@@ -11,3 +11,4 @@
 [submodule "externals/UXM_deconv"]
 	path = externals/UXM_deconv
 	url = https://github.com/gbuckle10/UXM_deconv
+	ignore=dirty

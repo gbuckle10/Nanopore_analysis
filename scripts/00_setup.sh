@@ -264,28 +264,44 @@ setup_submodules() {
   log_info "All submodules are synchronised and ready to go."
 }
 
-install_wgbstools() {
+install_wgbstools_uxm_deconv() {
   log_info "Compiling wgbstools"
-
-
   log_info "Running command cd externals/wgbstools && python setup.py"
 
-  (cd externals/wgbs_tools && python setup.py)
+  #(cd externals/wgbs_tools && python setup.py)
 
-  log_info "python setup script was run"
-
-  log_info "Creating runtime config file..."
+  log_info "Adding wgbs_tools and uxm_deconv_dir to runtime config file..."
   WGBS_TOOLS_DIR="externals/wgbs_tools"
+  #UXM_DECONV_DIR="externals/uxm_deconv"
+
+  UXM_DECONV_DIR="${PWD}/externals/UXM_deconv"
+  log_info "Need to add ${UXM_DECONV_DIR} to path"
 
   cat >> "${RUNTIME_CONFIG}" << EOL
 #!/bin/bash
 # Add wgbstools directories to path
 export PATH="${PWD}/${WGBS_TOOLS_DIR}:\${PATH}"
-
+export PATH="${UXM_DECONV_DIR}:\${PATH}"
 EOL
   log_info "Runtime config created"
   source "${RUNTIME_CONFIG}"
+
+  log_info $PATH
+  log_info ${RUNTIME_CONFIG}
+
+  log_info "Test wgbstools exe"
   wgbstools
+
+  log_info "Patching uxm wrapper to be robust."
+  UXM_FILE_PATH="${UXM_DECONV_DIR}/uxm"
+  UXM_PY_PATH="${UXM_DECONV_DIR}/src/uxm.py"
+  FULL_UXM_PY_PATH="$(realpath "${UXM_PY_PATH}")"
+
+  log_info "Adding ${FULL_UXM_PY_PATH} to the uxm file."
+  echo "${FULL_UXM_PY_PATH}" > "${UXM_FILE_PATH}"
+  log_info "uxm file now contains: $(cat ${UXM_FILE_PATH})"
+  uxm
+
 
 }
 
@@ -293,8 +309,8 @@ make_directories
 download_reference_genome
 index_reference_genome
 #setup_submodules
-#install_wgbstools
-#install_dorado
+install_wgbstools_uxm_deconv
+install_dorado
 download_methylation_atlas_and_illumina_manifest
 if [[ "$SHOULD_DOWNLOAD_FAST5_FILES" == "true" ]]; then
   download_fast5_data

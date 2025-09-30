@@ -13,7 +13,7 @@ pipeline_control:
     #- basecalling
     #- align
     #- align_qc
-    #- methylation_summary
+    - methylation_summary
     - deconvolution_prep
     #- deconvolution
 
