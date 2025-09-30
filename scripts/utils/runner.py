@@ -1,9 +1,9 @@
-import signal
+import pty
 import subprocess
 import logging
 import yaml
-import shlex
 import os
+import signal
 
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
@@ -26,54 +26,46 @@ def run_command(command: list, config: dict, use_conda: bool=True):
 
     logger = logging.getLogger('pipeline')
 
-    command_str = shlex.join(command)
-
-    full_command = [
-        "script",
-        "-q",
-        "--flush",
-        "-c", command_str,
-        "/dev/null"
-    ]
-
-    logger.info(f"Executing command: {' '.join(full_command)}")
+    logger.info(f"Executing command: {' '.join(command)}")
 
     process = None
 
     try:
+        # create pseudoterminal
+        parent_fd, child_fd = pty.openpty()
+
+        # start subprocess, connecting the output to the pseudoterminal.
         process = subprocess.Popen(
-            full_command,
-            stderr=subprocess.STDOUT,
+            command,
+            stdout=child_fd,
+            stderr=child_fd,
             text=True,
-            bufsize=1,
-            universal_newlines=True,
-            preexec_fn=os.setsid
+            preexec_fn=os.setpgrp
         )
-        if process.stdout:
-            for line in iter(process.stdout.readline, ''):
+
+        # We don't need the child part of the terminal anymore.
+        os.close(child_fd)
+
+        # Read the clean, live output from the parent part of the terminal
+        with os.fdopen(parent_fd) as master_file:
+            for line in iter(master_file.readline, ''):
                 logger.info(line.strip())
 
         process.wait()
 
         if process.returncode != 0:
-            logger.error(f"{process.returncode}")
+            logger.error(f"Command failed with exit code {process.returncode}")
             raise subprocess.CalledProcessError(process.returncode, process.args)
         else:
             logger.info("Command completed successfully")
 
     except KeyboardInterrupt:
-        logger.warning(">>> Keyboard interrupt")
+        logger.warning(">>> Keyboard interrupt detected. Terminating subprocess...")
         if process:
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         raise
-    except subprocess.CalledProcessError as e:
-        logger.critical(' '.join(e.cmd))
-        raise e
-    except FileNotFoundError:
-        logger.critical(f"{full_command[0]}")
-        raise
     except Exception as e:
-        logger.critical(e)
+        logger.critical(f"An unexpected error occurred: {e}")
         if process:
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         raise e
