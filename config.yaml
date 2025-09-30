@@ -9,13 +9,13 @@ conda_env_name: "nanopore_analysis"
 # ========================================================
 pipeline_control:
   run_steps:
-    #- setup
+    - setup
     #- basecalling
     #- align
     #- align_qc
-    #- methylation_summary
-    - deconvolution_prep
-    - deconvolution
+    - methylation_summary
+    #- deconvolution_prep
+    #- deconvolution
 
   run_setup_tasks:
     download_fast5_data: false
@@ -95,13 +95,13 @@ paths:
   reference_genome_name: "hg38.fa"
   indexed_ref_gen_name: "hg38.mmi"
   unaligned_bam_name: "newcalls2.bam"
-  aligned_bam_name: "alignment_2.bam"
+  aligned_bam_name: "taken_alignment.sorted.bam"
   alignment_flagstat_name: "alignment.flagstat.txt"
   alignment_stats_name: "alignment.stats.txt"
 
   # Step 3: Methylation summary outputs
   methylation_dir: "data/methylation/"
-  methylation_bed_name: "comfy.bed"
+  methylation_bed_name: "uxm_test.bed"
   methylation_log_file: "pileup_wowow.log"
 
   # Step 4: Analysis and Deconvolution outputs
