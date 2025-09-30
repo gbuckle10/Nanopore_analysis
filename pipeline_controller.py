@@ -91,6 +91,7 @@ def run_deconvolution_prep(config):
 
         command = [
             sys.executable,
+            "-u",
             "scripts/deconvolution_prep.py",
             "--bed-file", bed_file_path,
             "--manifest-file", manifest_file_path,
@@ -98,7 +99,7 @@ def run_deconvolution_prep(config):
             "--chunk-size", str(chunk_size)
         ]
 
-        run_command(command, config, use_conda=True)
+        run_command(command, config, use_conda=False)
 
 
     except Exception as e:
