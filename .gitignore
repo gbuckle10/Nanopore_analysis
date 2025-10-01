@@ -213,6 +213,7 @@ __marimo__/
 # Don't commit the downloaded and generated data
 /data/
 /models/
+/analysis/
 # Ignore downloaded archives
 *.zip
 *.tar.gz
