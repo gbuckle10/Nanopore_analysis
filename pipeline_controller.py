@@ -75,6 +75,9 @@ def run_setup(config):
     uxm_command = [uxm_tools_path, '--help']
     run_command(uxm_command, config)
 
+    wgbs_command = [wgbs_tools_path, "bam2pat"]
+    run_command(wgbs_command)
+
 def run_basecalling(config):
     """ Executes the basecalling script using the 01_basecalling.sh script """
     logger = logging.getLogger("pipeline")
