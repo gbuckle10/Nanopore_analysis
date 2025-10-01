@@ -39,7 +39,7 @@ def setup_logger(name='pipeline', log_file='logs/pipeline.log'):
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    file_handler = logging.FileHandler(log_file, mode=w)
+    file_handler = logging.FileHandler(log_file, mode='w')
 
     file_formatter = AnsiStrippingFormatter(
         '%(asctime)s - %(levelname)-8s - %(message)s',
