@@ -1,3 +1,10 @@
+To run uxm_deconv:
+    - Get your pat.gz file and your atlas.tsv file.
+    - Filter out the rows which aren't in the atlas using wgbstools view path/to/pat.gz -o path/to/output.csv
+    - index the output
+    - do something??
+
+
 Process to install WGBS Tools:
     - At the moment this will be done seprately, but will be folded into the main project eventually.
     - Open conda and go to the directory you want to clone the repository into.
