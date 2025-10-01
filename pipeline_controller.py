@@ -7,8 +7,53 @@ from datetime import datetime
 from scripts.utils.runner import load_config, run_command
 from scripts.utils.logger import setup_logger
 from scripts.deconvolution_prep import generate_deconvolution_files
+import os
+import re
 
+def load_tool_paths(env_file="runtime.env"):
+    logger = logging.getLogger('pipeline')
+    paths = {}
 
+    try:
+        with open(env_file, 'r') as f:
+            for line in f:
+                if '=' in line and not line.strip().startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    paths[key] = value
+
+            logger.info("Successfully loaded tool paths from runtime.env")
+            return paths
+    except FileNotFoundError:
+        logger.critical(f"Runtime environment file not found.")
+        raise
+
+def apply_runtime_config(runtime_config="scripts/runtime_config.sh"):
+    """
+    Reads a shell script and applies the export PATH commands to the current
+    process's environment.
+    :param runtime_config:
+    :return:
+    """
+
+    logger = logging.getLogger('pipeline')
+    config_vars = {}
+    try:
+        with open(runtime_config, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+
+                if line.startswith('export '):
+                    line = line[7:] # slice off "export"
+
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    config_vars[key] = value
+                    logger.info(f"Loaded config: {key}={value}")
+        return config_vars
+    except FileNotFoundError:
+        logger.error(f"Runtime config file '{runtime_config}' not found. PATH not updated.")
 def run_setup(config):
     """ Executes the 00_setup.sh script """
     logger = logging.getLogger("pipeline")
@@ -17,9 +62,18 @@ def run_setup(config):
 
     script_path = "scripts/00_setup.sh"
     config_file = "config.yaml"
+
     command = ["bash", script_path, config_file]
 
     run_command(command, config)
+
+    tool_paths = apply_runtime_config()
+    wgbs_tools_path = tool_paths.get("WGBSTOOLS_EXE")
+    uxm_tools_path = tool_paths.get("UXM_EXE")
+    wgbs_command = [wgbs_tools_path, "--version"]
+    run_command(wgbs_command, config)
+    uxm_command = [uxm_tools_path, '--help']
+    run_command(uxm_command, config)
 
 def run_basecalling(config):
     """ Executes the basecalling script using the 01_basecalling.sh script """

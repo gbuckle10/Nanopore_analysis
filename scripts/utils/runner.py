@@ -26,6 +26,7 @@ def run_command(command: list, config: dict, use_conda: bool=True):
 
     logger = logging.getLogger('pipeline')
 
+    print(command)
     logger.info(f"Executing command: {' '.join(command)}")
 
     process = None
@@ -48,9 +49,11 @@ def run_command(command: list, config: dict, use_conda: bool=True):
 
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd) as master_file:
-            for line in iter(master_file.readline, ''):
-                logger.info(line.strip())
-
+            try:
+                for line in iter(master_file.readline, ''):
+                    logger.info(line.strip())
+            except OSError:
+                pass
         process.wait()
 
         if process.returncode != 0:
