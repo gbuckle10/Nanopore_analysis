@@ -3,6 +3,7 @@ import colorlog
 from colorlog import ColoredFormatter
 from pathlib import Path
 import re
+import os
 
 class AnsiStrippingFormatter(logging.Formatter):
     """
@@ -23,6 +24,7 @@ def setup_logger(name='pipeline', log_file='logs/pipeline.log'):
     """
     # Create logger
     logger = logging.getLogger(name)
+
     logger.setLevel(logging.INFO)
 
     console_handler = logging.StreamHandler()

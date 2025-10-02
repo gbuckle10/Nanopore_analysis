@@ -4,7 +4,7 @@ import yaml
 import logging
 from collections import deque
 from datetime import datetime
-from scripts.utils.runner import run_command
+from scripts.utils.runner import run_command, load_config
 from scripts.utils.logger import setup_logger
 from scripts.utils.file_conversion import apply_runtime_config
 from scripts.deconvolution_prep import generate_deconvolution_files
@@ -22,30 +22,23 @@ class Pipeline:
         self.logger.info(f"The log for this run will be saved to: {log_file_path}")
         self.logger.info("=" * 80)
         self.tool_paths = {}
-        self.config = self.load_config(config_path)
-
-    def load_config(self, config_file="config.yaml"):
-        """ Loads the pipeline config from a YAML file """
-
-        try:
-            with open(config_file, 'r') as f:
-                config = yaml.safe_load(f)
-            self.logger.info(f"Configuration loaded from {config_file}")
-            return config
-        except FileNotFoundError:
-            self.logger.critical(f"Configuration file {config_file} not found.")
-            raise
+        self.config = load_config(config_path)
 
     def run_setup(self):
         """ Executes the 00_setup.sh script """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
-
+        '''
         script_path = "scripts/00_setup.sh"
         config_file = "config.yaml"
-
         command = ["bash", script_path, config_file]
+        '''
 
+        script_path = "scripts/00_setup.py"
+        command = [
+            sys.executable,
+            script_path
+        ]
         run_command(command)
 
         self.tool_paths = apply_runtime_config()
@@ -58,10 +51,6 @@ class Pipeline:
 
         wgbs_command = [wgbs_tools_path, "bam2pat"]
         run_command(wgbs_command)
-
-
-
-
 
     def run_basecalling(self):
         """ Executes the basecalling script using the 01_basecalling.sh script """
@@ -189,8 +178,7 @@ class Pipeline:
     def run(self):
         self.logger.info(" ---------------- Starting main run ----------------")
         try:
-            config = self.load_config()
-            steps_to_run = config['pipeline_control']['run_steps']
+            steps_to_run = self.config['pipeline_control']['run_steps']
         except (FileNotFoundError, KeyError) as e:
             self.logger.error(f"FATAL ERROR: Could not load required configuration.")
             self.logger.error(f"Details: {e}")
