@@ -4,9 +4,11 @@ import yaml
 import logging
 from collections import deque
 from datetime import datetime
+from pathlib import Path
 from scripts.utils.runner import run_command
 from scripts.utils.logger import setup_logger
-from scripts.utils.file_conversion import apply_runtime_config
+from scripts.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
+from scripts.deconvolution import Deconvolution
 from scripts.deconvolution_prep import generate_deconvolution_files
 import os
 import re
@@ -23,6 +25,7 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.tool_paths = {}
         self.config = self.load_config(config_path)
+        self.script_dir = Path(__file__).resolve().parent
 
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
@@ -49,18 +52,17 @@ class Pipeline:
         run_command(command)
 
         self.tool_paths = apply_runtime_config()
-        wgbs_tools_path = self.tool_paths.get("WGBSTOOLS_EXE")
-        uxm_tools_path = self.tool_paths.get("UXM_EXE")
-        wgbs_command = [wgbs_tools_path, "--version"]
-        run_command(wgbs_command)
-        uxm_command = [uxm_tools_path, '--help']
-        run_command(uxm_command)
 
-        wgbs_command = [wgbs_tools_path, "bam2pat"]
-        run_command(wgbs_command)
+        wgbstools_sl_path = self.script_dir / "externals" / "wgbs_tools" / "wgbstools"
+        wgbstools_py_path = self.script_dir / "externals" / "wgbs_tools" / "src" / "python" / "wgbs_tools.py"
+        ensure_tool_symlink(wgbstools_sl_path, wgbstools_py_path)
+        self.logger.info("Symlink for wgbstools good.")
 
+        uxm_sl_path = self.script_dir / "externals" / "UXM_deconv" / "uxm"
+        uxm_py_path = self.script_dir / "externals" / "UXM_deconv" / "src" / "uxm.py"
+        ensure_tool_symlink(uxm_sl_path, uxm_py_path)
 
-
+        self.logger.info("Symlink for uxm good.")
 
 
     def run_basecalling(self):
@@ -186,6 +188,9 @@ class Pipeline:
             self.logger.critical("Halting process due to deconvolution script failure.")
             raise e
 
+    def run_uxm_deconvolution(self):
+        self.tool_paths.get("UXM_EXE")
+
     def run(self):
         self.logger.info(" ---------------- Starting main run ----------------")
         try:
@@ -217,7 +222,6 @@ class Pipeline:
             self.run_deconvolution_prep()
         if 'deconvolution' in steps_to_run:
             self.run_deconvolution_submodule()
-
 
 if __name__ == '__main__':
     CONFIG_FILE = "config.yaml"
