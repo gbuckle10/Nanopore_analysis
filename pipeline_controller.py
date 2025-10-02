@@ -144,9 +144,15 @@ class Pipeline:
     def run_deconvolution(self):
         self.logger.info(">>> Starting deconvolution process")
 
+        '''
         atlas_file = self.project_root / "data" / "atlas" / "Atlas.U250.l4.hg19.full.tsv"
         file_to_deconv = self.project_root / "data" / "alignment_output" / "GSM5652316_Blood-B-Z000000TX.pat.gz"
         output_file = self.project_root / "data" / "alignment_output" / "Blood_deconv_hg19.tsv"
+        '''
+
+        atlas_file = self.project_root / "data" / "atlas" / "full_atlas_geco.csv"
+        file_to_deconv = self.project_root / "data" / "processed" / "deconvolution_geco.csv"
+        output_file = self.project_root / "data" / "processed"
 
         deconv_handler = Deconvolution(self.config, self.tool_paths, atlas_file, file_to_deconv, output_file)
         deconv_handler.run()

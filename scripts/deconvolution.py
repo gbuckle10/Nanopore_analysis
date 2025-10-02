@@ -1,4 +1,6 @@
 import logging
+import sys
+
 from scripts.utils.runner import run_command
 from pathlib import Path
 
@@ -61,6 +63,18 @@ class Deconvolution:
         This will contain the basic nnls algorithm for a generic atlas/bed pair.
         '''
         self.logger.info("Running NNLS deconvolution...")
+        deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
+
+        command = [
+            sys.executable,
+            deconvolve_script,
+            "-a",
+            str(self.atlas_path),
+            str(self.input_data_path),
+            "--out_dir", str(self.output_dir)
+        ]
+
+        run_command(command)
 
     def run(self):
         """
