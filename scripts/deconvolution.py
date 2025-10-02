@@ -22,11 +22,13 @@ class Deconvolution:
         self.logger.info("Running UXM Deconvolution...")
         self.logger.info(f"Deconvolving {self.input_data_path.name} using atlas {self.atlas_path.name}")
 
-        pat_suffix = '.pat.gz'
-        input_base_name = self.input_data_path.name.removesuffix(pat_suffix)
-        filtered_pat_name = f"{input_base_name}_temp{pat_suffix}"
+        pat_index_suffix = '.pat.gz'
+        pat_suffix = '.pat'
+        input_base_name = self.input_data_path.name.removesuffix(pat_index_suffix)
+        filtered_pat_name = f"{input_base_name}_tempnew{pat_suffix}"
+        indexed_pat_name = f"{input_base_name}_tempnew{pat_index_suffix}"
         filtered_pat_dir = self.input_data_path.with_name(filtered_pat_name)
-
+        indexed_pat_dir = self.input_data_path.with_name(indexed_pat_name)
         self.logger.info(f"Filtering input based on the atlas, filtered file {filtered_pat_dir}")
 
         pat_filter_command = [
@@ -35,22 +37,22 @@ class Deconvolution:
             '-L', str(self.atlas_path),
             '-o', str(filtered_pat_dir)
         ]
-        run_command(pat_filter_command)
+        #run_command(pat_filter_command)
 
         self.logger.info(f"Finished filtering the pat based on the atlas. Indexing...")
         pat_index_command = [
             'wgbstools', 'index',
             str(filtered_pat_dir)
         ]
-        run_command(pat_index_command)
+        #run_command(pat_index_command)
 
         self.logger.info(f"Finished indexing the pat. Deconvoluting...")
 
         deconvolution_command = [
             'uxm', 'deconv',
-            str(filtered_pat_dir),
-            '--atlas', self.atlas_path,
-            '--output', self.output_dir,
+            str(indexed_pat_dir),
+            '--atlas', str(self.atlas_path),
+            '--output', str(self.output_dir),
         ]
         run_command(deconvolution_command)
 
