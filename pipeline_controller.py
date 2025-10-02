@@ -25,6 +25,7 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.tool_paths = {}
         self.config = self.load_config(config_path)
+        self.steps_to_run = self.config['pipeline_control']['run_steps']
         self.project_root = Path(__file__).resolve().parent
 
     def load_config(self, config_file="config.yaml"):
@@ -108,39 +109,6 @@ class Pipeline:
 
         run_command(command)
 
-    def run_deconvolution_prep(self):
-        """
-        Executes the full deconvolution analysis in two steps. The first step is to
-        arrange the data in the bed file in such a way that it can be compared to the
-        meth_atlas.
-        """
-        self.logger.info("=" * 80)
-        self.logger.info(">>> Starting preparation for deconvolution.")
-
-        try:
-            # One day change this so that the yaml structure mirrors the file structure. config['paths']['methylation_dir']['methylation_bed_name']
-            bed_file_path = self.config['paths']['methylation_dir'] + self.config['paths']['methylation_bed_name']
-            manifest_file_path = self.config['paths']['atlas_dir'] + self.config['paths']['illumina_manifest']
-            uxm_atlas_file_path = self.config['paths']['atlas_dir'] + self.config['paths']['uxm_atlas_name']
-            chunk_size = int(self.config['parameters']['analysis']['methylation_aggregation_chunksize'])
-
-            command = [
-                sys.executable,
-                "-u",
-                "scripts/deconvolution_prep.py",
-                "--bed-file", bed_file_path,
-                "--manifest-file", manifest_file_path,
-                "--uxm-atlas-file", uxm_atlas_file_path,
-                "--chunk-size", str(chunk_size)
-            ]
-
-            run_command(command)
-
-
-        except Exception as e:
-            print(f"--- ERROR during deconvolution prep: {e} ---")
-            raise
-
     def run_deconvolution(self):
         self.logger.info(">>> Starting deconvolution process")
 
@@ -150,14 +118,21 @@ class Pipeline:
         output_file = self.project_root / "data" / "alignment_output" / "Blood_deconv_hg19.tsv"
         '''
 
+
         atlas_file = self.project_root / "data" / "atlas" / "full_atlas_geco.csv"
         file_to_deconv = self.project_root / "data" / "processed" / "deconvolution_geco.csv"
         output_file = self.project_root / "data" / "processed"
 
         deconv_handler = Deconvolution(self.config, self.tool_paths, atlas_file, file_to_deconv, output_file)
+
+        if "deconvolution_prep" in self.steps_to_run:
+            deconv_handler.prepare()
         deconv_handler.run()
 
-    def run_deconvolution_submodule(self):
+
+
+
+    def ___run_deconvolution_submodule(self):
         self.logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
 
         atlas_file = f"data/atlas/{self.config['paths']['atlas_file_uxm']}"
@@ -206,36 +181,26 @@ class Pipeline:
 
     def run(self):
         self.logger.info(" ---------------- Starting main run ----------------")
-        try:
-            config = self.load_config()
-            steps_to_run = config['pipeline_control']['run_steps']
-        except (FileNotFoundError, KeyError) as e:
-            self.logger.error(f"FATAL ERROR: Could not load required configuration.")
-            self.logger.error(f"Details: {e}")
-            sys.exit(1)
 
-        if not steps_to_run:
+        if not self.steps_to_run:
             self.logger.error("Error, there aren't any steps for me to run. Check config.yaml.")
             sys.exit(1)
 
         self.logger.info('--- Pipeline Started ---')
-        self.logger.info(f"--- Pipeline will execute the following steps: {steps_to_run} ---")
+        self.logger.info(f"--- Pipeline will execute the following steps: {self.steps_to_run} ---")
 
-        if 'setup' in steps_to_run:
+        if 'setup' in self.steps_to_run:
             self.run_setup()
-        if 'basecalling' in steps_to_run:
+        if 'basecalling' in self.steps_to_run:
             self.run_basecalling()
-        if 'align' in steps_to_run:
+        if 'align' in self.steps_to_run:
             self.run_alignment()
-        if 'align_qc' in steps_to_run:
+        if 'align_qc' in self.steps_to_run:
             self.run_alignment_qc()
-        if 'methylation_summary' in steps_to_run:
+        if 'methylation_summary' in self.steps_to_run:
             self.run_methylation_summary()
-        if 'deconvolution_prep' in steps_to_run:
-            self.run_deconvolution_prep()
-        if 'deconvolution' in steps_to_run:
+        if 'deconvolution' in self.steps_to_run:
             self.run_deconvolution()
-            #self.run_deconvolution_submodule()
 
 if __name__ == '__main__':
     CONFIG_FILE = "config.yaml"

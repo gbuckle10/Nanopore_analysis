@@ -58,6 +58,29 @@ class Deconvolution:
         ]
         run_command(deconvolution_command)
 
+    def _prepare_for_nnls(self):
+        """
+        Prepare the data output from previous steps for basic nnls algorithm.
+        """
+        self.logger.info("Running preparation for meth_atlas-based nnls deconvolution algorithm.")
+
+        bed_file_path = self.config['paths']['methylation_dir'] + self.config['paths']['methylation_bed_name']
+        manifest_file_path = self.config['paths']['atlas_dir'] + self.config['paths']['illumina_manifest']
+        uxm_atlas_file_path = self.config['paths']['atlas_dir'] + self.config['paths']['uxm_atlas_name']
+        chunk_size = int(self.config['parameters']['analysis']['methylation_aggregation_chunksize'])
+
+        command = [
+            sys.executable,
+            "-u",
+            "scripts/deconvolution_prep.py",
+            "--bed-file", bed_file_path,
+            "--manifest-file", manifest_file_path,
+            "--chunk-size", str(chunk_size)
+        ]
+
+        run_command(command)
+
+
     def _run_nnls_algorithm(self):
         '''
         This will contain the basic nnls algorithm for a generic atlas/bed pair.
@@ -75,6 +98,23 @@ class Deconvolution:
         ]
 
         run_command(command)
+
+    def prepare(self):
+        """
+        Prepare the data files for the relevant algorithm.
+        """
+        self.logger.info("=" * 80)
+        self.logger.info(">>> Starting preparation for deconvolution.")
+
+        algorithm = self.config['parameters']['deconvolution']['algorithm']
+        self.logger.info(f"Selected deconvolution algorithm: {algorithm}")
+
+        if algorithm == "nnls":
+            self._prepare_for_nnls()
+        else:
+            self.logger.error(f"Unknown deconvolution algorithm: {algorithm}")
+            raise ValueError("Invalid deconvolution algorithm specified in config.")
+
 
     def run(self):
         """
