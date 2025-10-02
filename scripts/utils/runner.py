@@ -5,21 +5,8 @@ import yaml
 import os
 import signal
 
-def load_config(config_file="config.yaml"):
-    """ Loads the pipeline config from a YAML file """
-    logger = logging.getLogger('pipeline')
 
-    try:
-        with open(config_file, 'r') as f:
-            config = yaml.safe_load(f)
-        logger.info(f"Configuration loaded from {config_file}")
-        return config
-    except FileNotFoundError:
-        logger.critical(f"Configuration file {config_file} not found.")
-        raise
-
-
-def run_command(command: list, config: dict, use_conda: bool=True):
+def run_command(command: list):
     '''
     Runs the commands for each step, logs the outputs in real time and handles errors.
     '''
