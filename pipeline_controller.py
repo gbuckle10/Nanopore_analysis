@@ -25,7 +25,7 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.tool_paths = {}
         self.config = self.load_config(config_path)
-        self.script_dir = Path(__file__).resolve().parent
+        self.project_root = Path(__file__).resolve().parent
 
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
@@ -53,13 +53,13 @@ class Pipeline:
 
         self.tool_paths = apply_runtime_config()
 
-        wgbstools_sl_path = self.script_dir / "externals" / "wgbs_tools" / "wgbstools"
-        wgbstools_py_path = self.script_dir / "externals" / "wgbs_tools" / "src" / "python" / "wgbs_tools.py"
+        wgbstools_sl_path = self.project_root / "externals" / "wgbs_tools" / "wgbstools"
+        wgbstools_py_path = self.project_root / "externals" / "wgbs_tools" / "src" / "python" / "wgbs_tools.py"
         ensure_tool_symlink(wgbstools_sl_path, wgbstools_py_path)
         self.logger.info("Symlink for wgbstools good.")
 
-        uxm_sl_path = self.script_dir / "externals" / "UXM_deconv" / "uxm"
-        uxm_py_path = self.script_dir / "externals" / "UXM_deconv" / "src" / "uxm.py"
+        uxm_sl_path = self.project_root / "externals" / "UXM_deconv" / "uxm"
+        uxm_py_path = self.project_root / "externals" / "UXM_deconv" / "src" / "uxm.py"
         ensure_tool_symlink(uxm_sl_path, uxm_py_path)
 
         self.logger.info("Symlink for uxm good.")
@@ -141,6 +141,16 @@ class Pipeline:
             print(f"--- ERROR during deconvolution prep: {e} ---")
             raise
 
+    def run_deconvolution(self):
+        self.logger.info(">>> Starting deconvolution process")
+
+        atlas_file = self.project_root / "data" / "atlas" / "Atlas.U250.l4.hg19.full.tsv"
+        file_to_deconv = self.project_root / "data" / "alignment_output" / "GSM5652316_Blood-B-Z000000TX.pat.gz"
+        output_file = self.project_root / "data" / "alignment_output" / "Blood_deconv_hg19.tsv"
+
+        deconv_handler = Deconvolution(self.config, self.tool_paths, atlas_file, file_to_deconv, output_file)
+        deconv_handler.run()
+
     def run_deconvolution_submodule(self):
         self.logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
 
@@ -188,9 +198,6 @@ class Pipeline:
             self.logger.critical("Halting process due to deconvolution script failure.")
             raise e
 
-    def run_uxm_deconvolution(self):
-        self.tool_paths.get("UXM_EXE")
-
     def run(self):
         self.logger.info(" ---------------- Starting main run ----------------")
         try:
@@ -221,7 +228,8 @@ class Pipeline:
         if 'deconvolution_prep' in steps_to_run:
             self.run_deconvolution_prep()
         if 'deconvolution' in steps_to_run:
-            self.run_deconvolution_submodule()
+            self.run_deconvolution()
+            #self.run_deconvolution_submodule()
 
 if __name__ == '__main__':
     CONFIG_FILE = "config.yaml"
