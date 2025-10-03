@@ -90,10 +90,11 @@ paths:
   basecalled_output_dir: "data/basecalled_output/"
 
   # Step 2: Alignment output
+  reference_genome: "hg19"
   alignment_output_dir: "data/alignment_output/"
   qc_dir: "data/alignment_qc/"
-  reference_genome_name: "hg38.fa"
-  indexed_ref_gen_name: "hg38.mmi"
+  reference_genome_fasta_name: "hg38.fa"
+  indexed_ref_gen_fasta_name: "hg38.mmi"
   unaligned_bam_name: "newcalls2.bam"
   aligned_bam_name: "taken_alignment.sorted.bam"
   alignment_flagstat_name: "alignment.flagstat.txt"
