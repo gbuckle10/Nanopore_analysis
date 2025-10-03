@@ -284,17 +284,12 @@ def main():
     download_and_index_reference_genome(config)
     setup_submodules(config)
     download_atlas_manifest_files(config)
-    '''
-    
-    
-    
-    
-d
+
+
     if config['pipeline_control']['run_setup_tasks']['download_fast5_data']:
         download_fast5_data(config)
     if config['pipeline_control']['run_setup_tasks']['convert_fast5_to_pod5']:
         convert_fast5_to_pod5(config)
-  '''
 
 
 if __name__ == "__main__":
