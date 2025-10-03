@@ -42,15 +42,6 @@ class Pipeline:
         run_command(command)
 
         self.tool_paths = apply_runtime_config()
-        wgbs_tools_path = self.tool_paths.get("WGBSTOOLS_EXE")
-        uxm_tools_path = self.tool_paths.get("UXM_EXE")
-        wgbs_command = [wgbs_tools_path, "--version"]
-        run_command(wgbs_command)
-        uxm_command = [uxm_tools_path, '--help']
-        run_command(uxm_command)
-
-        wgbs_command = [wgbs_tools_path, "bam2pat"]
-        run_command(wgbs_command)
 
     def run_basecalling(self):
         """ Executes the basecalling script using the 01_basecalling.sh script """
@@ -215,5 +206,5 @@ if __name__ == '__main__':
     try:
         pipeline.run()
     except Exception as e:
-        logging.getLogger('pipeline').critical(f"--- PIPELINE HALTED DUE TO UNHANDLED ERROR: {e} ---")
+        logging.getLogger('pipeline').critical(f"--- PIPELINE HALTED DUE TO UNHANDLED ERROR: {e} ---", exc_info=True)
         sys.exit(1)
