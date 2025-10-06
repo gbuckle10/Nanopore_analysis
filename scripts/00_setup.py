@@ -97,7 +97,7 @@ def setup_submodules(config):
         return
 
     sync_command = ["git", "submodule", "sync", "--recursive"]
-    update_command = ["git" "submodule" "update" "--init" "--recursive" "--force"]
+    update_command = ["git", "submodule", "update", "--init", "--recursive", "--force"]
 
     run_external_command(sync_command)
     run_external_command(update_command)
@@ -281,7 +281,7 @@ def main():
 
     make_directories(config)
     install_dorado(config)
-    download_and_index_reference_genome(config)
+    #download_and_index_reference_genome(config)
     setup_submodules(config)
     download_atlas_manifest_files(config)
 
