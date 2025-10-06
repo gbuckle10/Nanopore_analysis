@@ -26,6 +26,20 @@ def download_dorado_model(config):
     run_external_command(download_cmd)
 
     print(f"Dorado model successfully downloaded.")
+
+def demultiplex_bam(config):
+    raw_bam_dir = config['paths']['basecalled_output_dir']
+    raw_bam_filename = config['paths']['unaligned_bam_name']
+    raw_bam_file = os.path.join(project_root, raw_bam_dir, raw_bam_filename)
+
+    demux_cmd = [
+        "dorado",
+        "demux",
+        "--output-dir", "analysis/demultiplexed"
+        "--kit-name", "SQK-NBD114-24",
+        raw_bam_file
+    ]
+
 def basecalling_pod5(config):
     pod5_dir = config['paths']['pod5_dir']
     basecalling_dir = config['paths']['basecalled_output_dir']
