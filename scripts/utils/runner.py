@@ -99,8 +99,6 @@ def run_external_command(command: list, cwd=None):
     external tools.
     Prints output to console and exists on failure.
     """
-
-
     print(f"Executing: {' '.join(command)}")
 
     try:

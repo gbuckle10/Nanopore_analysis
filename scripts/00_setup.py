@@ -13,7 +13,7 @@ import zipfile
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "scripts", "runtime_config.sh")
+RUNTIME_CONFIG_PATH = os.path.join(project_root, "scripts", "runtime_config.yaml")
 
 def download_file(url, destination):
     print(f"Downloading from {url} to {destination}")
@@ -69,6 +69,7 @@ def install_dorado(config):
 
     if os.path.isdir(dorado_dir):
         print(f"Dorado already found at {dorado_dir}. Skipping download.")
+        return dorado_dir
     else:
         print(f"Downloading dorado version {version} for {os_type} from {download_url}")
         archive_path = os.path.join(project_root, "tools", archive_filename)
@@ -90,6 +91,7 @@ def install_dorado(config):
         f.write(f"\nexport DORADO_EXECUTABLE=\"{dorado_exe_path}\"\n")
     print(f"Dorado executable path added to {RUNTIME_CONFIG_PATH}")
 
+    return dorado_exe_path
 def setup_submodules(config):
     print(" --- Setting up git submodules. ---")
     if not os.path.exists(f"{project_root}/.gitmodules"):
@@ -278,9 +280,13 @@ def convert_fast5_to_pod5(config):
 
 def main():
     config = load_config(CONFIG_PATH)
-
+    runtime_tool_paths = {}
     make_directories(config)
-    install_dorado(config)
+    dorado_path = install_dorado(config)
+
+    runtime_tool_paths['dorado'] = str(dorado_path)
+    print(f"We've added dorado {dorado_path} to the runtime tool paths dictionary.")
+
     #download_and_index_reference_genome(config)
     setup_submodules(config)
     download_atlas_manifest_files(config)
