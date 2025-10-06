@@ -5,7 +5,7 @@ import logging
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from scripts.utils.runner import run_command
+from scripts.utils.runner import run_command, run_wgbstools, run_uxm
 from scripts.utils.logger import setup_logger
 from scripts.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
 from scripts.deconvolution import Deconvolution
@@ -54,10 +54,14 @@ class Pipeline:
 
         self.tool_paths = apply_runtime_config()
 
+        wgbstool_path = self.project_root / "externals" / "wgbs_tools"
         wgbstools_sl_path = self.project_root / "externals" / "wgbs_tools" / "wgbstools"
         wgbstools_py_path = self.project_root / "externals" / "wgbs_tools" / "src" / "python" / "wgbs_tools.py"
         ensure_tool_symlink(wgbstools_sl_path, wgbstools_py_path)
+
         self.logger.info("Symlink for wgbstools good.")
+
+        run_wgbstools(['wgbstools', '--version'], self.project_root)
 
         uxm_sl_path = self.project_root / "externals" / "UXM_deconv" / "uxm"
         uxm_py_path = self.project_root / "externals" / "UXM_deconv" / "src" / "uxm.py"
@@ -65,6 +69,7 @@ class Pipeline:
 
         self.logger.info("Symlink for uxm good.")
 
+        run_uxm(['uxm', '--help'], self.project_root)
 
     def run_basecalling(self):
         """ Executes the basecalling script using the 01_basecalling.sh script """
