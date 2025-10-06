@@ -4,9 +4,11 @@ import yaml
 import logging
 from collections import deque
 from datetime import datetime
+from pathlib import Path
 from scripts.utils.runner import run_command
 from scripts.utils.logger import setup_logger
-from scripts.utils.file_conversion import apply_runtime_config
+from scripts.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
+from scripts.deconvolution import Deconvolution
 from scripts.deconvolution_prep import generate_deconvolution_files
 import os
 import re
@@ -23,6 +25,8 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.tool_paths = {}
         self.config = self.load_config(config_path)
+        self.steps_to_run = self.config['pipeline_control']['run_steps']
+        self.project_root = Path(__file__).resolve().parent
 
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
@@ -49,18 +53,17 @@ class Pipeline:
         run_command(command)
 
         self.tool_paths = apply_runtime_config()
-        wgbs_tools_path = self.tool_paths.get("WGBSTOOLS_EXE")
-        uxm_tools_path = self.tool_paths.get("UXM_EXE")
-        wgbs_command = [wgbs_tools_path, "--version"]
-        run_command(wgbs_command)
-        uxm_command = [uxm_tools_path, '--help']
-        run_command(uxm_command)
 
-        wgbs_command = [wgbs_tools_path, "bam2pat"]
-        run_command(wgbs_command)
+        wgbstools_sl_path = self.project_root / "externals" / "wgbs_tools" / "wgbstools"
+        wgbstools_py_path = self.project_root / "externals" / "wgbs_tools" / "src" / "python" / "wgbs_tools.py"
+        ensure_tool_symlink(wgbstools_sl_path, wgbstools_py_path)
+        self.logger.info("Symlink for wgbstools good.")
 
+        uxm_sl_path = self.project_root / "externals" / "UXM_deconv" / "uxm"
+        uxm_py_path = self.project_root / "externals" / "UXM_deconv" / "src" / "uxm.py"
+        ensure_tool_symlink(uxm_sl_path, uxm_py_path)
 
-
+        self.logger.info("Symlink for uxm good.")
 
 
     def run_basecalling(self):
@@ -115,31 +118,20 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting preparation for deconvolution.")
 
-        try:
-            # One day change this so that the yaml structure mirrors the file structure. config['paths']['methylation_dir']['methylation_bed_name']
-            bed_file_path = self.config['paths']['methylation_dir'] + self.config['paths']['methylation_bed_name']
-            manifest_file_path = self.config['paths']['atlas_dir'] + self.config['paths']['illumina_manifest']
-            uxm_atlas_file_path = self.config['paths']['atlas_dir'] + self.config['paths']['uxm_atlas_name']
-            chunk_size = int(self.config['parameters']['analysis']['methylation_aggregation_chunksize'])
+        atlas_file = self.project_root / "data" / "atlas" / "full_atlas_geco.csv"
+        file_to_deconv = self.project_root / "data" / "processed" / "deconvolution_geco.csv"
+        output_file = self.project_root / "data" / "processed"
 
-            command = [
-                sys.executable,
-                "-u",
-                "scripts/deconvolution_prep.py",
-                "--bed-file", bed_file_path,
-                "--manifest-file", manifest_file_path,
-                "--uxm-atlas-file", uxm_atlas_file_path,
-                "--chunk-size", str(chunk_size)
-            ]
+        deconv_handler = Deconvolution(self.config, self.tool_paths, atlas_file, file_to_deconv, output_file)
 
-            run_command(command)
+        if "deconvolution_prep" in self.steps_to_run:
+            deconv_handler.prepare()
+        deconv_handler.run()
 
 
-        except Exception as e:
-            print(f"--- ERROR during deconvolution prep: {e} ---")
-            raise
 
-    def run_deconvolution_submodule(self):
+
+    def ___run_deconvolution_submodule(self):
         self.logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
 
         atlas_file = f"data/atlas/{self.config['paths']['atlas_file_uxm']}"

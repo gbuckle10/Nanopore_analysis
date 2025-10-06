@@ -9,13 +9,13 @@ conda_env_name: "nanopore_analysis"
 # ========================================================
 pipeline_control:
   run_steps:
-    - setup
+    #- setup
     #- basecalling
     #- align
     #- align_qc
     #- methylation_summary
-    #- deconvolution_prep
-    #- deconvolution
+    - deconvolution_prep
+    - deconvolution
 
   run_setup_tasks:
     download_fast5_data: false
@@ -46,7 +46,8 @@ parameters:
     batch_size: "64"
   analysis:
     methylation_aggregation_chunksize: '5000000'
-
+  deconvolution:
+    algorithm: "nnls"
 # ========================================================
 # Paths
 # All file and directory paths

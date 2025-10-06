@@ -266,7 +266,7 @@ setup_submodules() {
   log_info "All submodules have been synced and are ready to go."
 
   # Add a check to see whether it's already been compiled...figure this out.
-  install_wgbstools
+  #install_wgbstools
   patch_wgbstools_wrapper
   patch_uxm_wrapper
 }
