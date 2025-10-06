@@ -36,6 +36,7 @@ def align_and_index(config):
 
     # Add a check - allow the user to decide whether to align a single bam or a directory of bams.
     # If the user wants to a directory, you need to specify an --output-dir
+    # Sorting and indexing is automatic if a directory is given instead of a specific file.
     alignment_cmd = [
         'dorado', 'aligner',
         '-t', threads,
@@ -95,3 +96,11 @@ def align_and_index(config):
     run_external_command(index_cmd)
 
     print("Indexing complete")
+
+def main():
+    config = load_config()
+    align_and_index(config)
+
+
+if __name__ == '__main__':
+    main()
