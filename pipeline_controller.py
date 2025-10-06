@@ -28,6 +28,7 @@ class Pipeline:
         """ Executes the 00_setup.sh script """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
+
         '''
         script_path = "scripts/00_setup.sh"
         config_file = "config.yaml"
@@ -48,10 +49,17 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 1: Basecalling")
 
+        '''
         script_path = "scripts/01_basecalling.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
+        '''
 
+        script_path = "scripts/01_basecalling.py"
+        command = [
+            sys.executable,
+            script_path
+        ]
         run_command(command)
 
 
@@ -60,9 +68,16 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 2: Alignment and Indexing")
 
+        '''
         script_path = "scripts/02_alignment.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
+        '''
+        script_path = "scripts/02_alignment.py"
+        command = [
+            sys.executable,
+            script_path
+        ]
 
         run_command(command)
 
@@ -70,19 +85,34 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.logger.info(">>> Running QC on aligned and indexed data")
 
+        '''
         script_path = "scripts/03_alignment_qc.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
+        '''
+
+        script_path = "scripts/03_alignment_qc.py"
+        command = [
+            sys.executable,
+            script_path
+        ]
 
         run_command(command)
 
     def run_methylation_summary(self):
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 4: Methylation Summary")
-
+        '''
         script_path = "scripts/04_methylation_summary.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
+        '''
+
+        script_path = "scripts/04_methylation_summary.py"
+        command = [
+            sys.executable,
+            script_path
+        ]
 
         run_command(command)
 
