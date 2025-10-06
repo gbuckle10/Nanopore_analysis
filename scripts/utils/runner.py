@@ -7,6 +7,64 @@ import signal
 import sys
 from pathlib import Path
 
+
+def run_wgbstools(wgbstools_args: list, project_root):
+    """
+    Temporarily adds the wgbstools executable to the PATH, and runs the specified command.
+    :param command:
+    :return:
+    """
+
+    # THE RUNNER SHOULD BE ABLE TO FIND THE PROJECT_ROOT ON ITS OWN, THIS IS TEMPORARY
+    wgbstools_exe_path = project_root / "externals" / "wgbs_tools" / "wgbstools"
+    if not wgbstools_exe_path.exists():
+        raise FileNotFoundError(f"wgbstools not found at {wgbstools_exe_path}")
+    wgbs_dir = str(wgbstools_exe_path.parent)
+    env = os.environ.copy()
+    env['PATH'] = f"{wgbs_dir}{os.pathsep}{env['PATH']}"
+    # Check whether the wgbstools is the first item in the command list, and if not prepend wgbstools to the list.
+    if wgbstools_args[0] == 'wgbstools':
+        full_command = wgbstools_args
+    else:
+        full_command = ['wgbstools'] + wgbstools_args
+
+    print(f"Running wgbstools command: {' '.join(full_command)}")
+
+    try:
+        subprocess.run(full_command, check=True, env=env)
+    except Exception as e:
+        print(f"CRITICAL: wgbstools command failed.", file=sys.stderr)
+        raise e
+
+def run_uxm(uxm_args: list, project_root):
+    """
+        Temporarily adds the uxm executable to the PATH, and runs the specified command.
+        :param command:
+        :return:
+        """
+
+    # THE RUNNER SHOULD BE ABLE TO FIND THE PROJECT_ROOT ON ITS OWN, THIS IS TEMPORARY
+    uxm_exe_path = project_root / "externals" / "UXM_deconv" / "uxm"
+    if not uxm_exe_path.exists():
+        raise FileNotFoundError(f"uxm not found at {uxm_exe_path}")
+    uxm_dir = str(uxm_exe_path.parent)
+    env = os.environ.copy()
+    env['PATH'] = f"{uxm_dir}{os.pathsep}{env['PATH']}"
+
+    # Check whether the wgbstools is the first item in the command list, and if not prepend wgbstools to the list.
+    if uxm_args[0] == 'uxm':
+        full_command = uxm_args
+    else:
+        full_command = ['uxm'] + uxm_args
+
+    print(f"Running uxm command: {' '.join(full_command)}")
+
+    try:
+        subprocess.run(full_command, check=True, env=env)
+    except Exception as e:
+        print(f"CRITICAL: uxm command failed.", file=sys.stderr)
+        raise e
+
 def get_project_root() -> Path:
     """
     Finds the projects root directory by navigating up from the file's location.
@@ -41,6 +99,7 @@ def run_external_command(command: list, cwd=None):
     external tools.
     Prints output to console and exists on failure.
     """
+
 
     print(f"Executing: {' '.join(command)}")
 

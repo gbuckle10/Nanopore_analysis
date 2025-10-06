@@ -6,6 +6,10 @@ To run uxm_deconv:
     - Make sure you have used the correct atlas (hg38/hg19) - it should be the same genome assembly used for the basecalling.
     - The atlas you used for the view function should be the same as the one you use for the deconv.
 
+The UXM and wgbs_tools files in the parent directory for the respective submodules should be symlinks, but sometimes they
+end up as text files containing the path to the py file. To fix this:
+    - rm path/to/file
+    - ls -s src/uxm.py path/to/file
 
 Process to install WGBS Tools:
     - At the moment this will be done seprately, but will be folded into the main project eventually.
