@@ -9,7 +9,7 @@ conda_env_name: "nanopore_analysis"
 # ========================================================
 pipeline_control:
   run_steps:
-    #- setup
+    - setup
     #- basecalling
     - align
     #- align_qc
@@ -73,6 +73,10 @@ paths:
     - "data/processed/"
     - "logs/"
 
+  tools:
+    dorado: ""
+    wgbstools: ""
+    uxm: ""
 
   # --- External Data URLs ---
   fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
