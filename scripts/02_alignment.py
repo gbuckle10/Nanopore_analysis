@@ -22,7 +22,7 @@ def align_and_index(config):
     reference_index = os.path.join(
         project_root,
         'reference_genomes',
-        config['paths']['indexed_ref_gen_name']
+        config['paths']['indexed_ref_gen_fasta_name']
     )
     sort_memory_limit = config['parameters']['general']['sort_memory_limit']
     aligned_bam_dir = os.path.join(
