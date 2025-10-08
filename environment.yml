@@ -18,13 +18,17 @@ dependencies:
   - go-yq
   - bedtools
   - pybedtools
+  - requests
+  - pandas
+  - scipy
+  - matplotlib
   - conda_forge:gxx
   - pip
   - pip:
     - pyyaml
-    - pandas
-    - scipy
-    - matplotlib
+    #- pandas
+    #- scipy
+    #- matplotlib
     - colorlog
   # --- Conda Packages ---
   - minimap2
