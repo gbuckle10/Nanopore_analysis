@@ -165,6 +165,10 @@ download_fast5_data() {
   log_info "--- Downloading ${NUM_FAST5_FILES} fast5 files into '${FAST5_DESTINATION_DIR}' ---"
   log_info "--- Downloading from '${FAST5_DOWNLOAD_URL}'"
 
+  log_info "Starting to download fast5 data, starting from finding the file names."
+  start_time=$(date +%s%N)
+
+
   ALL_S3_FILENAMES=$(aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request | grep '\.fast5' | awk '{print $4}')
 
   if [[ "${NUM_FAST5_FILES}" == "all" ]]; then
@@ -188,6 +192,9 @@ download_fast5_data() {
     fi
   done
 
+  end_time=$(date +%s%N)
+  duration=$(awk "BEGIN {printf \"%.2f\", ($end_time - $start_time) / 1000000000}")
+  log_info "Fast5 download process finished in ${duration} seconds"
 
   #aws s3 ls "${FAST5_DOWNLOAD_URL}" --no-sign-request \
   #| head -n "${NUM_FAST5_FILES}" \

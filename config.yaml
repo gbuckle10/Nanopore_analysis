@@ -11,7 +11,7 @@ pipeline_control:
   run_steps:
     #- setup
     - basecalling
-    #- align
+    - align
     #- align_qc
     #- methylation_summary
     #- deconvolution_prep

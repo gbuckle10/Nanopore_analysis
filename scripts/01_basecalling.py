@@ -1,5 +1,5 @@
 import os
-from utils.runner import load_config, get_project_root, run_external_command
+from utils.runner import load_config, get_project_root, run_external_command, run_dorado
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -19,8 +19,8 @@ def download_dorado_model(config):
     ]
 
     print(f"Downloading dorado model {dorado_model_name} with \n{' '.join(download_cmd)}")
-
-    run_external_command(download_cmd)
+    run_dorado(download_cmd, project_root)
+    #run_external_command(download_cmd)
 
     print(f"Dorado model successfully downloaded.")
 
@@ -37,13 +37,21 @@ def demultiplex_bam(config):
         raw_bam_file
     ]
 
-def basecalling_pod5(config):
+def basecalling_pod5(config, kit_name=None):
+    '''
+    We will need to make this method modifiable, depending on whether we want to use model speed and modifications or
+    specific models. This will change soon.
+    :param config:
+    :param kit_name:
+    :return:
+    '''
     pod5_dir = config['paths']['pod5_dir']
     basecalling_dir = config['paths']['basecalled_output_dir']
     basecalled_filename = config['paths']['unaligned_bam_name']
     model_speed = config['parameters']['basecalling']['model_speed']
     modifications = config['parameters']['basecalling']['basecalling_modifications']
-    batchsize = config['parameters']['basecalling']['batchsize']
+    batchsize = config['parameters']['basecalling']['batch_size']
+
 
     output_file = os.path.join(basecalling_dir, basecalled_filename)
 
@@ -51,14 +59,14 @@ def basecalling_pod5(config):
         "dorado", "basecaller",
         f"{model_speed},{modifications}",
         pod5_dir,
-        "--kit-name", kit_name,
+        #"--kit-name", kit_name,
         "--no-trim",
         "--batchsize", batchsize
     ]
 
     print(f"Executing command {' '.join(basecalling_cmd)}")
 
-    run_external_command(basecalling_cmd)
+    run_dorado(basecalling_cmd, project_root, "data/basecalled_output/calls.bam")
 
 def main():
     config = load_config(CONFIG_PATH)

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-def run_dorado(dorado_command: list, project_root):
+def run_dorado(dorado_command: list, project_root, output_file: str = None):
     '''
     Temporarily add dorado executable to PATH and runs the specified command.
     This function, along with the run_wgbstools and run_uxm, are temporary and will be combined in future.
@@ -30,7 +30,12 @@ def run_dorado(dorado_command: list, project_root):
     print(f"Running dorado command: {' '.join(full_command)}")
 
     try:
-        subprocess.run(full_command, check=True, env=env)
+        if output_file:
+            with open(output_file, 'wb') as f_out:
+                print(f"Writing to output file {output_file}")
+                subprocess.run(full_command, check=True, env=env, stdout=f_out)
+        else:
+            subprocess.run(full_command, check=True, env=env)
     except Exception as e:
         print(f"CRITICAL: wgbstools command failed.", file=sys.stderr)
         raise e
@@ -120,6 +125,7 @@ def load_config(config_file="config.yaml"):
     except FileNotFoundError:
         logger.critical(f"Configuration file {config_file} not found.")
         raise
+
 
 def run_external_command(command: list, cwd=None):
     """
