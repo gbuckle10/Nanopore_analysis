@@ -1,7 +1,10 @@
+#!/usr/bin/env python
+
 import subprocess
 import sys
 import yaml
 import logging
+import argparse
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -250,11 +253,40 @@ class Pipeline:
         if 'deconvolution' in steps_to_run:
             self.run_deconvolution_submodule()
 
+def main():
+    CONFIG_FILE = "config.yaml"
+
+    parser = argparse.ArgumentParser(description="Nanopore analysis pipeline controller.")
+
+    subparsers = parser.add_subparsers(dest='command', help='Pipeline step to run')
+    subparsers.required = True
+    subparsers.add_parser('setup', help="Run the initial setup step (download tools, data etc).")
+    subparsers.add_parser('basecall', help="Run the basecalling step.")
+    subparsers.add_parser('align', help="Run the alignment step.")
+    subparsers.add_parser('methylation_summary', help="Run the methylation summary step.")
+    subparsers.add_parser('deconvolution_prep', help="Run the deconvolution prep.")
+    subparsers.add_parser('deconvolution', help="Run the deconvolution step.")
+
+    subparsers.add_parser('all', help="Run all steps enabled in config.yaml")
+
+    args = parser.parse_args()
+
+    controller = Pipeline(CONFIG_FILE)
+
+    if args.command == 'setup':
+        controller.run_setup()
+    elif args.command == 'basecall':
+        controller.run_basecalling()
+    elif args.command == 'setup':
+        controller.run_setup()
+    else:
+        print(f"Unknown command: {args.command}")
+        parser.print_help()
 
 if __name__ == '__main__':
     CONFIG_FILE = "config.yaml"
-
-    pipeline = Pipeline(CONFIG_FILE)
+    main()
+    #pipeline = Pipeline(CONFIG_FILE)
 
     try:
         pipeline.run()
