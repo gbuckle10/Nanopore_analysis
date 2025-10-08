@@ -56,6 +56,7 @@ class Pipeline:
             sys.executable,
             script_path
         ]
+
         run_command(command)
 
         self.tool_paths = apply_runtime_config()

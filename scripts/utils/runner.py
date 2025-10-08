@@ -11,10 +11,31 @@ from pathlib import Path
 def run_dorado(dorado_command: list, project_root):
     '''
     Temporarily add dorado executable to PATH and runs the specified command.
+    This function, along with the run_wgbstools and run_uxm, are temporary and will be combined in future.
     '''
 
     # This is hard coded for now, but won't be in future.
-    dorado_exe_path = project_root / "tools" / "dorado" / "dorado-0.9.6-linux-x64" /
+    dorado_exe_path = project_root / "tools" / "dorado-0.9.6-linux-x64" / "bin" / "dorado"
+    if not dorado_exe_path.exists():
+        raise FileNotFoundError(f"dorado not found at {dorado_exe_path}")
+    dorado_dir = str(dorado_exe_path.parent)
+    env = os.environ.copy()
+    env['PATH'] = f"{dorado_dir}{os.pathsep}{env['PATH']}"
+    # Check whether the wgbstools is the first item in the command list, and if not prepend wgbstools to the list.
+    if dorado_command[0] == 'dorado':
+        full_command = dorado_command
+    else:
+        full_command = ['dorado'] + dorado_command
+
+    print(f"Running dorado command: {' '.join(full_command)}")
+
+    try:
+        subprocess.run(full_command, check=True, env=env)
+    except Exception as e:
+        print(f"CRITICAL: wgbstools command failed.", file=sys.stderr)
+        raise e
+
+
 def run_wgbstools(wgbstools_args: list, project_root):
     """
     Temporarily adds the wgbstools executable to the PATH, and runs the specified command.
@@ -105,6 +126,9 @@ def run_external_command(command: list, cwd=None):
     A simpler version of the runner.run_command method which worker scripts will use to execute
     external tools.
     Prints output to console and exists on failure.
+
+    args:
+        cwd: current working directory - runs the command from the specified directory.
     """
     print(f"Executing: {' '.join(command)}")
 

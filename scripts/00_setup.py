@@ -221,7 +221,8 @@ def download_fast5_data(config):
     fast5_dir = os.path.join(project_root, config['paths']['fast5_input_dir'])
     number_to_download = config['parameters']['setup']['num_fast5_files']
     print(f"Downloading {number_to_download} fast5 files into {fast5_dir}")
-    url = config['path']['fast5_download_url']
+    url = config['paths']['fast5_download_url']
+
 
     os.makedirs(fast5_dir, exist_ok=True)
 
@@ -244,6 +245,8 @@ def download_fast5_data(config):
         print(f"Failed to list S3 bucket contents, make sure AWS CLI is installed and working", file=sys.stderr)
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+
 
     if str(number_to_download).lower() == 'all':
         files_to_download = all_files
@@ -289,7 +292,7 @@ def convert_fast5_to_pod5(config):
         'pod5', 'convert', 'fast5',
         fast5_dir,
         '--output', pod5_dir,
-        '--force_overwrite'
+        '--force-overwrite'
     ]
 
     print(f"Converting fast5 to pod5, command: {' '.join(pod5_cmd)}")
