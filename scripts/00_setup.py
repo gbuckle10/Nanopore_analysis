@@ -111,21 +111,20 @@ def setup_submodules(config):
     run_external_command(update_command)
 
     print("Compiling wgbstools")
-    wgbstools_dir = f"{project_root}/externals/wgbs_tools"
-    config['paths']['tools']['wgbstools'] = wgbstools_dir
-    config_path = project_root / "config.yaml"
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f, sort_keys=False, indent=2)
-
 
 
     comp_command = ["python", "setup.py"]
     #run_external_command(comp_command, cwd=wgbstools_dir)
 
-    wgbstools_exe_path = os.path.abspath(os.path.join(wgbstools_dir, "src/python/wgbs_tools.py"))
-    with open(RUNTIME_CONFIG_PATH, 'a') as f:
-        f.write(f'export WGBSTOOLS_EXE="{wgbstools_exe_path}"\n')
-    print(f"wgbstools path added to {RUNTIME_CONFIG_PATH}")
+    # The code block below will write the config file with the wgbstools dir in the config.
+    # Wait until config/template config is properly set up to use this block.
+    '''
+    wgbstools_dir = f"{project_root}/externals/wgbs_tools"
+    config['paths']['tools']['wgbstools'] = wgbstools_dir
+    config_path = project_root / "config.yaml"
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, sort_keys=False, indent=2)
+    '''
 
     uxm_dir = f"{project_root}/externals/UXM_deconv"
     uxm_exe_path = os.path.abspath(os.path.join(uxm_dir, "src/uxm.py"))

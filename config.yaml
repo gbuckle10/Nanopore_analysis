@@ -9,8 +9,8 @@ conda_env_name: "nanopore_analysis"
 # ========================================================
 pipeline_control:
   run_steps:
-    - setup
-    #- basecalling
+    #- setup
+    - basecalling
     #- align
     #- align_qc
     #- methylation_summary
@@ -18,8 +18,8 @@ pipeline_control:
     #- deconvolution
 
   run_setup_tasks:
-    download_fast5_data: false
-    convert_fast5_to_pod5: false
+    download_fast5_data: true
+    convert_fast5_to_pod5: true
 
 # ========================================================
 # Parameters
@@ -31,7 +31,7 @@ parameters:
     sort_memory_limit: "2G"
   setup:
     dorado_version: "0.9.6"
-    num_fast5_files: "10"
+    num_fast5_files: "2"
   basecalling:
     # Use EITHER the model complex OR the explicit base/mod model names
     # Method A: Model Complex
@@ -72,10 +72,6 @@ paths:
     - "data/processed/"
     - "logs/"
 
-  tools:
-    dorado: ""
-    wgbstools: ""
-    uxm: ""
 
   # --- External Data URLs ---
   fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"

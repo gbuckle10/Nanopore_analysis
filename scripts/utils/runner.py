@@ -8,6 +8,13 @@ import sys
 from pathlib import Path
 
 
+def run_dorado(dorado_command: list, project_root):
+    '''
+    Temporarily add dorado executable to PATH and runs the specified command.
+    '''
+
+    # This is hard coded for now, but won't be in future.
+    dorado_exe_path = project_root / "tools" / "dorado" / "dorado-0.9.6-linux-x64" /
 def run_wgbstools(wgbstools_args: list, project_root):
     """
     Temporarily adds the wgbstools executable to the PATH, and runs the specified command.

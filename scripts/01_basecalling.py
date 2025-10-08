@@ -45,13 +45,14 @@ def basecalling_pod5(config):
     modifications = config['parameters']['basecalling']['basecalling_modifications']
     batchsize = config['parameters']['basecalling']['batchsize']
 
-
     output_file = os.path.join(basecalling_dir, basecalled_filename)
 
     basecalling_cmd = [
         "dorado", "basecaller",
         f"{model_speed},{modifications}",
         pod5_dir,
+        "--kit-name", kit_name,
+        "--no-trim",
         "--batchsize", batchsize
     ]
 
