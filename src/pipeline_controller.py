@@ -1,21 +1,24 @@
+#!/usr/bin/env python
+
 import subprocess
 import sys
 import yaml
 import logging
+import argparse
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from scripts.utils.runner import run_command, run_wgbstools, run_uxm
-from scripts.utils.logger import setup_logger
-from scripts.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
-from scripts.deconvolution import Deconvolution
-from scripts.deconvolution_prep import generate_deconvolution_files
+from utils.runner import run_command, run_wgbstools, run_uxm, get_project_root
+from utils.logger import setup_logger
+from utils.file_conversion import apply_runtime_config, ensure_tool_symlink
+from deconvolution import Deconvolution
+from deconvolution_prep import generate_deconvolution_files
 import os
 import re
 
 
 class Pipeline:
-    def __init__(self, config_path):
+    def __init__(self, config_name="config.yaml"):
         """Initialise pipeline, set up logging and load config"""
         run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
@@ -24,9 +27,11 @@ class Pipeline:
         self.logger.info(f"The log for this run will be saved to: {log_file_path}")
         self.logger.info("=" * 80)
         self.tool_paths = {}
-        self.config = self.load_config(config_path)
+        self.project_root = get_project_root()
+
+        config_path = self.project_root / config_name
+        self.config = self.load_config(str(config_path))
         self.steps_to_run = self.config['pipeline_control']['run_steps']
-        self.project_root = Path(__file__).resolve().parent
 
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
@@ -46,15 +51,15 @@ class Pipeline:
         self.logger.info(">>> Starting Step 0: Setup")
 
         '''
-        script_path = "scripts/00_setup.sh"
+        script_path = "src/00_setup.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/00_setup.py"
+        script_path = self.project_root / "src" / "00_setup.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -84,15 +89,15 @@ class Pipeline:
         self.logger.info(">>> Starting step 1: Basecalling")
 
         '''
-        script_path = "scripts/01_basecalling.sh"
+        script_path = "src/01_basecalling.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/01_basecalling.py"
+        script_path = self.project_root / "src" / "01_basecalling.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
         run_command(command)
 
@@ -103,14 +108,14 @@ class Pipeline:
         self.logger.info(">>> Starting step 2: Alignment and Indexing")
 
         '''
-        script_path = "scripts/02_alignment.sh"
+        script_path = "src/02_alignment.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
-        script_path = "scripts/02_alignment.py"
+        script_path = self.project_root / "src" / "02_alignment.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -120,15 +125,15 @@ class Pipeline:
         self.logger.info(">>> Running QC on aligned and indexed data")
 
         '''
-        script_path = "scripts/03_alignment_qc.sh"
+        script_path = "src/03_alignment_qc.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/03_alignment_qc.py"
+        script_path = "03_alignment_qc.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -137,15 +142,15 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 4: Methylation Summary")
         '''
-        script_path = "scripts/04_methylation_summary.sh"
+        script_path = "src/04_methylation_summary.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/04_methylation_summary.py"
+        script_path = self.project_root / "src" / "04_methylation_summary.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -250,11 +255,39 @@ class Pipeline:
         if 'deconvolution' in steps_to_run:
             self.run_deconvolution_submodule()
 
+def main():
+
+    parser = argparse.ArgumentParser(description="Nanopore analysis pipeline controller.")
+
+    subparsers = parser.add_subparsers(dest='command', help='Pipeline step to run')
+    subparsers.required = True
+    subparsers.add_parser('setup', help="Run the initial setup step (download tools, data etc).")
+    subparsers.add_parser('basecall', help="Run the basecalling step.")
+    subparsers.add_parser('align', help="Run the alignment step.")
+    subparsers.add_parser('methylation_summary', help="Run the methylation summary step.")
+    subparsers.add_parser('deconvolution_prep', help="Run the deconvolution prep.")
+    subparsers.add_parser('deconvolution', help="Run the deconvolution step.")
+
+    subparsers.add_parser('all', help="Run all steps enabled in config.yaml")
+
+    args = parser.parse_args()
+
+    controller = Pipeline()
+
+    if args.command == 'setup':
+        controller.run_setup()
+    elif args.command == 'basecall':
+        controller.run_basecalling()
+    elif args.command == 'setup':
+        controller.run_setup()
+    else:
+        print(f"Unknown command: {args.command}")
+        parser.print_help()
 
 if __name__ == '__main__':
-    CONFIG_FILE = "config.yaml"
-
-    pipeline = Pipeline(CONFIG_FILE)
+    CONFIG_FILE = "../config.yaml"
+    main()
+    #pipeline = Pipeline(CONFIG_FILE)
 
     try:
         pipeline.run()

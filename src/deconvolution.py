@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from scripts.utils.runner import run_command
+from utils.runner import run_command
 from pathlib import Path
 
 class Deconvolution:
@@ -72,7 +72,7 @@ class Deconvolution:
         command = [
             sys.executable,
             "-u",
-            "scripts/deconvolution_prep.py",
+            "src/deconvolution_prep.py",
             "--bed-file", bed_file_path,
             "--manifest-file", manifest_file_path,
             "--chunk-size", str(chunk_size)

@@ -6,7 +6,7 @@ from utils.runner import load_config, get_project_root, run_external_command
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "scripts", "runtime_config.sh")
+RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.sh")
 
 def methylation_pileup(config):
     alignment_output_dir = config['paths']['alignment_output_dir']

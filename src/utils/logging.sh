@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# scripts/utils/logging.sh
+# src/utils/logging.sh
 
 # Print a formatted log message to stderr
 log_info() {
