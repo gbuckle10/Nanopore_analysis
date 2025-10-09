@@ -31,7 +31,18 @@ class Pipeline:
 
         config_path = self.project_root / config_name
         self.config = self.load_config(str(config_path))
-        self.steps_to_run = self.config['pipeline_control']['run_steps']
+
+        try:
+            self.steps_to_run = self.config['pipeline_control']['run_steps']
+        except (FileNotFoundError, KeyError) as e:
+            self.logger.error(f"FATAL ERROR: Could not load required configuration.")
+            self.logger.error(f"Details: {e}")
+            sys.exit(1)
+        if not self.steps_to_run:
+            self.logger.error("Error, there aren't any steps for me to run. Check config.yaml.")
+            sys.exit(1)
+        self.logger.info(" ---------------- Starting main run ----------------")
+
 
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
@@ -223,37 +234,6 @@ class Pipeline:
         except subprocess.CalledProcessError as e:
             self.logger.critical("Halting process due to deconvolution script failure.")
             raise e
-
-    def run(self):
-        self.logger.info(" ---------------- Starting main run ----------------")
-        try:
-            steps_to_run = self.config['pipeline_control']['run_steps']
-        except (FileNotFoundError, KeyError) as e:
-            self.logger.error(f"FATAL ERROR: Could not load required configuration.")
-            self.logger.error(f"Details: {e}")
-            sys.exit(1)
-
-        if not steps_to_run:
-            self.logger.error("Error, there aren't any steps for me to run. Check config.yaml.")
-            sys.exit(1)
-
-        self.logger.info('--- Pipeline Started ---')
-        self.logger.info(f"--- Pipeline will execute the following steps: {steps_to_run} ---")
-
-        if 'setup' in steps_to_run:
-            self.run_setup()
-        if 'basecalling' in steps_to_run:
-            self.run_basecalling()
-        if 'align' in steps_to_run:
-            self.run_alignment()
-        if 'align_qc' in steps_to_run:
-            self.run_alignment_qc()
-        if 'methylation_summary' in steps_to_run:
-            self.run_methylation_summary()
-        if 'deconvolution_prep' in steps_to_run:
-            self.run_deconvolution_prep()
-        if 'deconvolution' in steps_to_run:
-            self.run_deconvolution_submodule()
 
 def main():
 
