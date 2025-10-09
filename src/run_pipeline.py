@@ -9,6 +9,7 @@ def main():
     """
     Main entry point for the pipeline
     """
+
     parser = argparse.ArgumentParser(description="Nanopore analysis pipeline controller.")
 
     # --- Sub-parser setup ---
@@ -25,21 +26,26 @@ def main():
 
     args = parser.parse_args()
 
+    if args.command is None:
+        print("You haven't selected a step, so I'll assume you want to do the entire pipeline.")
+
     controller = PipelineController()
 
-    if args.command == 'setup':
-        controller.run_setup()
-    elif args.command == 'basecalling':
-        controller.run_basecalling()
-    elif args.command == 'align':
-        controller.run_alignment()
-        controller.run_alignment_qc()
-    elif args.command == "methylation_summary":
-        controller.run_methylation_summary()
-    elif args.command == "all":
-        controller.run_active_steps()
+    command_map = {
+        'setup': controller.run_setup,
+        'basecall': controller.run_basecalling,
+        'align': controller.run_alignment,
+        'methylation_summary': controller.run_methylation_summary,
+        'deconvolution': controller.run_deconvolution,
+        'all': controller.run_active_steps
+    }
+
+    function_to_run = command_map.get(args.command)
+
+    if function_to_run:
+        function_to_run()
     else:
-        print(f"Unknown command: {args.command}")
+        print(f"Error: Unknown command '{args.command}'")
         parser.print_help()
 
 

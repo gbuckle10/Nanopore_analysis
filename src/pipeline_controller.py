@@ -86,12 +86,6 @@ class PipelineController:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
 
-        '''
-        script_path = "src/00_setup.sh"
-        config_file = "config.yaml"
-        command = ["bash", script_path, config_file]
-        '''
-
         script_path = self.project_root / "src" / "00_setup.py"
         command = [
             sys.executable,
@@ -124,11 +118,6 @@ class PipelineController:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 1: Basecalling")
 
-        '''
-        script_path = "src/01_basecalling.sh"
-        config_file = "config.yaml"
-        command = ["bash", script_path, config_file]
-        '''
 
         script_path = self.project_root / "src" / "01_basecalling.py"
         command = [
@@ -143,11 +132,6 @@ class PipelineController:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 2: Alignment and Indexing")
 
-        '''
-        script_path = "src/02_alignment.sh"
-        config_file = "config.yaml"
-        command = ["bash", script_path, config_file]
-        '''
         script_path = self.project_root / "src" / "02_alignment.py"
         command = [
             sys.executable,
@@ -160,11 +144,6 @@ class PipelineController:
         self.logger.info("=" * 80)
         self.logger.info(">>> Running QC on aligned and indexed data")
 
-        '''
-        script_path = "src/03_alignment_qc.sh"
-        config_file = "config.yaml"
-        command = ["bash", script_path, config_file]
-        '''
 
         script_path = "03_alignment_qc.py"
         command = [
@@ -177,11 +156,6 @@ class PipelineController:
     def run_methylation_summary(self):
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 4: Methylation Summary")
-        '''
-        script_path = "src/04_methylation_summary.sh"
-        config_file = "config.yaml"
-        command = ["bash", script_path, config_file]
-        '''
 
         script_path = self.project_root / "src" / "04_methylation_summary.py"
         command = [
