@@ -175,17 +175,26 @@ def run_command(command: list, env=None):
             preexec_fn=os.setpgrp,
             env=env
         )
+        pgid = os.getpgid(process.pid)
 
         # We don't need the child part of the terminal anymore.
         os.close(child_fd)
 
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd) as master_file:
+            parent_fd = None # fd is now managed by master_file
             try:
                 for line in iter(master_file.readline, ''):
-                    logger.info(line.strip())
+                    clean_line = line.strip()
+                    if not clean_line:
+                        continue
+                    if '\r' in line:
+                        logger.debug(clean_line)
+                    else:
+                        logger.info(clean_line)
             except OSError:
                 pass
+
         process.wait()
 
         if process.returncode != 0:
@@ -205,6 +214,18 @@ def run_command(command: list, env=None):
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         raise e
 
+    finally:
+        if parent_fd is not None:
+            os.close(parent_fd)
+        if pgid is not None:
+            try:
+                logger.info(f"Sending SIGTERM ot process group {pgid}")
+                os.killpg(pgid, signal.SIGTERM) # Sends a (polite) termination request to the entire process group.
+                logger.info("Signal sent. Child process should now terminate.")
+            except ProcessLookupError:
+                logger.info("Child process already terminated.")
+            except Exception as e:
+                logger.error(f"Error during cleanup: {e}")
 
 
 
