@@ -8,17 +8,17 @@ import argparse
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from src.utils.runner import run_command, run_wgbstools, run_uxm
-from src.utils.logger import setup_logger
-from src.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
-from src.deconvolution import Deconvolution
-from src.deconvolution_prep import generate_deconvolution_files
+from utils.runner import run_command, run_wgbstools, run_uxm, get_project_root
+from utils.logger import setup_logger
+from utils.file_conversion import apply_runtime_config, ensure_tool_symlink
+from deconvolution import Deconvolution
+from deconvolution_prep import generate_deconvolution_files
 import os
 import re
 
 
 class Pipeline:
-    def __init__(self, config_path):
+    def __init__(self, config_name="config.yaml"):
         """Initialise pipeline, set up logging and load config"""
         run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
@@ -27,9 +27,11 @@ class Pipeline:
         self.logger.info(f"The log for this run will be saved to: {log_file_path}")
         self.logger.info("=" * 80)
         self.tool_paths = {}
-        self.config = self.load_config(config_path)
+        self.project_root = get_project_root()
+
+        config_path = self.project_root / config_name
+        self.config = self.load_config(str(config_path))
         self.steps_to_run = self.config['pipeline_control']['run_steps']
-        self.project_root = Path(__file__).resolve().parent
 
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
@@ -54,10 +56,10 @@ class Pipeline:
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "00_setup.py"
+        script_path = self.project_root / "src" / "00_setup.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -92,10 +94,10 @@ class Pipeline:
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "01_basecalling.py"
+        script_path = self.project_root / "src" / "01_basecalling.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
         run_command(command)
 
@@ -110,10 +112,10 @@ class Pipeline:
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
-        script_path = "02_alignment.py"
+        script_path = self.project_root / "src" / "02_alignment.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -131,7 +133,7 @@ class Pipeline:
         script_path = "03_alignment_qc.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -145,10 +147,10 @@ class Pipeline:
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "04_methylation_summary.py"
+        script_path = self.project_root / "src" / "04_methylation_summary.py"
         command = [
             sys.executable,
-            script_path
+            str(script_path)
         ]
 
         run_command(command)
@@ -254,7 +256,6 @@ class Pipeline:
             self.run_deconvolution_submodule()
 
 def main():
-    CONFIG_FILE = "../config.yaml"
 
     parser = argparse.ArgumentParser(description="Nanopore analysis pipeline controller.")
 
@@ -271,7 +272,7 @@ def main():
 
     args = parser.parse_args()
 
-    controller = Pipeline(CONFIG_FILE)
+    controller = Pipeline()
 
     if args.command == 'setup':
         controller.run_setup()
