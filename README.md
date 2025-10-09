@@ -1,5 +1,6 @@
-#Peter's Instructions :)
-##To finish the analysis:
+# Peter's Instructions :)
+
+## To finish the analysis:
     - Basecalling:
         - If the basecalling isn't finished, you can continue from an existing bam file by using the --resume-from
         command.
