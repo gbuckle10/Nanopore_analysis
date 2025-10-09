@@ -31,7 +31,7 @@ def ensure_tool_symlink(link_path, target_path):
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
-def apply_runtime_config(runtime_config="scripts/runtime_config.sh"):
+def apply_runtime_config(runtime_config="src/runtime_config.sh"):
     """
     Reads a shell script and applies the export PATH commands to the current
     process's environment.

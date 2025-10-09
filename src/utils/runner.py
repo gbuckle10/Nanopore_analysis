@@ -129,7 +129,7 @@ def load_config(config_file="config.yaml"):
 
 def run_external_command(command: list, cwd=None):
     """
-    A simpler version of the runner.run_command method which worker scripts will use to execute
+    A simpler version of the runner.run_command method which worker src will use to execute
     external tools.
     Prints output to console and exists on failure.
 

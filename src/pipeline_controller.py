@@ -8,11 +8,11 @@ import argparse
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from scripts.utils.runner import run_command, run_wgbstools, run_uxm
-from scripts.utils.logger import setup_logger
-from scripts.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
-from scripts.deconvolution import Deconvolution
-from scripts.deconvolution_prep import generate_deconvolution_files
+from src.utils.runner import run_command, run_wgbstools, run_uxm
+from src.utils.logger import setup_logger
+from src.utils.file_conversion import apply_runtime_config, ensure_tool_symlink
+from src.deconvolution import Deconvolution
+from src.deconvolution_prep import generate_deconvolution_files
 import os
 import re
 
@@ -49,12 +49,12 @@ class Pipeline:
         self.logger.info(">>> Starting Step 0: Setup")
 
         '''
-        script_path = "scripts/00_setup.sh"
+        script_path = "src/00_setup.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/00_setup.py"
+        script_path = "00_setup.py"
         command = [
             sys.executable,
             script_path
@@ -87,12 +87,12 @@ class Pipeline:
         self.logger.info(">>> Starting step 1: Basecalling")
 
         '''
-        script_path = "scripts/01_basecalling.sh"
+        script_path = "src/01_basecalling.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/01_basecalling.py"
+        script_path = "01_basecalling.py"
         command = [
             sys.executable,
             script_path
@@ -106,11 +106,11 @@ class Pipeline:
         self.logger.info(">>> Starting step 2: Alignment and Indexing")
 
         '''
-        script_path = "scripts/02_alignment.sh"
+        script_path = "src/02_alignment.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
-        script_path = "scripts/02_alignment.py"
+        script_path = "02_alignment.py"
         command = [
             sys.executable,
             script_path
@@ -123,12 +123,12 @@ class Pipeline:
         self.logger.info(">>> Running QC on aligned and indexed data")
 
         '''
-        script_path = "scripts/03_alignment_qc.sh"
+        script_path = "src/03_alignment_qc.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/03_alignment_qc.py"
+        script_path = "03_alignment_qc.py"
         command = [
             sys.executable,
             script_path
@@ -140,12 +140,12 @@ class Pipeline:
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 4: Methylation Summary")
         '''
-        script_path = "scripts/04_methylation_summary.sh"
+        script_path = "src/04_methylation_summary.sh"
         config_file = "config.yaml"
         command = ["bash", script_path, config_file]
         '''
 
-        script_path = "scripts/04_methylation_summary.py"
+        script_path = "04_methylation_summary.py"
         command = [
             sys.executable,
             script_path
@@ -254,7 +254,7 @@ class Pipeline:
             self.run_deconvolution_submodule()
 
 def main():
-    CONFIG_FILE = "config.yaml"
+    CONFIG_FILE = "../config.yaml"
 
     parser = argparse.ArgumentParser(description="Nanopore analysis pipeline controller.")
 
@@ -284,7 +284,7 @@ def main():
         parser.print_help()
 
 if __name__ == '__main__':
-    CONFIG_FILE = "config.yaml"
+    CONFIG_FILE = "../config.yaml"
     main()
     #pipeline = Pipeline(CONFIG_FILE)
 

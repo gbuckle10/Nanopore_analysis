@@ -13,7 +13,7 @@ import yaml
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "scripts", "runtime_config.yaml")
+RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.yaml")
 
 
 def download_file(url, destination):
