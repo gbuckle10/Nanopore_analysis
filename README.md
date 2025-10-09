@@ -1,50 +1,46 @@
 # Peter's Instructions :)
 
 ## To finish the analysis:
-    - Basecalling:
-        - If the basecalling isn't finished, you can continue from an existing bam file by using the --resume-from
-        command.
-        - In the 01_basecalling.sh file there is a basecalling_pod5() function. I have already fixed it so that it'll continue
-        from the file that's already being done. It should be resumed from "data/basecalled_output/cyclomics2_continued.bam" and
-        in the function call underneath it should be writing to "data/basecalled_output/cyclomics2_continued_forreal.bam"
-        - The basecalling should also contain a demultiplex_bam() function. Make sure the local raw_bam variable assignment
-        points to the right file. If you had to run it a second time it's already correct, if not you need to change the raw_bam
-        variable to be cyclomics2_continued.bam
-    - Merging bam files:
-        - This is not part of the pipeline, so we need to do this manually. There should now be 2 bam files for each barcode, one in
-        the set2 folder and one in the set1 folder. We need to do this before alignment because merging will destroy the sorting.
-        - You can merge the bam files with the command:
-            samtools merge -o analysis/combined/demultiplexed/barcode_X.bam path/to/file1.bam path/to/file2.bam
-        - This might be quite annoying, but I think automating it at the moment would be more annoying.
-    - Alignment:
-        - Once the files are merged and put into the analysis/combined folder, you can run the alignment script. To just run the
-        alignment script, go to config.yaml and comment out all of the run steps apart from align.
-        - The 02_alignment.sh script should only run the align_and_index() method. In that method, the alignment_cmd will
-        take the entire demultiplexed folder (demultiplexed), align and index, and send to the output directory (demux_sorted).
-        - If there is an error here some of them are pretty self-explanatory, but if you call me I'll take a look.
-        - After the alignment step, there should be a folder in nanopore_analysis/analysis/set2/demux_sorted containing
-        a bam and a bam.bai file for each barcode.
-        - There are more steps in our pipeline, but for the UXM deconvolution we don't need to do them. So from here we can do everything
-        manually.
-    - Now you have demultiplexed, sorted and indexed bam files for all of the barcodes. Now you can start deconvoluting.
+
+### Basecalling:
+
+- If the basecalling isn't finished, you can continue from an existing bam file by using the ```--resume-from``` command.
+- In the 01_basecalling.sh file there is a basecalling_pod5() function. I have already fixed it so that it'll continue from the file that's already being done. It should be resumed from "data/basecalled_output/cyclomics2_continued.bam" and in the function call underneath it should be writing to "data/basecalled_output/cyclomics2_continued_forreal.bam"
+- The basecalling should also contain a demultiplex_bam() function. Make sure the local raw_bam variable assignment points to the right file. If you had to run it a second time it's already correct, if not you need to change the raw_bam variable to be cyclomics2_continued.bam
+### Merging bam files:
+- This is not part of the pipeline, so we need to do this manually. There should now be 2 bam files for each barcode, one in the set2 folder and one in the set1 folder. We need to do this before alignment because merging will destroy the sorting.
+- You can merge the bam files with the command:
+      ```samtools merge -o analysis/combined/demultiplexed/barcode_X.bam path/to/file1.bam path/to/file2.bam```
+- This might be quite annoying, but I think automating it at the moment would be more annoying.
+### Alignment:
+- Once the files are merged and put into the analysis/combined folder, you can run the alignment script. To just run the alignment script, go to config.yaml and comment out all of the run steps apart from align.
+- The 02_alignment.sh script should only run the align_and_index() method. In that method, the alignment_cmd will take the entire demultiplexed folder (demultiplexed), align and index, and send to the output directory (demux_sorted).
+- If there is an error here some of them are pretty self-explanatory, but if you call me I'll take a look.
+- After the alignment step, there should be a folder in nanopore_analysis/analysis/set2/demux_sorted containing a bam and a bam.bai file for each barcode.
+- There are more steps in our pipeline, but for the UXM deconvolution we don't need to do them. So from here we can do everything manually.
+- Now you have demultiplexed, sorted and indexed bam files for all of the barcodes. Now you can start deconvoluting.
 ##Deconvolution
-    - You have a separate bam file for each barcode, you can run the steps we've already gone through.
-    - Make sure wgbstools and uxm are in your PATH environment variable (you know how).
-    - Make the pat files
-        - bam2pat can take a whole directory of bam files. In our case you would want to do the following commands:
-            mkdir -p analysis/combined/demux_pat/
-            wgbstools bam2pat analysis/combined/demux_sorted/*.bam -output_dir analysis/combined/demux_pat/
-        - Now there should be a load of pat files in the demux_pat folder.
-    - Filter the pats using the atlas
-        - You unfortunately need to do this one by one. First you can do mkdir -p analysis/combined/filtered/, then do
-        the following for each barcode:
-            wgbstools view analysis/combined/demux_pat/patname.pat.gz -L data/atlas/Atlas.U250.l4.hg38.full.tsv -o analysis/combined/filtered/filename.pat.
-            You can give them any name you want, I would just name them after their barcode.
-        - Now you have a load of pat files in the analysis/combined/filtered folder.
-    - Index the pat files:
-        - wgbstools index analysis/combined/filtered/*.pat
-    - Use uxm to deconvolute the files one by one:
-        uxm deconv analysis/combined/filtered/file.pat.gz --atlas data/atlas/Atlas.U250.l4.hg38.full.tsv -o analysis/combined/deconvoluted/barcodeXX.csv
+- You have a separate bam file for each barcode, you can run the steps we've already gone through.
+- Make sure wgbstools and uxm are in your PATH environment variable (you know how).
+- Make the pat files
+    - bam2pat can take a whole directory of bam files. In our case you would want to do the following commands:
+      
+        ```mkdir -p analysis/combined/demux_pat/```
+      
+        ```wgbstools bam2pat analysis/combined/demux_sorted/*.bam -output_dir analysis/combined/demux_pat/```
+    - Now there should be a load of pat files in the demux_pat folder.
+- Filter the pats using the atlas
+    - You unfortunately need to do this one by one. First you can do ```mkdir -p analysis/combined/filtered/```, then do the following for each barcode:
+      
+      ```wgbstools view analysis/combined/demux_pat/patname.pat.gz -L data/atlas/Atlas.U250.l4.hg38.full.tsv -o analysis/combined/filtered/filename.pat.```
+    - You can give them any name you want, I would just name them after their barcode.
+- Now you have a load of pat files in the analysis/combined/filtered folder.
+- Index the pat files:
+
+  ```wgbstools index analysis/combined/filtered/*.pat```
+- Use uxm to deconvolute the files one by one:
+  
+  ```uxm deconv analysis/combined/filtered/file.pat.gz --atlas data/atlas/Atlas.U250.l4.hg38.full.tsv -o analysis/combined/deconvoluted/barcodeXX.csv```
 
 To run uxm_deconv:
     - Get your pat.gz file and your atlas.tsv file.
