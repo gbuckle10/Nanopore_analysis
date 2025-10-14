@@ -175,7 +175,7 @@ def run_command(command: list, env=None):
 
         # We don't need the child part of the terminal anymore.
         os.close(child_fd)
-
+        pgid = os.getpgid(process.pid)
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd) as master_file:
             parent_fd = None # fd is now managed by master_file
@@ -202,7 +202,6 @@ def run_command(command: list, env=None):
     except KeyboardInterrupt:
         logger.warning(">>> Keyboard interrupt detected. Terminating subprocess...")
         if process:
-            pgid = os.getpgid(process.pid)
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         raise
     except Exception as e:

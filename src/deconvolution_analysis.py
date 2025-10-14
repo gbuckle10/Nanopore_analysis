@@ -29,17 +29,17 @@ def filter_bam_by_size(input_file, size_cutoff, output_dir=None, side_selection=
     count_below = 0
     count_total = 0
 
-    name_above = f"{prefix}_above_{size_cutoff}bp.bam"
-    name_below = f"{prefix}_below_{size_cutoff}bp.bam"
+    file_above = output_dir / f"{prefix}_above_{size_cutoff}bp.bam"
+    file_below = output_dir / f"{prefix}_below_{size_cutoff}bp.bam"
 
     try:
         with pysam.AlignmentFile(input_file, "rb") as infile:
             if side_selection in ["both", "above"]:
-                logger.info(f"Outputting the reads above {size_cutoff} bp to {name_above}")
-                output_above = pysam.AlignmentFile(name_above, "wb", template=infile)
+                logger.info(f"Outputting the reads above {size_cutoff} bp to {file_above}")
+                output_above = pysam.AlignmentFile(file_above, "wb", template=infile)
             if side_selection in ["both", "below"]:
-                logger.info(f"Outputting the reads below {size_cutoff} bp to {name_below}")
-                output_below = pysam.AlignmentFile(name_below, "wb", template=infile)
+                logger.info(f"Outputting the reads below {size_cutoff} bp to {file_below}")
+                output_below = pysam.AlignmentFile(file_below, "wb", template=infile)
 
             for read in infile:
                 count_total += 1
@@ -49,11 +49,12 @@ def filter_bam_by_size(input_file, size_cutoff, output_dir=None, side_selection=
                     if output_above:
                         output_above.write(read)
                         count_above += 1
-                    else:
+                else:
+                    if output_below:
                         output_below.write(read)
                         count_below += 1
 
-            logger.info("\n--- Filtering Complete ---")
+            logger.info("--- Filtering Complete ---")
             logger.info(f"Total reads processed - {count_total}")
             if output_above:
                 print(f"Reads > {size_cutoff} bp: {count_above}")
@@ -77,7 +78,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="A suite of analysis tools to analyse the sequencing and deconvolution data."
     )
-    print("starting deconvolution_analysis ")
     # Create a sub-command system
     subparsers = parser.add_subparsers(dest='command', required=True, help='The task to run.')
 
@@ -110,7 +110,6 @@ if __name__ == "__main__":
              "  below: save reads with length <= cutoff\n"
              "  both: save reads above and below the cutoff in separate files"
     )
-    print("arguments added")
     args = parser.parse_args()
 
     if args.command == 'filter_bam_by_size':
