@@ -3,9 +3,11 @@ import pysam
 import logging
 from pathlib import Path
 import sys
-from utils.logger import setup_logger
+from src.utils.logger import setup_logger
 
-def filter_bam_by_size(input_file, size_cutoff, output_dir=None, side_selection="both"):
+
+
+def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selection="both"):
     '''
     Takes a bam file and filters based on the size cutoff. A new bam file is made based on the filtering,
     with the option to save the reads above the cutoff, below the cutoff, or both.
@@ -76,52 +78,45 @@ if __name__ == "__main__":
     setup_logger()
 
     parser = argparse.ArgumentParser(
-        description="A suite of analysis tools to analyse the sequencing and deconvolution data."
+        description="Filter a bam file by a specified length"
     )
-    # Create a sub-command system
-    subparsers = parser.add_subparsers(dest='command', required=True, help='The task to run.')
 
-    # Create parsers for size separation
-    p_filter = subparsers.add_parser('filter_bam_by_size', help='Filter reads in a bam file by size.')
-    p_filter.add_argument(
+    parser.add_argument(
         "input_bam",
         type=Path,
         help="Path to the input bam file."
     )
-    p_filter.add_argument(
+    parser.add_argument(
         "-c", "--cutoff",
         type=int,
         required=True,
         help="The read length cutoff value."
     )
-    p_filter.add_argument(
+    parser.add_argument(
         "--output-dir",
         type=Path,
-        required=False,
         help="The directory to save the filtered files. If no directory selected, it'll be saved to the same directory as the original BAM file."
     )
-    p_filter.add_argument(
+    parser.add_argument(
         "--mode",
         choices=['above', 'below', 'both'],
         type=str,
-        required=False,
         help="Specify which reads to save:\n"
              "  above: save reads with length > cutoff\n"
              "  below: save reads with length <= cutoff\n"
              "  both: save reads above and below the cutoff in separate files"
     )
+
     args = parser.parse_args()
 
-    if args.command == 'filter_bam_by_size':
-        if args.output_dir:
-            output_directory = args.output_dir
-        else:
-            output_directory = args.input_bam.parent
 
-        print(f"Input BAM: {args.input_bam}")
-        print(f"Cutoff: {args.cutoff}")
-        print(f"Mode: {args.mode}")
-        print(f"Output directory: {output_directory}")
-        filter_bam_by_size(args.input_bam, args.cutoff, output_directory, args.mode)
+    if args.output_dir:
+        output_directory = args.output_dir
+    else:
+        output_directory = args.input_bam.parent
 
-
+    print(f"Input BAM: {args.input_bam}")
+    print(f"Cutoff: {args.cutoff}")
+    print(f"Mode: {args.mode}")
+    print(f"Output directory: {output_directory}")
+    filter_bam_by_length(args.input_bam, args.cutoff, output_directory, args.mode)
