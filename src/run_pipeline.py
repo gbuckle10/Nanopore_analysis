@@ -21,7 +21,8 @@ def main():
         'deconvolution': 'pipeline',
         'all': 'pipeline',
 
-        'filter_bam_by_size': 'src/deconvolution_analysis.py'
+        'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
+        'summarise-lengths': 'src/analysis/summarise_lengths.py'
     }
 
     alias_map = {
@@ -47,8 +48,10 @@ def main():
     elif handler:
         script_path = handler
         remaining_argv = sys.argv[2:]
-        command_to_run = ["python", script_path, user_command] + remaining_argv
 
+        command_to_run = ["python", script_path] + remaining_argv
+
+        print(f"Running command {' '.join(command_to_run)}")
         try:
             subprocess.run(command_to_run, check=True),
         except subprocess.CalledProcessError:
