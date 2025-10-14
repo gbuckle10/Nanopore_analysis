@@ -23,6 +23,7 @@ dependencies:
   - scipy
   - matplotlib
   - conda_forge:gxx
+  - pysam
   - pip
   - pip:
     - pyyaml
