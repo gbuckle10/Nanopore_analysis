@@ -1,3 +1,4 @@
+import argparse
 import subprocess
 import sys
 import yaml
@@ -231,3 +232,40 @@ class PipelineController:
             self.logger.critical("Halting process due to deconvolution script failure.")
             raise e
 
+    def main(self, argv):
+        parser = argparse.ArgumentParser(description='Internal pipeline steps.')
+
+        # --- Sub-parser setup ---
+        subparsers = parser.add_subparsers(dest='command', help='Pipeline step to run')
+        subparsers.required = False  # Subcommand is optional, if not given it'll default to "all".
+
+        subparsers.add_parser('setup', help="Run the initial setup step (download tools, data etc).")
+        subparsers.add_parser('basecalling', aliases=['basecall'], help="Run the basecalling step.")
+        subparsers.add_parser('align', aliases=['alignment'], help="Run the alignment step.")
+        subparsers.add_parser('methylation_summary', help="Run the methylation summary step.")
+        subparsers.add_parser('deconvolution_prep', help="Run the deconvolution prep.")
+        subparsers.add_parser('deconvolution', aliases=['deconv'], help="Run the deconvolution step.")
+        subparsers.add_parser('all', help="Run all steps enabled in config.yaml")
+
+        args = parser.parse_args(argv)
+
+        print(f"Command passed to pipeline controller - {args.command}")
+
+        user_command = args.command if args.command is not None else 'all'
+
+        command_map = {
+            'setup': self.run_setup,
+            'basecalling': self.run_basecalling,
+            'align': self.run_alignment,
+            'methylation_summary': self.run_methylation_summary,
+            'deconvolution': self.run_deconvolution,
+            'all': self.run_active_steps
+        }
+
+        function_to_run = command_map.get(user_command)
+
+        if function_to_run:
+            function_to_run()
+        else:
+            print(f"Error: Unknown command '{args.command}'")
+            parser.print_help()

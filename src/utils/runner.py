@@ -3,10 +3,9 @@ import subprocess
 import logging
 import yaml
 import os
-import signal
 import sys
+import signal
 from pathlib import Path
-
 
 def run_dorado(dorado_command: list, project_root, output_file: str = None):
     '''
@@ -157,9 +156,7 @@ def run_command(command: list, env=None):
     '''
 
     logger = logging.getLogger('pipeline')
-
     logger.info(f"Executing command: {' '.join(command)}")
-
     process = None
 
     try:
@@ -175,7 +172,6 @@ def run_command(command: list, env=None):
             preexec_fn=os.setpgrp,
             env=env
         )
-        pgid = os.getpgid(process.pid)
 
         # We don't need the child part of the terminal anymore.
         os.close(child_fd)
@@ -206,6 +202,7 @@ def run_command(command: list, env=None):
     except KeyboardInterrupt:
         logger.warning(">>> Keyboard interrupt detected. Terminating subprocess...")
         if process:
+            pgid = os.getpgid(process.pid)
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         raise
     except Exception as e:
@@ -219,7 +216,7 @@ def run_command(command: list, env=None):
             os.close(parent_fd)
         if pgid is not None:
             try:
-                logger.info(f"Sending SIGTERM ot process group {pgid}")
+                logger.info(f"Sending SIGTERM to process group {pgid}")
                 os.killpg(pgid, signal.SIGTERM) # Sends a (polite) termination request to the entire process group.
                 logger.info("Signal sent. Child process should now terminate.")
             except ProcessLookupError:
