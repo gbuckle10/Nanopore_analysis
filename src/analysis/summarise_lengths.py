@@ -29,7 +29,9 @@ def summarise_lengths(input_file, output_dir=None, must_be_aligned=False, min_le
         with pysam.AlignmentFile(input_file, "rb", check_sq=False) as infile:
             # check_sq=False tells pysam not to crash if there's no header, so it'll be more robust for unaligned bams.
             for read in infile:
-                read_lengths[read] += 1
+                if read.is_secondary or read.is_supplementary:
+                    continue
+                read_lengths[read.query_length] += 1
         logger.info(f"Process complete.")
 
         with open(output_file, 'w', newline='') as csvfile:
@@ -80,6 +82,7 @@ if __name__ == '__main__':
         type=int,
         help="Maximum length to count"
     )
+
 
     args = parser.parse_args()
 
