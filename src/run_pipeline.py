@@ -30,7 +30,6 @@ def main():
         'deconv': 'deconvolution'
     }
 
-
     print(f"sys.argv before parsing = {sys.argv}")
 
     if len(sys.argv) < 2:
@@ -38,24 +37,21 @@ def main():
     else:
         user_command = sys.argv[1]
 
-
-    primary_command = alias_map.get(user_command, user_command)
-
-    handler = command_map.get(primary_command)
+    handler = command_map.get(user_command)
 
     if not handler:
-        print(f"Error: unknown command or alias '{primary_command}'", file=sys.stderr)
+        print(f"Error: unknown command or alias '{user_command}'", file=sys.stderr)
         sys.exit(1)
 
     if handler == 'pipeline':
         controller = PipelineController()
-        print(f"Passing {primary_command} to the pipeline")
+        print(f"Passing {user_command} to the pipeline")
 
         controller.main(sys.argv[1:])
     elif handler:
         script_path = handler
         remaining_argv = sys.argv[2:]
-        command_to_run = ["python", script_path, primary_command] + remaining_argv
+        command_to_run = ["python", script_path, user_command] + remaining_argv
 
         try:
             print(f"Attempting to run: '{' '.join(command_to_run)}'")
