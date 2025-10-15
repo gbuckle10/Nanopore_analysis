@@ -65,6 +65,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "-o", "--output-dir",
         type=Path,
+        default='.',
         help="Path to save output"
     )
     parser.add_argument(

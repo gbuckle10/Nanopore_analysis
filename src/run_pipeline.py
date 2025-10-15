@@ -6,45 +6,48 @@ from pipeline_controller import PipelineController
 import subprocess
 import sys
 
+COMMAND_MAP = {
+    'setup': 'pipeline',
+    'basecalling': 'pipeline',
+    'basecall': 'pipeline',
+    'align': 'pipeline',
+    'alignment': 'pipeline',
+    'methylation_summary': 'pipeline',
+    'deconvolution_prep': 'pipeline',
+    'deconvolution': 'pipeline',
+    'deconv': 'pipeline',
+    'all': 'pipeline',
+
+    'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
+    'summarise-lengths': 'src/analysis/summarise_lengths.py'
+}
 
 def main():
-    """
-    Main entry point for the pipeline
-    """
-
-    command_map = {
-        'setup': 'pipeline',
-        'basecalling': 'pipeline',
-        'align': 'pipeline',
-        'methylation_summary': 'pipeline',
-        'deconvolution_prep': 'pipeline',
-        'deconvolution': 'pipeline',
-        'all': 'pipeline',
-
-        'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
-        'summarise-lengths': 'src/analysis/summarise_lengths.py'
-    }
-
-    alias_map = {
-        'basecall': 'basecalling',
-        'alignment': 'align',
-        'deconv': 'deconvolution'
-    }
 
     if len(sys.argv) < 2:
         user_command = 'all'
+        args_to_send = ['all']
     else:
         user_command = sys.argv[1]
+        args_to_send = sys.argv[1:]
 
-    handler = command_map.get(user_command)
+    handler = COMMAND_MAP.get(user_command)
 
     if not handler:
+        print(f"Error: Unknown command '{user_command}'", file=sys.stderr)
+        print(f"Available commands:", ", ".join(sorted(COMMAND_MAP.keys())))
         sys.exit(1)
 
     if handler == 'pipeline':
-        controller = PipelineController()
+        script_path = "src/pipeline_controller.py"
+        command_to_run = ["python", script_path] + args_to_send
 
-        controller.main(sys.argv[1:])
+        print(f"Running command {' '.join(command_to_run)}")
+        try:
+            subprocess.run(command_to_run, check=True)
+        except subprocess.CalledProcessError:
+            print(f"There was an error...")
+            sys.exit(1)
     elif handler:
         script_path = handler
         remaining_argv = sys.argv[2:]
@@ -53,7 +56,7 @@ def main():
 
         print(f"Running command {' '.join(command_to_run)}")
         try:
-            subprocess.run(command_to_run, check=True),
+            subprocess.run(command_to_run, check=True)
         except subprocess.CalledProcessError:
             sys.exit(1)
 

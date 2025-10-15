@@ -232,9 +232,15 @@ class PipelineController:
             self.logger.critical("Halting process due to deconvolution script failure.")
             raise e
 
-    def main(self, argv):
-        parser = argparse.ArgumentParser(description='Internal pipeline steps.')
+    def main(self, argv=None):
+        print(f"Running pipeline with args {argv}")
 
+        parser = argparse.ArgumentParser(description='Internal pipeline steps.')
+        parser.add_argument(
+            '--config',
+            default='config.yaml',
+            help='Path to the configuration file.'
+        )
         # --- Sub-parser setup ---
         subparsers = parser.add_subparsers(dest='command', help='Pipeline step to run')
         subparsers.required = False  # Subcommand is optional, if not given it'll default to "all".
@@ -262,10 +268,20 @@ class PipelineController:
             'all': self.run_active_steps
         }
 
-        function_to_run = command_map.get(user_command)
-
+        alias_map = {
+            'basecall': 'basecalling',
+            'alignment': 'align',
+            'deconv': 'deconvolution'
+        }
+        print(f"Deciding which function to run.")
+        function_to_run = command_map.get(alias_map.get(user_command, user_command))
+        print(f"Function to run is {function_to_run}")
         if function_to_run:
             function_to_run()
         else:
             print(f"Error: Unknown command '{args.command}'")
             parser.print_help()
+
+if __name__ == '__main__':
+    controller = PipelineController()
+    controller.main(sys.argv[1:])
