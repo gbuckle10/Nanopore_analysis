@@ -1,5 +1,10 @@
+import argparse
 import os
+import sys
+from pathlib import Path
+
 from utils.runner import load_config, get_project_root, run_external_command, run_dorado
+from src.utils.logger import setup_logger
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -68,14 +73,72 @@ def basecalling_pod5(config, kit_name=None):
 
     run_dorado(basecalling_cmd, project_root, "data/basecalled_output/calls.bam")
 
-def main():
-    config = load_config(CONFIG_PATH)
+def main(argv=None):
 
-    # Add an arg to decide whether to use a specific model, which model to use, and how
-    # exactly we want to define the basecalling method.
-    download_dorado_model(config)
-    basecalling_pod5(config)
+    if argv is None:
+        argv = sys.argv[1:]
+
+    setup_logger()
+
+    parser = argparse.ArgumentParser(
+        description="Basecalling using dorado."
+    )
+
+    parser.add_argument(
+        "--basecalling-pod5",
+        action='store_true',
+        help='Just run the basecalling method.'
+    )
+    parser.add_argument(
+        "--download-dorado-model",
+        action='store_true',
+        help='Download the dorado model.'
+    )
+    parser.add_argument(
+        "--demultiplex",
+        action='store_true',
+        help='Demultiplex a multiplexed bam file.'
+    )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        help="Path to the input file/directory."
+    )
+    parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        help="Path to the config file."
+    )
+
+    args = parser.parse_args()
+
+    if not args.config:
+        config = load_config(CONFIG_PATH)
+    else:
+        config = load_config(args.config)
+
+    method_flagged = args.basecalling_pod5 or args.download_dorado_model or args.demultiplex
+
+    print("Yes" if method_flagged else "No")
+
+    if not method_flagged:
+        print(f"No specific methods flagged. Running all of them")
+        # Add an arg to decide whether to use a specific model, which model to use, and how
+        # exactly we want to define the basecalling method.
+        download_dorado_model(config)
+        basecalling_pod5(config)
+    else:
+        print("Methods have been specified, so I'll run the ones you specified.")
+        if args.basecalling_pod5:
+            basecalling_pod5(config)
+        if args.download_dorado_model:
+            download_dorado_model(config)
+        if args.demultiplex:
+            demultiplex_bam(config)
+
+
 
 
 if __name__ == "__main__":
     main()
+

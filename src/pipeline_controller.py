@@ -35,7 +35,6 @@ class PipelineController:
             sys.exit(1)
         self.logger.info(" ---------------- Starting main run ----------------")
 
-
     def load_config(self, config_file="config.yaml"):
         """ Loads the pipeline config from a YAML file """
 
@@ -48,7 +47,7 @@ class PipelineController:
             self.logger.critical(f"Configuration file {config_file} not found.")
             raise
 
-    def run_active_steps(self):
+    def run_active_steps(self, script_args):
         """
         Executes the scripts specified in the config.yaml file.
         """
@@ -82,7 +81,7 @@ class PipelineController:
         if 'deconvolution' in steps_to_run:
             self.run_deconvolution()
 
-    def run_setup(self):
+    def run_setup(self, script_args):
         """ Executes the 00_setup.sh script """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
@@ -114,24 +113,20 @@ class PipelineController:
 
         run_uxm(['uxm', '--help'], self.project_root)
 
-    def run_basecalling(self, input=None, **kwargs):
+    def run_basecalling(self, script_args):
         """ Executes the basecalling script using the 01_basecalling.sh script """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 1: Basecalling")
 
-
         script_path = self.project_root / "src" / "01_basecalling.py"
         command = [
-            sys.executable,
-            str(script_path)
-        ]
+                      sys.executable,
+                      str(script_path)
+                  ] + script_args
 
-        if input:
-            command.extend(['--input', input])
         run_command(command)
 
-
-    def run_alignment(self, input):
+    def run_alignment(self, script_args):
         """ Executes the alignment script: 02_alignment.sh """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 2: Alignment and Indexing")
@@ -144,10 +139,9 @@ class PipelineController:
 
         run_command(command)
 
-    def run_alignment_qc(self):
+    def run_alignment_qc(self, script_args):
         self.logger.info("=" * 80)
         self.logger.info(">>> Running QC on aligned and indexed data")
-
 
         script_path = "03_alignment_qc.py"
         command = [
@@ -157,7 +151,7 @@ class PipelineController:
 
         run_command(command)
 
-    def run_methylation_summary(self):
+    def run_methylation_summary(self, script_args):
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 4: Methylation Summary")
 
@@ -169,7 +163,7 @@ class PipelineController:
 
         run_command(command)
 
-    def run_deconvolution(self):
+    def run_deconvolution(self, script_args):
         """
         Executes the full deconvolution analysis in two steps. The first step is to
         arrange the data in the bed file in such a way that it can be compared to the
@@ -188,7 +182,7 @@ class PipelineController:
             deconv_handler.prepare()
         deconv_handler.run()
 
-    def ___run_deconvolution_submodule(self):
+    def ___run_deconvolution_submodule(self, script_args):
         self.logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
 
         atlas_file = f"data/atlas/{self.config['paths']['atlas_file_uxm']}"
@@ -237,28 +231,11 @@ class PipelineController:
 
     def main(self, argv=None):
         parser = argparse.ArgumentParser(description='Internal pipeline steps.')
-        subparsers = parser.add_subparsers(dest='command', help='Pipeline step to run')
+        parser.add_argument('command', help='The pipeline step to run')
 
-        # --- Parent Parsers ---
-        data_processing_parser = argparse.ArgumentParser(add_help=False)
-        data_processing_parser.add_argument(
-            '--input',
-            help='Path to the input data directory. If not given, the relevant file will be taken from config.yaml'
-        )
-        subparsers.required = False  # Subcommand is optional, if not given it'll default to "all".
-
-        subparsers.add_parser('setup', help="Run the initial setup step (download tools, data etc).")
-        basecalling_parser = subparsers.add_parser('basecalling', aliases=['basecall'], parents=[data_processing_parser], help="Run the basecalling step.")
-        subparsers.add_parser('align', aliases=['alignment'], parents=[data_processing_parser], help="Run the alignment step.")
-        subparsers.add_parser('methylation_summary', help="Run the methylation summary step.")
-        subparsers.add_parser('deconvolution_prep', help="Run the deconvolution prep.")
-        subparsers.add_parser('deconvolution', aliases=['deconv'], help="Run the deconvolution step.")
-        subparsers.add_parser('all', help="Run all steps enabled in config.yaml")
-
-        args = parser.parse_args(argv)
-
+        args, remaining_argv = parser.parse_known_args(argv)
         user_command = args.command if args.command is not None else 'all'
-        print(f"User command is {user_command}")
+
         command_map = {
             'setup': self.run_setup,
             'basecalling': self.run_basecalling,
@@ -276,12 +253,11 @@ class PipelineController:
         function_to_run = command_map.get(alias_map.get(user_command, user_command))
 
         if function_to_run:
-            cli_options = vars(args)
-            cli_options.pop('command', None)
-            function_to_run(**cli_options)
+            function_to_run(remaining_argv)
         else:
             print(f"Error: Unknown command '{args.command}'")
             parser.print_help()
+
 
 if __name__ == '__main__':
     controller = PipelineController()
