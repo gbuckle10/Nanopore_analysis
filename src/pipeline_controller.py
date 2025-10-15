@@ -114,7 +114,7 @@ class PipelineController:
 
         run_uxm(['uxm', '--help'], self.project_root)
 
-    def run_basecalling(self):
+    def run_basecalling(self, input=None, **kwargs):
         """ Executes the basecalling script using the 01_basecalling.sh script """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 1: Basecalling")
@@ -125,10 +125,13 @@ class PipelineController:
             sys.executable,
             str(script_path)
         ]
+
+        if input:
+            command.extend(['--input', input])
         run_command(command)
 
 
-    def run_alignment(self):
+    def run_alignment(self, input):
         """ Executes the alignment script: 02_alignment.sh """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting step 2: Alignment and Indexing")
@@ -233,21 +236,20 @@ class PipelineController:
             raise e
 
     def main(self, argv=None):
-        print(f"Running pipeline with args {argv}")
-
         parser = argparse.ArgumentParser(description='Internal pipeline steps.')
-        parser.add_argument(
-            '--config',
-            default='config.yaml',
-            help='Path to the configuration file.'
-        )
-        # --- Sub-parser setup ---
         subparsers = parser.add_subparsers(dest='command', help='Pipeline step to run')
+
+        # --- Parent Parsers ---
+        data_processing_parser = argparse.ArgumentParser(add_help=False)
+        data_processing_parser.add_argument(
+            '--input',
+            help='Path to the input data directory. If not given, the relevant file will be taken from config.yaml'
+        )
         subparsers.required = False  # Subcommand is optional, if not given it'll default to "all".
 
         subparsers.add_parser('setup', help="Run the initial setup step (download tools, data etc).")
-        subparsers.add_parser('basecalling', aliases=['basecall'], help="Run the basecalling step.")
-        subparsers.add_parser('align', aliases=['alignment'], help="Run the alignment step.")
+        basecalling_parser = subparsers.add_parser('basecalling', aliases=['basecall'], parents=[data_processing_parser], help="Run the basecalling step.")
+        subparsers.add_parser('align', aliases=['alignment'], parents=[data_processing_parser], help="Run the alignment step.")
         subparsers.add_parser('methylation_summary', help="Run the methylation summary step.")
         subparsers.add_parser('deconvolution_prep', help="Run the deconvolution prep.")
         subparsers.add_parser('deconvolution', aliases=['deconv'], help="Run the deconvolution step.")
@@ -255,10 +257,8 @@ class PipelineController:
 
         args = parser.parse_args(argv)
 
-        print(f"Command passed to pipeline controller - {args.command}")
-
         user_command = args.command if args.command is not None else 'all'
-
+        print(f"User command is {user_command}")
         command_map = {
             'setup': self.run_setup,
             'basecalling': self.run_basecalling,
@@ -273,15 +273,16 @@ class PipelineController:
             'alignment': 'align',
             'deconv': 'deconvolution'
         }
-        print(f"Deciding which function to run.")
         function_to_run = command_map.get(alias_map.get(user_command, user_command))
-        print(f"Function to run is {function_to_run}")
+
         if function_to_run:
-            function_to_run()
+            cli_options = vars(args)
+            cli_options.pop('command', None)
+            function_to_run(**cli_options)
         else:
             print(f"Error: Unknown command '{args.command}'")
             parser.print_help()
 
 if __name__ == '__main__':
     controller = PipelineController()
-    controller.main(sys.argv[1:])
+    controller.main()

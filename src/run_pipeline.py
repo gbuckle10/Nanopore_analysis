@@ -46,7 +46,6 @@ def main():
         try:
             subprocess.run(command_to_run, check=True)
         except subprocess.CalledProcessError:
-            print(f"There was an error...")
             sys.exit(1)
     elif handler:
         script_path = handler
