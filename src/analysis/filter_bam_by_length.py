@@ -3,7 +3,8 @@ import pysam
 import logging
 from pathlib import Path
 import sys
-from src.utils.logger import setup_logger
+from logger import setup_logger
+import subprocess
 
 
 
@@ -63,6 +64,18 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
             if output_below:
                 print(f"Reads < {size_cutoff} bp: {count_below}")
 
+        logger.info("--- Indexing output files ---")
+        if side_selection in ['above', 'both']:
+            logger.info("Indexing {output_above}")
+            index_above_cmd = ['samtools', 'index', file_above]
+            subprocess.run(index_above_cmd, check=True)
+            logger.info("Indexing complete")
+        if side_selection in ['below', 'both']:
+            logger.info("Indexing {output_below}")
+            index_below_cmd = ['samtools', 'index', file_below]
+            subprocess.run(index_below_cmd, check=True)
+            logger.info("Indexing complete")
+
     except FileNotFoundError:
         print(f"Error: Input file not found at '{input_file}'", file=sys.stderr)
         sys.exit(1)
@@ -78,7 +91,7 @@ if __name__ == "__main__":
     setup_logger()
 
     parser = argparse.ArgumentParser(
-        description="Filter a bam file by a specified length"
+        description="Filter a bam file by a specified length and indexes the output"
     )
 
     parser.add_argument(
