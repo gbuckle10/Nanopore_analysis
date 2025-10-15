@@ -10,6 +10,7 @@ project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
 RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.sh")
 
+
 def download_dorado_model(config):
     # This should be better defined - give the base model name and
     # use the specified modifications to download the relevant modification models
@@ -25,9 +26,10 @@ def download_dorado_model(config):
 
     print(f"Downloading dorado model {dorado_model_name} with \n{' '.join(download_cmd)}")
     run_dorado(download_cmd, project_root)
-    #run_external_command(download_cmd)
+    # run_external_command(download_cmd)
 
     print(f"Dorado model successfully downloaded.")
+
 
 def demultiplex_bam(config):
     raw_bam_dir = config['paths']['basecalled_output_dir']
@@ -38,9 +40,10 @@ def demultiplex_bam(config):
         "dorado",
         "demux",
         "--output-dir", "analysis/demultiplexed"
-        "--kit-name", "SQK-NBD114-24",
+                        "--kit-name", "SQK-NBD114-24",
         raw_bam_file
     ]
+
 
 def basecalling_pod5(config, kit_name=None):
     '''
@@ -57,14 +60,13 @@ def basecalling_pod5(config, kit_name=None):
     modifications = config['parameters']['basecalling']['basecalling_modifications']
     batchsize = config['parameters']['basecalling']['batch_size']
 
-
     output_file = os.path.join(basecalling_dir, basecalled_filename)
 
     basecalling_cmd = [
         "dorado", "basecaller",
         f"{model_speed},{modifications}",
         pod5_dir,
-        #"--kit-name", kit_name,
+        # "--kit-name", kit_name,
         "--no-trim",
         "--batchsize", batchsize
     ]
@@ -73,8 +75,8 @@ def basecalling_pod5(config, kit_name=None):
 
     run_dorado(basecalling_cmd, project_root, "data/basecalled_output/calls.bam")
 
-def main(argv=None):
 
+def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
@@ -137,8 +139,5 @@ def main(argv=None):
             demultiplex_bam(config)
 
 
-
-
 if __name__ == "__main__":
     main()
-

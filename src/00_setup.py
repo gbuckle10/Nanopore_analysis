@@ -1,4 +1,7 @@
+import argparse
 import platform
+from pathlib import Path
+
 from utils.runner import load_config, get_project_root, run_external_command, run_wgbstools
 import os
 import subprocess
@@ -10,6 +13,7 @@ import gzip
 import shutil
 import zipfile
 import yaml
+from src.utils.logger import setup_logger
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -299,12 +303,39 @@ def convert_fast5_to_pod5(config):
     run_external_command(pod5_cmd)
 
 
-def main():
-    config = load_config(CONFIG_PATH)
-    runtime_tool_paths = {}
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    setup_logger()
+
+    parser = argparse.ArgumentParser(
+        description="Setup for pipeline run"
+    )
+    parser.add_argument(
+        "--dorado-version",
+        type=str,
+        help="Dorado version to download."
+    )
+    parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        help="Path to the config file."
+    )
+
+    args = parser.parse_args()
+
+    if not args.config:
+        config = load_config(CONFIG_PATH)
+    else:
+        config = load_config(args.config)
+
+    if args.dorado_version is not None:
+        print(f"Overriding dorado version with user-provided version. Using {args.dorado_version} instead.")
+        config['parameters']['setup']['dorado_version'] = args.dorado_version
+
+    # Run methods
     make_directories(config)
-
-
     setup_submodules(config)
     download_atlas_manifest_files(config)
     # download_and_index_reference_genome(config)
