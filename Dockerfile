@@ -16,8 +16,11 @@ RUN apt-get update && apt-get install -y \
 # Create a directory called /app to hold the project.
 WORKDIR /app
 
+# Add metadata to the image
+LABEL version="0.9.0"
+
 # Tells python to look for modules in the project root.
-ENV PYTHONPATH="${PYTHONPATH}:/app"
+ENV PYTHONPATH="/app"
 
 # Download and install Miniforge
 RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh" -O miniforge.sh && \
