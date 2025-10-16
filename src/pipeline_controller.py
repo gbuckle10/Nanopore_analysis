@@ -20,9 +20,37 @@ class PipelineController:
         self.logger.info("=" * 80)
         self.tool_paths = {}
         self.project_root = get_project_root()
-
+        self.scripts_path = self.project_root / "src" / "pipeline"
         config_path = self.project_root / config_name
         self.config = self.load_config(str(config_path))
+
+        self.pipeline_steps = {
+            'setup': {
+                'step_number': 0,
+                'script_name': '00_setup.py',
+                'description': 'Setup'
+            },
+            'basecalling': {
+                'step_number': 1,
+                'script_name': '01_basecalling.py',
+                'description': 'Basecalling'
+            },
+            'alignment': {
+                'step_number': 2,
+                'script_name': '02_alignment.py',
+                'description': 'Alignment'
+            },
+            'align_qc': {
+                'step_number': 3,
+                'script_name': '03_alignment_qc.py',
+                'description': 'Alignment QC'
+            },
+            'methylation_summary': {
+                'step_number': 4,
+                'script_name': '04_methylation_summary.py',
+                'description': 'Methylation Summary'
+            }
+        }
 
         try:
             self.steps_to_run = self.config['pipeline_control']['run_steps']
@@ -65,8 +93,8 @@ class PipelineController:
             self.logger.error("Error, there aren't any steps for me to run. Check config.yaml.")
             sys.exit(1)
 
-        self.logger.info('--- Pipeline Started ---')
-        self.logger.info(f"--- Pipeline will execute the following steps: {steps_to_run} ---")
+        self.logger.info('--- pipeline Started ---')
+        self.logger.info(f"--- pipeline will execute the following steps: {steps_to_run} ---")
 
         if 'setup' in steps_to_run:
             self.run_setup()
@@ -81,8 +109,34 @@ class PipelineController:
         if 'deconvolution' in steps_to_run:
             self.run_deconvolution()
 
+    def _run_step(self, step_name, script_args):
+        """
+        A generic method to run a pipeline step
+        """
+        step_info = self.pipeline_steps.get(step_name)
+        if not step_info:
+            self.logger.error(f"Undefined pipeline step: {step_name}")
+            sys.exit(1)
+
+        step_num = step_info['step_number']
+        description = step_info['description']
+        script_path = self.scripts_path / step_info['script_name']
+
+        self.logger.info("=" * 80)
+        self.logger.info(f">>> Starting step {step_num}: {description}")
+
+        command = [
+            sys.executable,
+            str(script_path)
+        ] + script_args
+
+        run_command(command)
+
     def run_setup(self, script_args):
         """ Executes the 00_setup.sh script """
+
+
+
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
 
@@ -103,7 +157,6 @@ class PipelineController:
 
         self.logger.info("Symlink for wgbstools good.")
 
-        run_wgbstools(['wgbstools', '--version'], self.project_root)
 
         uxm_sl_path = self.project_root / "externals" / "UXM_deconv" / "uxm"
         uxm_py_path = self.project_root / "externals" / "UXM_deconv" / "src" / "uxm.py"
@@ -111,57 +164,19 @@ class PipelineController:
 
         self.logger.info("Symlink for uxm good.")
 
-        run_uxm(['uxm', '--help'], self.project_root)
 
     def run_basecalling(self, script_args):
-        """ Executes the basecalling script using the 01_basecalling.sh script """
-        self.logger.info("=" * 80)
-        self.logger.info(">>> Starting step 1: Basecalling")
-
-        script_path = self.project_root / "src" / "01_basecalling.py"
-        command = [
-                      sys.executable,
-                      str(script_path)
-                  ] + script_args
-
-        run_command(command)
+        self._run_step('basecalling', script_args)
 
     def run_alignment(self, script_args):
         """ Executes the alignment script: 02_alignment.sh """
-        self.logger.info("=" * 80)
-        self.logger.info(">>> Starting step 2: Alignment and Indexing")
-
-        script_path = self.project_root / "src" / "02_alignment.py"
-        command = [
-            sys.executable,
-            str(script_path)
-        ]
-
-        run_command(command)
+        self._run_step('alignment', script_args)
 
     def run_alignment_qc(self, script_args):
-        self.logger.info("=" * 80)
-        self.logger.info(">>> Running QC on aligned and indexed data")
-
-        script_path = "03_alignment_qc.py"
-        command = [
-            sys.executable,
-            str(script_path)
-        ]
-
-        run_command(command)
+        self._run_step('alignment_qc', script_args)
 
     def run_methylation_summary(self, script_args):
-        self.logger.info("=" * 80)
-        self.logger.info(">>> Starting step 4: Methylation Summary")
-
-        script_path = self.project_root / "src" / "04_methylation_summary.py"
-        command = [
-            sys.executable,
-            str(script_path)
-        ]
-
-        run_command(command)
+        self._run_step('methylation_summary', script_args)
 
     def run_deconvolution(self, script_args):
         """
