@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 # Create a directory called /app to hold the project.
 WORKDIR /app
 
+# Tells python to look for modules in the project root.
+ENV PYTHONPATH="${PYTHONPATH}:/app"
+
 # Download and install Miniforge
 RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh" -O miniforge.sh && \
     bash miniforge.sh -b -p /opt/conda && \
@@ -38,5 +41,5 @@ RUN echo "Conda environment activated successfully" && \
     yq --version
 
 # Environment is now built and ready.
-ENTRYPOINT ["python", "src/run_pipeline.py"]
+ENTRYPOINT ["mamba", "run", "-n", "nanopore_analysis", "python", "src/run_pipeline.py"]
 CMD ["all"]
