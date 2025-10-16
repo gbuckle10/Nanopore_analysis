@@ -41,20 +41,28 @@ def install_conda():
     """
     Creates the Conda environment and the local symlink.
     """
+    env_name = "nanopore_analysis"
 
     command_str = (
         "mamba env create -f environment.yml && "
-        "mamba run -n nanopore_analysis python src/run_pipeline.py setup"
+        f"mamba run -n {env_name} python src/run_pipeline.py setup"
     )
 
-    '''
-    run_command(["mamba", "env", "create", "-f", "environment.yml"], "Creating Conda environment")
-    run_command(["mamba", "run", "-n", "nanopore-pipeline", "python", "src/run_pipeline.py", "setup"],
-                "Running internal setup.")
-    '''
-
-
     run_command(['bash', '-c', command_str], "Creating conda environment and running internal setup step.")
+
+    print(">>> Installing Conda activation scripts")
+    conda_info = subprocess.check_output(["conda", "info", "--json"], text=True)
+    import json
+    conda_root = json.loads(conda_info)['conda_prefix']
+    env_path = os.path.join(conda_root, 'envs', env_name)
+    activation_dir = os.path.join(env_path, 'etc', 'conda', 'activate.d')
+    os.makedirs(activation_dir, exist_ok=True)
+    import shutil
+    shutil.copy(
+        './etc/conda/activate.d/env_vars.sh',
+        os.path.join(activation_dir, 'env_vars.sh')
+    )
+
     print(">>> Creating local symlink: ./nanopore_analysis")
     if os.path.exists("nanopore_analysis"):
         os.remove("nanopore_analysis")
