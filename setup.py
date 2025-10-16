@@ -53,6 +53,7 @@ def install_conda():
                 "Running internal setup.")
     '''
 
+
     run_command(['bash', '-c', command_str], "Creating conda environment and running internal setup step.")
     print(">>> Creating local symlink: ./nanopore_analysis")
     if os.path.exists("nanopore_analysis"):
