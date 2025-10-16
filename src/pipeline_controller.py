@@ -97,17 +97,17 @@ class PipelineController:
         self.logger.info(f"--- pipeline will execute the following steps: {steps_to_run} ---")
 
         if 'setup' in steps_to_run:
-            self.run_setup()
+            self._run_step('setup', script_args)
         if 'basecalling' in steps_to_run:
-            self.run_basecalling()
+            self._run_step('basecalling', script_args)
         if 'align' in steps_to_run:
-            self.run_alignment()
+            self._run_step('align', script_args)
         if 'align_qc' in steps_to_run:
-            self.run_alignment_qc()
+            self._run_step('align_qc', script_args)
         if 'methylation_summary' in steps_to_run:
-            self.run_methylation_summary()
+            self._run_step('methylation_summary', script_args)
         if 'deconvolution' in steps_to_run:
-            self.run_deconvolution()
+            self._run_step('deconvolution', script_args)
 
     def _run_step(self, step_name, script_args):
         """
@@ -134,9 +134,6 @@ class PipelineController:
 
     def run_setup(self, script_args):
         """ Executes the 00_setup.sh script """
-
-
-
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
 
@@ -275,5 +272,6 @@ class PipelineController:
 
 
 if __name__ == '__main__':
+    print(f"DOCKER TEST")
     controller = PipelineController()
     controller.main()
