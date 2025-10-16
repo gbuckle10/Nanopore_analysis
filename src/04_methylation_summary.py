@@ -1,7 +1,10 @@
+import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
+from src.utils.logger import setup_logger
 from utils.runner import load_config, get_project_root, run_external_command
 
 project_root = get_project_root()
@@ -29,8 +32,29 @@ def methylation_pileup(config):
         output_bed
     ]
 
-def main():
-    config = load_config()
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    setup_logger()
+
+    parser = argparse.ArgumentParser(
+        description="Methylation summary of sequenced and aligned data using modkit."
+    )
+
+    parser.add_argument(
+        "-c", "--config",
+        type=Path,
+        help="Path to the config file."
+    )
+
+    args = parser.parse_args()
+
+    if not args.config:
+        config = load_config(CONFIG_PATH)
+    else:
+        config = load_config(args.config)
+
     methylation_pileup(config)
 
 if __name__ == '__main__':

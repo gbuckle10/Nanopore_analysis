@@ -2,9 +2,8 @@ import argparse
 import os
 import sys
 from pathlib import Path
-
-from utils.runner import load_config, get_project_root, run_external_command, run_dorado
 from src.utils.logger import setup_logger
+from utils.runner import load_config, get_project_root, run_external_command, run_dorado
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")

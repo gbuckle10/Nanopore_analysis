@@ -1,7 +1,10 @@
+import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
+from src.utils.logger import setup_logger
 from utils.runner import load_config, get_project_root, run_external_command
 
 project_root = get_project_root()
@@ -97,10 +100,36 @@ def align_and_index(config):
 
     print("Indexing complete")
 
-def main():
-    config = load_config()
-    align_and_index(config)
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    setup_logger()
 
+    parser = argparse.ArgumentParser(
+        description="Align a basecalled bam file to a reference genome."
+    )
+
+    parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        help="Path to the config file."
+    )
+    parser.add_argument(
+        "--index-genome",
+        action='store_true',
+        help='Index a genome with samtools'
+    )
+
+    args = parser.parse_args()
+
+    if not args.config:
+        config = load_config(CONFIG_PATH)
+    else:
+        config = load_config(args.config)
+
+    method_flagged = args.index_genome
+
+    align_and_index(config)
 
 if __name__ == '__main__':
     main()
