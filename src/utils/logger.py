@@ -50,6 +50,9 @@ def setup_logger(name='pipeline', log_file=None):
     logger.addHandler(console_handler)
 
     if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+
         file_handler = logging.FileHandler(log_file, mode='w')
 
         file_formatter = AnsiStrippingFormatter(
