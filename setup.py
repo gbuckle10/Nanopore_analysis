@@ -41,9 +41,19 @@ def install_conda():
     """
     Creates the Conda environment and the local symlink.
     """
-    run_command(["mamba", "env", "create", "-f", "environment.yml"], "Creating Conda environment")
-    run_command(["mamba", "run", "-n", "nanopore-pipeline", "python", "src/run_pipeline.py", "setup"],
-                "Running internal setup.")
+
+    command_str = (
+        "mamba env create -f environment.yml && "
+        "mamba run -n nanopore-pipeline python src/run_pipeline.py setup"
+    )
+
+    run_command(
+        ['bash' '-c', command_str], "Creating Conda environment and running internal setup."
+    )
+
+    # run_command(["mamba", "env", "create", "-f", "environment.yml"], "Creating Conda environment")
+    # run_command(["mamba", "run", "-n", "nanopore-pipeline", "python", "src/run_pipeline.py", "setup"],
+    #            "Running internal setup.")
 
     print(">>> Creating local symlink: ./nanopore_analysis")
     if os.path.exists("nanopore_analysis"):
