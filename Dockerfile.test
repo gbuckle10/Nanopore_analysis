@@ -1,0 +1,38 @@
+# File for simulating a fresh git clone and setup
+
+# Start from a clean Ubuntu image
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies required by pipeline and Conda
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Miniforge
+RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh" -O miniforge.sh && \
+    bash miniforge.sh -b -p /opt/conda && \
+    rm miniforge.sh
+ENV PATH="/opt/conda/bin:${PATH}"
+
+RUN git clone https://github.com/gbuckle10/Nanopore_analysis
+
+# Copy project files into container's filesystem
+# Create a directory called /app to hold the project.
+WORKDIR /app
+
+# Create the conda environment from environment.yml
+RUN mamba env create -f environment.yml
+
+# Activate the conda environment for all subsequent commands
+SHELL ["mamba", "run", "-n", "nanopore_analysis", "/bin/bash", "-c"]
+
+# Run pipeline setup
+RUN python src/run_pipeline.py setup
+
+# Run a final test to ensure the setup worked
+RUN python src/run_pipeline.py --help
