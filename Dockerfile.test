@@ -19,20 +19,5 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     rm miniforge.sh
 ENV PATH="/opt/conda/bin:${PATH}"
 
-RUN git clone https://github.com/gbuckle10/Nanopore_analysis
+WORKDIR /workspace
 
-# Copy project files into container's filesystem
-# Create a directory called /app to hold the project.
-WORKDIR /app
-
-# Create the conda environment from environment.yml
-RUN mamba env create -f environment.yml
-
-# Activate the conda environment for all subsequent commands
-SHELL ["mamba", "run", "-n", "nanopore_analysis", "/bin/bash", "-c"]
-
-# Run pipeline setup
-RUN python src/run_pipeline.py setup
-
-# Run a final test to ensure the setup worked
-RUN python src/run_pipeline.py --help
