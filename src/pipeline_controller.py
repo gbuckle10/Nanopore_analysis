@@ -133,6 +133,8 @@ class PipelineController:
         run_command(command)
 
     def run_setup(self, script_args):
+        self._run_step('setup', script_args)
+        '''
         """ Executes the 00_setup.sh script """
         self.logger.info("=" * 80)
         self.logger.info(">>> Starting Step 0: Setup")
@@ -160,7 +162,7 @@ class PipelineController:
         ensure_tool_symlink(uxm_sl_path, uxm_py_path)
 
         self.logger.info("Symlink for uxm good.")
-
+        '''
 
     def run_basecalling(self, script_args):
         self._run_step('basecalling', script_args)
