@@ -1,0 +1,25 @@
+# Git and IDE files
+.git/
+.idea/
+.vscode/
+
+# Python cache and temp files
+__pycache__/
+*.pyc
+*.pyo
+
+# Directories to ignore
+data/
+tools/
+output/
+analysis/
+reference_genomes/
+
+# Submodule directory
+externals/
+
+# Local conda environments
+.conda/
+
+# Log files
+*.log
