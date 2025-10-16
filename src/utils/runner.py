@@ -9,6 +9,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 def kill_process_group(pgid):
     """
     Safely terminates a process group.
@@ -86,6 +87,7 @@ def run_wgbstools(wgbstools_args: list, project_root):
         print(f"CRITICAL: wgbstools command failed.", file=sys.stderr)
         raise e
 
+
 def run_uxm(uxm_args: list, project_root):
     """
         Temporarily adds the uxm executable to the PATH, and runs the specified command.
@@ -114,6 +116,7 @@ def run_uxm(uxm_args: list, project_root):
     except Exception as e:
         print(f"CRITICAL: uxm command failed.", file=sys.stderr)
         raise e
+
 
 def get_project_root() -> Path:
     """
@@ -168,6 +171,7 @@ def run_external_command(command: list, cwd=None):
         print(f"Command failed with return code {e.returncode}. Aborting.", file=sys.stderr)
         sys.exit(1)
 
+
 def run_command(command: list, env=None):
     '''
     Runs the commands for each step, logs the outputs in real time and handles errors.
@@ -196,7 +200,7 @@ def run_command(command: list, env=None):
         pgid = os.getpgid(process.pid)
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd) as master_file:
-            parent_fd = None # fd is now managed by master_file
+            parent_fd = None  # fd is now managed by master_file
             try:
                 for line in iter(master_file.readline, ''):
                     clean_line = line.strip()
