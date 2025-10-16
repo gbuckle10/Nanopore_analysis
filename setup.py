@@ -44,7 +44,7 @@ def install_conda():
 
     command_str = (
         "mamba env create -f environment.yml && "
-        "mamba run -n nanopore-pipeline python run.py setup"
+        "mamba run -n nanopore_analysis python src/run_pipeline.py setup"
     )
 
     '''
