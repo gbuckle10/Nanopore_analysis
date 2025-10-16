@@ -15,6 +15,8 @@ ENV PATH="/opt/conda/bin:${PATH}"
 WORKDIR /app
 RUN git clone -b installation https://github.com/gbuckle10/Nanopore_analysis.git .
 
+ENV PYTHONPATH="/app"
+
 # 3. Create the Conda environment from the cloned file, but don't run the setup script.
 RUN mamba env create -f environment.yml
 
