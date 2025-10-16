@@ -18,12 +18,20 @@ class AnsiStrippingFormatter(logging.Formatter):
 
         # Strip ANSI codes from the result.
         return self.ANSI_ESCAPE_REGEX.sub('', formatted_record)
-def setup_logger(name='pipeline', log_file='logs/pipeline.log'):
+def setup_logger(name='pipeline', log_file=None):
     """
-    Sets up a standardised logger with coloured console output and file output
+    Sets up a standardised logger with coloured console output and file output.
+    - If the logger is already configured, it does nothing.
+    - If log_file is provided, it logs to a file in addition to the console.
+    - If log_file is not provided, it logs only to the console.
     """
     # Create logger
     logger = logging.getLogger(name)
+
+    # If the logger already has handlers, it means that it's already been configured.
+    # Therefore, don't add more handlers.
+    if logger.handlers:
+        return
 
     logger.setLevel(logging.INFO)
 
@@ -41,14 +49,15 @@ def setup_logger(name='pipeline', log_file='logs/pipeline.log'):
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    file_handler = logging.FileHandler(log_file, mode='w')
+    if log_file:
+        file_handler = logging.FileHandler(log_file, mode='w')
 
-    file_formatter = AnsiStrippingFormatter(
-        '%(asctime)s - %(levelname)-8s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
+        file_formatter = AnsiStrippingFormatter(
+            '%(asctime)s - %(levelname)-8s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
 
     '''
     # Prevent from propagating to the root logger

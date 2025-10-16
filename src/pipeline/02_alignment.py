@@ -1,8 +1,11 @@
+import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-from utils.runner import load_config, get_project_root, run_external_command
+from src.utils.logger import setup_logger
+from src.utils.runner import load_config, get_project_root, run_external_command
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -97,10 +100,47 @@ def align_and_index(config):
 
     print("Indexing complete")
 
-def main():
-    config = load_config()
-    align_and_index(config)
+def add_args(parser):
+    """Add setup-specific args to the parser"""
+    parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        help="Path to the config file."
+    )
+    parser.add_argument(
+        "--index-genome",
+        action='store_true',
+        help='Index a genome with samtools'
+    )
 
+    return parser
+
+
+def parse_args(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Align a basecalled bam file to a reference genome."
+    )
+
+    parser = add_args(parser)
+    args = parser.parse_args(argv)
+    return args
+
+def main(argv=None):
+    setup_logger()
+
+    args = parse_args(argv)
+
+    if not args.config:
+        config = load_config(CONFIG_PATH)
+    else:
+        config = load_config(args.config)
+
+    method_flagged = args.index_genome
+
+    align_and_index(config)
 
 if __name__ == '__main__':
     main()

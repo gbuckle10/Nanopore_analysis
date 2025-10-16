@@ -206,7 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Nanopore Pipeline Related
+# Nanopore pipeline Related
 # Don't commit the installed tools
 /tools/
 

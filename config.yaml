@@ -4,7 +4,7 @@
 conda_env_name: "nanopore_analysis"
 
 # ========================================================
-# Pipeline Control
+# pipeline Control
 # High-level control over which steps are to be done.
 # ========================================================
 pipeline_control:
@@ -78,7 +78,7 @@ paths:
   reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
   uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
 
-  # --- Data Processing Pipeline Paths ---
+  # --- Data Processing pipeline Paths ---
   # Raw data
   fast5_input_dir: "data/fast5_input/"
   pod5_dir: "data/pod5_output/"

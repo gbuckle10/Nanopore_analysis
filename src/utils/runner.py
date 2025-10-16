@@ -3,9 +3,26 @@ import subprocess
 import logging
 import yaml
 import os
-import signal
 import sys
+import signal
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+def kill_process_group(pgid):
+    """
+    Safely terminates a process group.
+    """
+
+    if pgid is None:
+        return
+    try:
+        logger.warning(f"Sending SIGTERM to process group {pgid}")
+        os.killpg(pgid, signal.SIGTERM)
+    except ProcessLookupError:
+        logger.info(f"Process group {pgid} already terminated.")
+    except Exception as e:
+        logger.error(f"Error during process group termination: {e}")
 
 
 def run_dorado(dorado_command: list, project_root, output_file: str = None):
@@ -157,9 +174,7 @@ def run_command(command: list, env=None):
     '''
 
     logger = logging.getLogger('pipeline')
-
     logger.info(f"Executing command: {' '.join(command)}")
-
     process = None
 
     try:
@@ -175,11 +190,10 @@ def run_command(command: list, env=None):
             preexec_fn=os.setpgrp,
             env=env
         )
-        pgid = os.getpgid(process.pid)
 
         # We don't need the child part of the terminal anymore.
         os.close(child_fd)
-
+        pgid = os.getpgid(process.pid)
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd) as master_file:
             parent_fd = None # fd is now managed by master_file
@@ -205,30 +219,13 @@ def run_command(command: list, env=None):
 
     except KeyboardInterrupt:
         logger.warning(">>> Keyboard interrupt detected. Terminating subprocess...")
-        if process:
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        kill_process_group(pgid)
         raise
     except Exception as e:
         logger.critical(f"An unexpected error occurred: {e}")
-        if process:
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        kill_process_group(pgid)
         raise e
 
     finally:
         if parent_fd is not None:
             os.close(parent_fd)
-        if pgid is not None:
-            try:
-                logger.info(f"Sending SIGTERM ot process group {pgid}")
-                os.killpg(pgid, signal.SIGTERM) # Sends a (polite) termination request to the entire process group.
-                logger.info("Signal sent. Child process should now terminate.")
-            except ProcessLookupError:
-                logger.info("Child process already terminated.")
-            except Exception as e:
-                logger.error(f"Error during cleanup: {e}")
-
-
-
-
-
-
