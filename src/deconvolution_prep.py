@@ -230,10 +230,21 @@ def convert_atlas_to_genome_coordinates(output_file, atlas_file, manifest_file):
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 
-    parser = argparse.ArgumentParser(description="Deconvolution Preparation")
-    parser.add_argument("--bed-file", required=True)
-    parser.add_argument("--manifest-file", required=True)
-    parser.add_argument("--chunk-size", required=True, type=int)
+    parser = argparse.ArgumentParser(
+        description="Deconvolution Preparation"
+    )
+    parser.add_argument(
+        "-b", "--bed-file",
+        required=True
+    )
+    parser.add_argument(
+        "-m", "--manifest-file",
+        required=True
+    )
+    parser.add_argument(
+        "-c", "--chunk-size",
+        required=True,
+        type=int)
 
     args = parser.parse_args()
 

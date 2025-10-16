@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 from src.utils.logger import setup_logger
-from utils.runner import load_config, get_project_root, run_external_command, run_dorado
+from src.utils.runner import load_config, get_project_root, run_external_command, run_dorado
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -75,16 +75,8 @@ def basecalling_pod5(config, kit_name=None):
     run_dorado(basecalling_cmd, project_root, "data/basecalled_output/calls.bam")
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv[1:]
-
-    setup_logger()
-
-    parser = argparse.ArgumentParser(
-        description="Basecalling using dorado."
-    )
-
+def add_args(parser):
+    """Add setup-specific args to the parser"""
     parser.add_argument(
         "--basecalling-pod5",
         action='store_true',
@@ -111,7 +103,25 @@ def main(argv=None):
         help="Path to the config file."
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def parse_args(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Basecalling using dorado."
+    )
+
+    parser = add_args(parser)
+    args = parser.parse_args(argv)
+    return args
+
+
+def main(argv=None):
+    setup_logger()
+    args = parse_args(argv)
 
     if not args.config:
         config = load_config(CONFIG_PATH)

@@ -53,24 +53,32 @@ def alignment_qc(config):
         print(f"CRITICAL: samtools flagstat failed with exit code {e.returncode}", file=sys.stderr)
         sys.exit(1)
 
-
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv[1:]
-
-    setup_logger()
-
-    parser = argparse.ArgumentParser(
-        description="Alignment stats of aligned sequencing data."
-    )
-
+def add_args(parser):
+    """Add setup-specific args to the parser"""
     parser.add_argument(
         "-c", "--config",
         type=Path,
         help="Path to the config file."
     )
+    return parser
 
-    args = parser.parse_args()
+
+def parse_args(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Alignment stats of aligned sequencing data."
+    )
+
+    parser = add_args(parser)
+    args = parser.parse_args(argv)
+    return args
+
+def main(argv=None):
+    setup_logger()
+
+    args = parse_args()
 
     if not args.config:
         config = load_config(CONFIG_PATH)

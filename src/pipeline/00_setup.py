@@ -2,7 +2,7 @@ import argparse
 import platform
 from pathlib import Path
 
-from utils.runner import load_config, get_project_root, run_external_command, run_wgbstools
+from src.utils.runner import load_config, get_project_root, run_external_command, run_wgbstools
 import os
 import subprocess
 import sys
@@ -116,9 +116,8 @@ def setup_submodules(config):
 
     print("Compiling wgbstools")
 
-
     comp_command = ["python", "setup.py"]
-    #run_external_command(comp_command, cwd=wgbstools_dir)
+    # run_external_command(comp_command, cwd=wgbstools_dir)
 
     # The code block below will write the config file with the wgbstools dir in the config.
     # Wait until config/template config is properly set up to use this block.
@@ -227,7 +226,6 @@ def download_fast5_data(config):
     print(f"Downloading {number_to_download} fast5 files into {fast5_dir}")
     url = config['paths']['fast5_download_url']
 
-
     os.makedirs(fast5_dir, exist_ok=True)
 
     cmd_file_list = [
@@ -249,8 +247,6 @@ def download_fast5_data(config):
         print(f"Failed to list S3 bucket contents, make sure AWS CLI is installed and working", file=sys.stderr)
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-
-
 
     if str(number_to_download).lower() == 'all':
         files_to_download = all_files
@@ -303,15 +299,8 @@ def convert_fast5_to_pod5(config):
     run_external_command(pod5_cmd)
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv[1:]
-
-    setup_logger()
-
-    parser = argparse.ArgumentParser(
-        description="Setup for pipeline run"
-    )
+def add_args(parser):
+    """Add setup-specific args to the parser"""
     parser.add_argument(
         "--dorado-version",
         type=str,
@@ -323,7 +312,24 @@ def main(argv=None):
         help="Path to the config file."
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def parse_args(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Setup for pipeline run"
+    )
+    parser = add_args(parser)
+    args = parser.parse_args(argv)
+    return args
+
+
+def main(argv=None):
+    setup_logger()
+    args = parse_args(argv)
 
     if not args.config:
         config = load_config(CONFIG_PATH)
