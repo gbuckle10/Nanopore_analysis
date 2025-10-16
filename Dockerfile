@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     build-essential \
-    && rm -rf /var/lib/apt/lists\*
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy project files into container's filesystem
 # Create a directory called /app to hold the project.
@@ -27,6 +27,7 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     bash miniforge.sh -b -p /opt/conda && \
     rm miniforge.sh
 ENV PATH="/opt/conda/bin:${PATH}"
+ENV PATH="${PATH}:/app"
 
 # Copy environment.yml
 COPY environment.yml .
@@ -39,10 +40,13 @@ SHELL ["mamba", "run", "-n", "nanopore_analysis", "/bin/bash", "-c"]
 
 COPY . .
 
+# Create a symlink to the main script in a PATH directory
+RUN ln -s /app/src/run_pipeline.py /usr/local/bin/nanopore_analysis
+
 RUN echo "Conda environment activated successfully" && \
     python --version && \
     yq --version
 
 # Environment is now built and ready.
-ENTRYPOINT ["mamba", "run", "-n", "nanopore_analysis", "python", "src/run_pipeline.py"]
+ENTRYPOINT ["nanopore_analysis"]
 CMD ["all"]
