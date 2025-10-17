@@ -72,6 +72,10 @@ paths:
     - "data/processed/"
     - "logs/"
 
+  submodules:
+    uxm_dir: "externals/UXM_deconv"
+    wgbstools_dir: "externals/wgbs_tools"
+    meth_atlas_dir: "externals/meth_atlas"
 
   # --- External Data URLs ---
   fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
