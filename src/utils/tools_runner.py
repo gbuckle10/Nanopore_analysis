@@ -3,8 +3,8 @@ import subprocess
 import sys
 from typing import List, Optional
 
-from install import run_command
 from src.utils.logger import logging
+from src.utils.process_utils import run_command
 
 logger = logging.getLogger(__name__)
 

@@ -27,10 +27,6 @@ class PipelineController:
         self.runtime_config = load_config("runtime_config.yaml")
         self.config = deep_merge(self.user_config, self.runtime_config)
 
-        print("user and runtime configs merged. Merged config:")
-        print(self.config)
-
-
         self.pipeline_steps = {
             'basecalling': {
                 'step_number': 1,
@@ -200,6 +196,7 @@ class PipelineController:
             raise e
 
     def main(self, argv=None):
+
         parser = argparse.ArgumentParser(description='Internal pipeline steps.')
         parser.add_argument('command', help='The pipeline step to run')
 
@@ -222,6 +219,7 @@ class PipelineController:
         function_to_run = command_map.get(alias_map.get(user_command, user_command))
 
         if function_to_run:
+            print(f"Running function {function_to_run}, giving arguments {remaining_argv}")
             function_to_run(remaining_argv)
         else:
             print(f"Error: Unknown command '{args.command}'")
@@ -229,6 +227,5 @@ class PipelineController:
 
 
 if __name__ == '__main__':
-    print(f"DOCKER TEST")
     controller = PipelineController()
     controller.main()

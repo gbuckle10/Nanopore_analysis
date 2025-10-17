@@ -18,6 +18,7 @@ class AnsiStrippingFormatter(logging.Formatter):
 
         # Strip ANSI codes from the result.
         return self.ANSI_ESCAPE_REGEX.sub('', formatted_record)
+
 def setup_logger(name='pipeline', log_file=None):
     """
     Sets up a standardised logger with coloured console output and file output.

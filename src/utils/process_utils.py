@@ -4,14 +4,14 @@ import pty
 import signal
 import subprocess
 
-from src.utils.runner import logger
+from src.utils.logger import setup_logger
 
 
 def kill_process_group(pgid):
     """
     Safely terminates a process group.
     """
-
+    logger = logging.getLogger('pipeline')
     if pgid is None:
         return
     try:
