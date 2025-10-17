@@ -1,0 +1,25 @@
+# This Dockerfile creates a development environment where the repository
+# is already cloned and the Conda environment is already built.
+
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1. Install prerequisites: Git and Conda
+RUN apt-get update && apt-get install -y git wget build-essential && rm -rf /var/lib/apt/lists/*
+RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh" -O miniforge.sh && \
+    bash miniforge.sh -b -p /opt/conda && \
+    rm miniforge.sh
+ENV PATH="/opt/conda/bin:${PATH}"
+
+RUN mamba init bash
+
+# 2. Clone development branch
+WORKDIR /app
+RUN git clone -b installation https://github.com/gbuckle10/Nanopore_analysis.git .
+
+ENV PYTHONPATH="/app"
+
+# 3. Create the Conda environment from the cloned file, but don't run the setup script.
+RUN mamba env create -f environment.yml
+
+RUN echo "conda activate nanopore_analysis" >> ~/.bashrc

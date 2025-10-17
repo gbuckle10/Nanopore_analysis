@@ -9,6 +9,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 def kill_process_group(pgid):
     """
     Safely terminates a process group.
@@ -58,15 +59,15 @@ def run_dorado(dorado_command: list, project_root, output_file: str = None):
         raise e
 
 
-def run_wgbstools(wgbstools_args: list, project_root):
+def run_wgbstools(wgbstools_args: list):
     """
     Temporarily adds the wgbstools executable to the PATH, and runs the specified command.
     :param command:
     :return:
     """
-
+    runtime_config = load_runtime_config()
+    wgbstools_exe_path = runtime_config['submodules']['wgbstools']
     # THE RUNNER SHOULD BE ABLE TO FIND THE PROJECT_ROOT ON ITS OWN, THIS IS TEMPORARY
-    wgbstools_exe_path = project_root / "externals" / "wgbs_tools" / "wgbstools"
     if not wgbstools_exe_path.exists():
         raise FileNotFoundError(f"wgbstools not found at {wgbstools_exe_path}")
     wgbs_dir = str(wgbstools_exe_path.parent)
@@ -85,6 +86,7 @@ def run_wgbstools(wgbstools_args: list, project_root):
     except Exception as e:
         print(f"CRITICAL: wgbstools command failed.", file=sys.stderr)
         raise e
+
 
 def run_uxm(uxm_args: list, project_root):
     """
@@ -115,6 +117,7 @@ def run_uxm(uxm_args: list, project_root):
         print(f"CRITICAL: uxm command failed.", file=sys.stderr)
         raise e
 
+
 def get_project_root() -> Path:
     """
     Finds the projects root directory by navigating up from the file's location.
@@ -134,15 +137,19 @@ def get_project_root() -> Path:
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
     logger = logging.getLogger('pipeline')
-    try:
-        with open(config_file, 'r') as f:
-            config = yaml.safe_load(f)
-        logger.info(f"Configuration loaded from {config_file}")
-        return config
-    except FileNotFoundError:
-        logger.critical(f"Configuration file {config_file} not found.")
-        raise
+    if not Path(config_file).is_file():
+        raise FileNotFoundError(f"Config file not found at: {config_file}")
+    with open(config_file, 'r') as f:
+        return yaml.safe_load(f)
 
+def load_runtime_config(config_file="runtime_config.yaml"):
+    """ Loads the runtime config from a yaml file"""
+    logger = logging.getLogger('pipeline')
+
+    if not Path(config_file).is_file():
+        raise FileNotFoundError(f"Runtime config not found at: {config_file}")
+    with open(config_file, 'r') as f:
+        return yaml.safe_load(f)
 
 def run_external_command(command: list, cwd=None):
     """
@@ -167,6 +174,7 @@ def run_external_command(command: list, cwd=None):
     except subprocess.CalledProcessError as e:
         print(f"Command failed with return code {e.returncode}. Aborting.", file=sys.stderr)
         sys.exit(1)
+
 
 def run_command(command: list, env=None):
     '''
@@ -196,7 +204,7 @@ def run_command(command: list, env=None):
         pgid = os.getpgid(process.pid)
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd) as master_file:
-            parent_fd = None # fd is now managed by master_file
+            parent_fd = None  # fd is now managed by master_file
             try:
                 for line in iter(master_file.readline, ''):
                     clean_line = line.strip()

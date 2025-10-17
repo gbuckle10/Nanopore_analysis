@@ -25,11 +25,6 @@ class PipelineController:
         self.config = self.load_config(str(config_path))
 
         self.pipeline_steps = {
-            'setup': {
-                'step_number': 0,
-                'script_name': '00_setup.py',
-                'description': 'Setup'
-            },
             'basecalling': {
                 'step_number': 1,
                 'script_name': '01_basecalling.py',
@@ -96,8 +91,6 @@ class PipelineController:
         self.logger.info('--- pipeline Started ---')
         self.logger.info(f"--- pipeline will execute the following steps: {steps_to_run} ---")
 
-        if 'setup' in steps_to_run:
-            self._run_step('setup', script_args)
         if 'basecalling' in steps_to_run:
             self._run_step('basecalling', script_args)
         if 'align' in steps_to_run:
@@ -131,36 +124,6 @@ class PipelineController:
         ] + script_args
 
         run_command(command)
-
-    def run_setup(self, script_args):
-        """ Executes the 00_setup.sh script """
-        self.logger.info("=" * 80)
-        self.logger.info(">>> Starting Step 0: Setup")
-
-        script_path = self.project_root / "src" / "00_setup.py"
-        command = [
-            sys.executable,
-            str(script_path)
-        ]
-
-        run_command(command)
-
-        self.tool_paths = apply_runtime_config()
-
-        wgbstool_path = self.project_root / "externals" / "wgbs_tools"
-        wgbstools_sl_path = self.project_root / "externals" / "wgbs_tools" / "wgbstools"
-        wgbstools_py_path = self.project_root / "externals" / "wgbs_tools" / "src" / "python" / "wgbs_tools.py"
-        ensure_tool_symlink(wgbstools_sl_path, wgbstools_py_path)
-
-        self.logger.info("Symlink for wgbstools good.")
-
-
-        uxm_sl_path = self.project_root / "externals" / "UXM_deconv" / "uxm"
-        uxm_py_path = self.project_root / "externals" / "UXM_deconv" / "src" / "uxm.py"
-        ensure_tool_symlink(uxm_sl_path, uxm_py_path)
-
-        self.logger.info("Symlink for uxm good.")
-
 
     def run_basecalling(self, script_args):
         self._run_step('basecalling', script_args)
@@ -249,7 +212,6 @@ class PipelineController:
         user_command = args.command if args.command is not None else 'all'
 
         command_map = {
-            'setup': self.run_setup,
             'basecalling': self.run_basecalling,
             'align': self.run_alignment,
             'methylation_summary': self.run_methylation_summary,
