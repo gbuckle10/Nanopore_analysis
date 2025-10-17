@@ -10,6 +10,87 @@ import shutil
 project_root = Path(__file__).resolve().parent
 
 
+def download_atlas_manifest_files(config):
+    print("--- Downloading and preparing atlas files and manifests ---")
+    atlas_dir = os.path.join(project_root, "data/atlas")
+    os.makedirs("data/atlas", exist_ok=True)
+
+    files_to_download = {
+        "illumina_manifest.csv": "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv",
+        "full_atlas.csv": "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz",
+        "UXM_atlas.tsv": "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg19.tsv"
+    }
+
+    for filename, url in files_to_download.items():
+        dest_path = os.path.join(atlas_dir, filename)
+        if not os.path.exists(dest_path):
+            download_file(url, dest_path)
+        else:
+            print(f"{filename} already exists. Skipping download.")
+
+    gz_path = os.path.join(atlas_dir, "full_atlas.csv.gz")
+    csv_path = os.path.join(atlas_dir, "full_atlas.csv")
+    if os.path.exists(gz_path) and not os.path.exists(csv_path):
+        print("Decompressing full_atlas.csv.gz...")
+        with gzip.open(gz_path, 'rb') as f_in:
+            with open(csv_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+    # Convert UXM_atlas.tsv to .csv
+    tsv_path = os.path.join(atlas_dir, "UXM_atlas.tsv")
+    uxm_csv_path = os.path.join(atlas_dir, "UXM_atlas.csv")
+    if os.path.exists(tsv_path) and not os.path.exists(uxm_csv_path):
+        print("Converting UXM_atlas.tsv to UXM_atlas.csv")
+        with open(tsv_path, 'r') as tsv_file, open(uxm_csv_path, 'w', newline='') as csv_file:
+            reader = csv.reader(tsv_file, delimiter='\t')
+            writer = csv.writer(uxm_csv_path, delimiter=',')
+            for row in reader:
+                writer.writerow(row)
+
+
+def download_and_index_reference_genome_manual(config):
+    """
+    Downloads the reference genomes with AWS CLI and indexes it with minimap 2.
+    """
+    genome = config['paths']['reference_genome']
+    print(f"--- Setting up reference genome {genome} ---")
+
+    ref_dir = os.path.join(project_root, 'reference_genomes', genome)
+    os.makedirs(ref_dir, exist_ok=True)
+    ref_fasta = os.path.join(ref_dir, config['paths']['reference_genome_fasta_name'])
+    ref_mmi = os.path.join(ref_dir, config['paths']['indexed_ref_gen_fasta_name'])
+
+    if not os.path.exists(ref_fasta):
+        # Maybe we'll hardcode the reference genome urls in this function...
+        ref_url = config['paths']['reference_genome_url']
+        print(f"Reference file {ref_fasta} doesn't exist. Downloading from {ref_url}")
+        run_external_command([
+            "aws", "c3", "cp", ref_url, ref_fasta, "--no-sign-request"
+        ])
+    else:
+        print("Reference genome already exists.")
+
+    if not os.path.exists(ref_mmi):
+        print("Indexing reference genome with minimap2...")
+        run_external_command([
+            "minimap2", "-d", ref_mmi, ref_fasta
+        ])
+    else:
+        print(f"Reference genome index already exists.")
+
+def download_and_index_reference_genome(config):
+    """
+    Use wgbstools init_genome to initialise the specified genome.
+    """
+    genome = config['paths']['reference_genome']
+    print(f"Initialising reference genome {genome}")
+    wgbstools_cmd = [
+        "wgbstools", "init_genome",
+        genome
+    ]
+
+    run_wgbstools(wgbstools_cmd)
+
 def download_fast5_data(config):
     print("--- Downloading sample fast5 data ---")
     fast5_dir = os.path.join(project_root, config['paths']['fast5_input_dir'])
