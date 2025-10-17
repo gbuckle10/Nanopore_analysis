@@ -3,7 +3,8 @@ import platform
 import subprocess
 from pathlib import Path
 
-from src.utils.runner import load_config, get_project_root, run_external_command, run_wgbstools
+from src.utils.process_utils import run_command
+from src.utils.config_utils import load_config, get_project_root
 import os
 import sys
 import csv
@@ -48,8 +49,8 @@ def setup_submodules(config):
     sync_command = ["git", "submodule", "sync", "--recursive"]
     update_command = ["git", "submodule", "update", "--init", "--recursive", "--force"]
 
-    run_external_command(sync_command)
-    run_external_command(update_command)
+    run_command(sync_command)
+    run_command(update_command)
 
     print("Compiling wgbstools")
 

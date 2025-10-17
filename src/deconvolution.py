@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from utils.runner import run_command
+from src.utils.process_utils import run_command
 from pathlib import Path
 
 class Deconvolution:

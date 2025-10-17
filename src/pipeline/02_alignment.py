@@ -5,7 +5,8 @@ import sys
 from pathlib import Path
 
 from src.utils.logger import setup_logger
-from src.utils.runner import load_config, get_project_root, run_external_command
+from src.utils.process_utils import run_command
+from src.utils.config_utils import load_config, get_project_root
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -96,7 +97,7 @@ def align_and_index(config):
         aligned_bam_file
     ]
 
-    run_external_command(index_cmd)
+    run_command(index_cmd)
 
     print("Indexing complete")
 

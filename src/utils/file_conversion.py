@@ -3,9 +3,10 @@ from pathlib import Path
 import logging
 import requests
 import sys
-from runner import run_external_command
 import gzip
 import shutil
+
+from src.utils.process_utils import run_command
 
 project_root = Path(__file__).resolve().parent
 
@@ -64,7 +65,7 @@ def download_and_index_reference_genome_manual(config):
         # Maybe we'll hardcode the reference genome urls in this function...
         ref_url = config['paths']['reference_genome_url']
         print(f"Reference file {ref_fasta} doesn't exist. Downloading from {ref_url}")
-        run_external_command([
+        run_command([
             "aws", "c3", "cp", ref_url, ref_fasta, "--no-sign-request"
         ])
     else:
@@ -72,7 +73,7 @@ def download_and_index_reference_genome_manual(config):
 
     if not os.path.exists(ref_mmi):
         print("Indexing reference genome with minimap2...")
-        run_external_command([
+        run_command([
             "minimap2", "-d", ref_mmi, ref_fasta
         ])
     else:
@@ -148,7 +149,7 @@ def download_fast5_data(config):
             "aws", "s3", "cp", source_path, fast5_dir, "--no-sign-request", "--quiet"
         ]
 
-        run_external_command(dl_cmd)
+        run_command(dl_cmd)
 
     print("--- Fast5 download complete! --- ")
 
@@ -248,7 +249,7 @@ def convert_fast5_to_pod5(config):
     ]
 
     print(f"Converting fast5 to pod5, command: {' '.join(pod5_cmd)}")
-    run_external_command(pod5_cmd)
+    run_command(pod5_cmd)
 
 
 def apply_runtime_config(runtime_config="src/runtime_config.sh"):

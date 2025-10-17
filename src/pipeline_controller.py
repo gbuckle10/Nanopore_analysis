@@ -3,7 +3,8 @@ import subprocess
 import sys
 import yaml
 from datetime import datetime
-from utils.runner import run_command, run_wgbstools, run_uxm, get_project_root
+from src.utils.process_utils import run_command
+from src.utils.config_utils import get_project_root, load_config, deep_merge
 from utils.logger import setup_logger
 from utils.file_conversion import apply_runtime_config, ensure_tool_symlink
 from deconvolution import Deconvolution
@@ -22,7 +23,13 @@ class PipelineController:
         self.project_root = get_project_root()
         self.scripts_path = self.project_root / "src" / "pipeline"
         config_path = self.project_root / config_name
-        self.config = self.load_config(str(config_path))
+        self.user_config = load_config(str(config_path))
+        self.runtime_config = load_config("runtime_config.yaml")
+        self.config = deep_merge(self.user_config, self.runtime_config)
+
+        print("user and runtime configs merged. Merged config:")
+        print(self.config)
+
 
         self.pipeline_steps = {
             'basecalling': {
@@ -57,18 +64,6 @@ class PipelineController:
             self.logger.error("Error, there aren't any steps for me to run. Check config.yaml.")
             sys.exit(1)
         self.logger.info(" ---------------- Starting main run ----------------")
-
-    def load_config(self, config_file="config.yaml"):
-        """ Loads the pipeline config from a YAML file """
-
-        try:
-            with open(config_file, 'r') as f:
-                config = yaml.safe_load(f)
-            self.logger.info(f"Configuration loaded from {config_file}")
-            return config
-        except FileNotFoundError:
-            self.logger.critical(f"Configuration file {config_file} not found.")
-            raise
 
     def run_active_steps(self, script_args):
         """
