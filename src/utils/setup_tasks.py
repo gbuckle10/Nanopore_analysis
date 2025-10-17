@@ -1,19 +1,17 @@
 import argparse
 import platform
+import subprocess
 from pathlib import Path
 
 from src.utils.runner import load_config, get_project_root, run_external_command, run_wgbstools
 import os
-import subprocess
 import sys
 import csv
 import requests
 import tarfile
 import gzip
 import shutil
-import zipfile
 import yaml
-from src.utils.logger import setup_logger
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
@@ -50,12 +48,37 @@ def make_directories(config):
     print(f"Initialised runtime config at {RUNTIME_CONFIG_PATH}")
 
 
-
 def setup_submodules(config):
     print(" --- Setting up git submodules. ---")
     if not os.path.exists(f"{project_root}/.gitmodules"):
         print("No gitmodules file found. Skipping submodule setup.")
         return
+
+    repository_path = "/app"
+
+    print(f">>> Configuring Git to trust {repository_path}")
+    subprocess.run(
+        ['git', 'config', '--global', '--add', 'safe.directory', repository_path]
+    )
+
+    print(">>> Getting the list of submodule paths")
+    result = subprocess.run(
+        ['git', 'submodule--helper', 'list'],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=repository_path
+    )
+
+    submodule_paths = [line.split()[-1] for line in result.stdout.strip().split('\n')]
+    print(f">>> Found submodules: {submodule_paths}")
+
+    for path in submodule_paths:
+        full_path = os.path.join(repository_path, path)
+        print(f">>> Configuring Git to trust submodule at {full_path}")
+        subprocess.run(
+            ['git', 'config', '--global', '--add', 'safe.directory', full_path]
+        )
 
     sync_command = ["git", "submodule", "sync", "--recursive"]
     update_command = ["git", "submodule", "update", "--init", "--recursive", "--force"]
@@ -153,7 +176,6 @@ def download_and_index_reference_genome_manual(config):
     else:
         print(f"Reference genome index already exists.")
 
-
 def download_and_index_reference_genome(config):
     """
     Use wgbstools init_genome to initialise the specified genome.
@@ -167,87 +189,6 @@ def download_and_index_reference_genome(config):
 
     run_wgbstools(wgbstools_cmd)
 
-
-def download_fast5_data(config):
-    print("--- Downloading sample fast5 data ---")
-    fast5_dir = os.path.join(project_root, config['paths']['fast5_input_dir'])
-    number_to_download = config['parameters']['setup']['num_fast5_files']
-    print(f"Downloading {number_to_download} fast5 files into {fast5_dir}")
-    url = config['paths']['fast5_download_url']
-
-    os.makedirs(fast5_dir, exist_ok=True)
-
-    cmd_file_list = [
-        "aws", "s3", "ls", url, "--no-sign-request"
-    ]
-
-    try:
-        result = subprocess.run(
-            cmd_file_list, check=True, capture_output=True, text=True
-        )
-
-        all_files = []
-        for line in result.stdout.strip().split('\n'):
-            if ".fast5" in line:
-                filename = line.split()[-1]
-                all_files.append(filename)
-
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"Failed to list S3 bucket contents, make sure AWS CLI is installed and working", file=sys.stderr)
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    if str(number_to_download).lower() == 'all':
-        files_to_download = all_files
-        print(f"Preparing to download all {len(files_to_download)} files.")
-    else:
-        try:
-            files_to_download = all_files[:int(number_to_download)]
-            print(f"Preparing to download the first {len(files_to_download)} files")
-        except ValueError:
-            print(f"'num_fast5_files' in config is not a number or 'all'. Value is {number_to_download}",
-                  file=sys.stderr)
-            sys.exit(1)
-
-    print("Starting download...")
-    for filename in files_to_download:
-        if not filename:
-            # A blank line
-            continue
-        source_path = f"{url}{filename}"
-        local_dest = os.path.join(fast5_dir, filename)
-
-        if os.path.exists(local_dest):
-            print(f"Skipping {filename}, already exists.")
-            continue
-
-        dl_cmd = [
-            "aws", "s3", "cp", source_path, fast5_dir, "--no-sign-request", "--quiet"
-        ]
-
-        run_external_command(dl_cmd)
-
-    print("--- Fast5 download complete! --- ")
-
-
-def convert_fast5_to_pod5(config):
-    print("--- Converting fast5 to pod5 ---")
-    pod5_dir = os.path.join(project_root, config['paths']['pod5_dir'])
-    fast5_dir = os.path.join(project_root, config['paths']['fast5_input_dir'])
-
-    os.makedirs(config['paths']['pod5_dir'], exist_ok=True)
-
-    pod5_cmd = [
-        'pod5', 'convert', 'fast5',
-        fast5_dir,
-        '--output', pod5_dir,
-        '--force-overwrite'
-    ]
-
-    print(f"Converting fast5 to pod5, command: {' '.join(pod5_cmd)}")
-    run_external_command(pod5_cmd)
-
-
 def install_dorado(config):
     """
     Downloads and extracts the correct version of Dorado.
@@ -256,51 +197,33 @@ def install_dorado(config):
     version = config['parameters']['setup']['dorado_version']
     system = platform.system()
 
-    if system == 'Linux':
-        os_type = 'linux-x64'
-        archive_filename = f"dorado-{version}-{os_type}.tar.gz"
-        download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-{os_type}.tar.gz"
-    elif system == 'Windows':
-        os_type = 'win64'
-        archive_filename = f"dorado-{version}-{os_type}.tar.gz"
-        download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-{os_type}.zip"
-    else:
-        print(f"You're using an operating system I don't know - {system}")
-        sys.exit(1)
+    archive_filename = f"dorado-{version}-linux-x64.tar.gz"
+    download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-linux-x64.tar.gz"
 
-    dorado_dir = f"{project_root}/tools/dorado-{version}-{os_type}"
+    dorado_dir = f"{project_root}/tools/dorado-{version}"
 
     print(f"Checking for dorado at {dorado_dir}")
 
     if os.path.isdir(dorado_dir):
         print(f"Dorado already found at {dorado_dir}. Writing to config.yaml and skipping download.")
         dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
-        print(f"Adding dorado executable path {dorado_exe_path} to config.yaml")
-        config['paths']['tools']['dorado'] = dorado_exe_path
-        return dorado_dir
+        return dorado_exe_path
     else:
-        print(f"Downloading dorado version {version} for {os_type} from {download_url}")
+        print(f"Downloading dorado version {version} from {download_url}")
         archive_path = os.path.join(project_root, "tools", archive_filename)
         download_file(download_url, archive_path)
 
         print(f"Extracting {archive_path}...")
-        if archive_path.endswith(".tar.gz"):
-            with tarfile.open(archive_path, "r:gz") as tar:
-                tar.extractall(path="tools")
-        elif archive_path.endswith(".zip"):
-            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-                zip_ref.extractall(path="tools")
+        with tarfile.open(archive_path, "r:gz") as tar:
+            tar.extractall(path="tools")
+
         os.remove(archive_path)
         print("Extraction complete")
 
     dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
-    print(f"Adding dorado executable path {dorado_exe_path} to config.yaml")
-    config['paths']['tools']['dorado'] = dorado_exe_path
+    print(f"The dorado executable path is {dorado_exe_path}")
 
     return dorado_exe_path
-
-
-
 
 
 def add_args(parser):
@@ -349,7 +272,6 @@ def main(argv=None):
 
     config = load_config(args.config)
 
-
     # If dorado version is in args, override config
     if args.dorado_version is not None:
         print(f"Overriding config with user-defined dorado version '{args.dorado_version}'")
@@ -364,10 +286,12 @@ def main(argv=None):
 
     if args.command in ['all', 'tools']:
         tool_paths = install_dorado(config)
+        print(f"The dorado executable path is {tool_paths}. We will add it to runtime_config.yaml")
         runtime_config.setdefault('tools', {}).update(tool_paths)
+        print(f"Added. Runtime config is now {runtime_config}")
 
     if args.command in ['all', 'submodules']:
-        submodule_paths = install_submodules(config)
+        submodule_paths = setup_submodules(config)
         runtime_config.setdefault('submodules', {}).update(submodule_paths)
 
     print(">>> Writing update runtime_config.yaml...")
