@@ -50,57 +50,6 @@ def make_directories(config):
     print(f"Initialised runtime config at {RUNTIME_CONFIG_PATH}")
 
 
-def install_dorado(config):
-    """
-    Downloads and extracts the correct version of Dorado.
-    """
-    print(" --- Setting up Dorado ---")
-    version = config['parameters']['setup']['dorado_version']
-    system = platform.system()
-
-    if system == 'Linux':
-        os_type = 'linux-x64'
-        archive_filename = f"dorado-{version}-{os_type}.tar.gz"
-        download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-{os_type}.tar.gz"
-    elif system == 'Windows':
-        os_type = 'win64'
-        archive_filename = f"dorado-{version}-{os_type}.tar.gz"
-        download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-{os_type}.zip"
-    else:
-        print(f"You're using an operating system I don't know - {system}")
-        sys.exit(1)
-
-    dorado_dir = f"{project_root}/tools/dorado-{version}-{os_type}"
-
-    print(f"Checking for dorado at {dorado_dir}")
-
-    if os.path.isdir(dorado_dir):
-        print(f"Dorado already found at {dorado_dir}. Writing to config.yaml and skipping download.")
-        dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
-        print(f"Adding dorado executable path {dorado_exe_path} to config.yaml")
-        config['paths']['tools']['dorado'] = dorado_exe_path
-        return dorado_dir
-    else:
-        print(f"Downloading dorado version {version} for {os_type} from {download_url}")
-        archive_path = os.path.join(project_root, "tools", archive_filename)
-        download_file(download_url, archive_path)
-
-        print(f"Extracting {archive_path}...")
-        if archive_path.endswith(".tar.gz"):
-            with tarfile.open(archive_path, "r:gz") as tar:
-                tar.extractall(path="tools")
-        elif archive_path.endswith(".zip"):
-            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-                zip_ref.extractall(path="tools")
-        os.remove(archive_path)
-        print("Extraction complete")
-
-    dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
-    print(f"Adding dorado executable path {dorado_exe_path} to config.yaml")
-    config['paths']['tools']['dorado'] = dorado_exe_path
-
-    return dorado_exe_path
-
 
 def setup_submodules(config):
     print(" --- Setting up git submodules. ---")
@@ -116,7 +65,7 @@ def setup_submodules(config):
 
     print("Compiling wgbstools")
 
-    comp_command = ["python", "setup.py"]
+    comp_command = ["python", "install.py"]
     # run_external_command(comp_command, cwd=wgbstools_dir)
 
     # The code block below will write the config file with the wgbstools dir in the config.
@@ -299,6 +248,61 @@ def convert_fast5_to_pod5(config):
     run_external_command(pod5_cmd)
 
 
+def install_dorado(config):
+    """
+    Downloads and extracts the correct version of Dorado.
+    """
+    print(" --- Setting up Dorado ---")
+    version = config['parameters']['setup']['dorado_version']
+    system = platform.system()
+
+    if system == 'Linux':
+        os_type = 'linux-x64'
+        archive_filename = f"dorado-{version}-{os_type}.tar.gz"
+        download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-{os_type}.tar.gz"
+    elif system == 'Windows':
+        os_type = 'win64'
+        archive_filename = f"dorado-{version}-{os_type}.tar.gz"
+        download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-{os_type}.zip"
+    else:
+        print(f"You're using an operating system I don't know - {system}")
+        sys.exit(1)
+
+    dorado_dir = f"{project_root}/tools/dorado-{version}-{os_type}"
+
+    print(f"Checking for dorado at {dorado_dir}")
+
+    if os.path.isdir(dorado_dir):
+        print(f"Dorado already found at {dorado_dir}. Writing to config.yaml and skipping download.")
+        dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
+        print(f"Adding dorado executable path {dorado_exe_path} to config.yaml")
+        config['paths']['tools']['dorado'] = dorado_exe_path
+        return dorado_dir
+    else:
+        print(f"Downloading dorado version {version} for {os_type} from {download_url}")
+        archive_path = os.path.join(project_root, "tools", archive_filename)
+        download_file(download_url, archive_path)
+
+        print(f"Extracting {archive_path}...")
+        if archive_path.endswith(".tar.gz"):
+            with tarfile.open(archive_path, "r:gz") as tar:
+                tar.extractall(path="tools")
+        elif archive_path.endswith(".zip"):
+            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                zip_ref.extractall(path="tools")
+        os.remove(archive_path)
+        print("Extraction complete")
+
+    dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
+    print(f"Adding dorado executable path {dorado_exe_path} to config.yaml")
+    config['paths']['tools']['dorado'] = dorado_exe_path
+
+    return dorado_exe_path
+
+
+
+
+
 def add_args(parser):
     """Add setup-specific args to the parser"""
     parser.add_argument(
@@ -308,9 +312,20 @@ def add_args(parser):
     )
     parser.add_argument(
         '-c', '--config',
+        default='config.yaml',
         type=Path,
         help="Path to the config file."
     )
+    subparsers = parser.add_subparsers(dest='command', help="Installation task to run")
+    parser.set_defaults(command='all') # If no command is given, default to all.
+
+    all_parser = subparsers.add_parser('all', help="Run all installation steps (default)")
+    all_parser.add_argument('--dorado-version', help='Override Dorado version from config file.')
+
+    tool_parser = subparsers.add_parser('tools', help="Install/update command-line tools (e.g. Dorado)")
+    tool_parser.add_argument('--dorado-version', help='Override Dorado version from config file.')
+
+    subparsers.add_parser('submodules', help="Initialise/update Git submodules.")
 
     return parser
 
@@ -328,13 +343,38 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
-    setup_logger()
     args = parse_args(argv)
 
-    if not args.config:
-        config = load_config(CONFIG_PATH)
-    else:
-        config = load_config(args.config)
+    print(f">>> Loading configurations")
+
+    config = load_config(args.config)
+
+
+    # If dorado version is in args, override config
+    if args.dorado_version is not None:
+        print(f"Overriding config with user-defined dorado version '{args.dorado_version}'")
+        config['parameters']['setup']['dorado_version'] = args.dorado_version
+
+    # Load existing runtime_config, otherwise make a new one.
+    try:
+        with open('runtime_config.yaml', 'r') as f:
+            runtime_config = yaml.safe_load(f)
+    except FileNotFoundError:
+        runtime_config = {}
+
+    if args.command in ['all', 'tools']:
+        tool_paths = install_dorado(config)
+        runtime_config.setdefault('tools', {}).update(tool_paths)
+
+    if args.command in ['all', 'submodules']:
+        submodule_paths = install_submodules(config)
+        runtime_config.setdefault('submodules', {}).update(submodule_paths)
+
+    print(">>> Writing update runtime_config.yaml...")
+    with open('runtime_config.yaml', 'w') as f:
+        yaml.dump(runtime_config, f, sort_keys=False)
+
+    print("Internal setup task completed.")
 
     if args.dorado_version is not None:
         print(f"Overriding dorado version with user-provided version. Using {args.dorado_version} instead.")
