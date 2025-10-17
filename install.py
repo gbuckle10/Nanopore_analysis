@@ -16,6 +16,7 @@ docker run --rm -it \\
 
 def run_command(command, description):
     print(f">>> {description}...")
+    print(f"Command to run - {command}")
     try:
         subprocess.run(command, check=True)
         print(">>> Success!")
@@ -43,11 +44,12 @@ def install_conda(task):
     """
     env_name = "nanopore_analysis"
 
+    '''
     if task == 'all':
         run_command([
             "mamba", "env", "create", "-f", "environment.yml"
         ], "Creating conda environment and running internal setup step.")
-
+    '''
     print(">>> Installing Conda activation scripts")
     conda_info = subprocess.check_output(["conda", "info", "--json"], text=True)
     import json
@@ -62,7 +64,7 @@ def install_conda(task):
     )
 
     command_to_run = [
-        "mamba", "run", "-n", env_name, "python", "-m", "src.setup_logic", task
+        "python", "-m", "src.utils.setup_tasks", task
     ]
     run_command(command_to_run, f"Running step logic for '{task}'")
 
@@ -80,34 +82,40 @@ def add_args(parser):
     """
     subparsers = parser.add_subparsers(dest='mode', required=True, help='Installation_mode')
 
-    conda_parser = subparsers.add_parser('conda', help="Install for a local Conda environment.")
-    conda_parser.add_argument(
-        'task', nargs='?', default='all', choices=['all', 'tools', 'submodules'], help='Specific task to run (default: all)'
-    )
-
     docker_parser = subparsers.add_parser('docker', help="Install by building a Docker image")
+
+    conda_parser = subparsers.add_parser('conda', help="Install for a local Conda environment.")
+    conda_subparsers = conda_parser.add_subparsers(dest='task', help='Specific task to run')
+    parser.set_defaults(task='all')  # Default for 'task' is 'all'
+
+    conda_subparsers.add_parser('all', help='Create environment and run all setup steps (default).')
+    conda_subparsers.add_parser('tools', help='Install/update command-line tools.')
+    conda_subparsers.add_parser('submodules', help='Initialise/update Git submodules.')
 
     return parser
 
 
-def parse_args(argv=None):
+def main(argv=None):
+    if len(sys.argv) > 1 and sys.argv[1] in ['tools', 'submodules']:
+        # If the first argument is tools or submodules, it has to be done with the conda installer.
+        task = sys.argv[1]
+        install_conda(task)
+        sys.exit(0)
+
     if argv is None:
         # If None is passed to this method, get the list of strings from the command line, excluding the script name.
         argv = sys.argv[1:]
+
     parser = argparse.ArgumentParser(
         description="Installer for the nanopore analysis pipeline.",
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser = add_args(parser)
-
     args = parser.parse_args(argv)
 
-    return args
-
-
-def main(argv=None):
-    args = parse_args(argv)
-
+    if args.mode is None:
+        parser.print_help()
+        sys.exit("\nError: You must specify an installation mode ('docker' or 'conda').")
     if args.mode == 'docker':
         install_docker()
     elif args.mode == 'conda':
