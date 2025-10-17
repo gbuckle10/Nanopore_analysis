@@ -22,5 +22,4 @@ ENV PYTHONPATH="/app"
 # 3. Create the Conda environment from the cloned file, but don't run the setup script.
 RUN mamba env create -f environment.yml
 
-# 4. Activate the environment for all subsequent commands
-SHELL ["mamba", "run", "-n", "nanopore_analysis", "/bin/bash", "-c"]
+RUN echo "conda activate nanopore_analysis" >> ~/.bashrc
