@@ -59,15 +59,15 @@ def run_dorado(dorado_command: list, project_root, output_file: str = None):
         raise e
 
 
-def run_wgbstools(wgbstools_args: list, project_root):
+def run_wgbstools(wgbstools_args: list):
     """
     Temporarily adds the wgbstools executable to the PATH, and runs the specified command.
     :param command:
     :return:
     """
-
+    runtime_config = load_runtime_config()
+    wgbstools_exe_path = runtime_config['submodules']['wgbstools']
     # THE RUNNER SHOULD BE ABLE TO FIND THE PROJECT_ROOT ON ITS OWN, THIS IS TEMPORARY
-    wgbstools_exe_path = project_root / "externals" / "wgbs_tools" / "wgbstools"
     if not wgbstools_exe_path.exists():
         raise FileNotFoundError(f"wgbstools not found at {wgbstools_exe_path}")
     wgbs_dir = str(wgbstools_exe_path.parent)
@@ -137,15 +137,19 @@ def get_project_root() -> Path:
 def load_config(config_file="config.yaml"):
     """ Loads the pipeline config from a YAML file """
     logger = logging.getLogger('pipeline')
-    try:
-        with open(config_file, 'r') as f:
-            config = yaml.safe_load(f)
-        logger.info(f"Configuration loaded from {config_file}")
-        return config
-    except FileNotFoundError:
-        logger.critical(f"Configuration file {config_file} not found.")
-        raise
+    if not Path(config_file).is_file():
+        raise FileNotFoundError(f"Config file not found at: {config_file}")
+    with open(config_file, 'r') as f:
+        return yaml.safe_load(f)
 
+def load_runtime_config(config_file="runtime_config.yaml"):
+    """ Loads the runtime config from a yaml file"""
+    logger = logging.getLogger('pipeline')
+
+    if not Path(config_file).is_file():
+        raise FileNotFoundError(f"Runtime config not found at: {config_file}")
+    with open(config_file, 'r') as f:
+        return yaml.safe_load(f)
 
 def run_external_command(command: list, cwd=None):
     """
