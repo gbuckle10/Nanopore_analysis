@@ -9,7 +9,6 @@ conda_env_name: "nanopore_analysis"
 # ========================================================
 pipeline_control:
   run_steps:
-    #- setup
     - basecalling
     - align
     #- align_qc
