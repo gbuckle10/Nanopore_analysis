@@ -11,6 +11,8 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     rm miniforge.sh
 ENV PATH="/opt/conda/bin:${PATH}"
 
+RUN mamba init bash
+
 # 2. Clone development branch
 WORKDIR /app
 RUN git clone -b installation https://github.com/gbuckle10/Nanopore_analysis.git .
