@@ -195,19 +195,17 @@ def install_dorado(config):
     """
     print(" --- Setting up Dorado ---")
     version = config['parameters']['setup']['dorado_version']
-    system = platform.system()
-
     archive_filename = f"dorado-{version}-linux-x64.tar.gz"
     download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-linux-x64.tar.gz"
 
-    dorado_dir = f"{project_root}/tools/dorado-{version}"
+    dorado_dir = f"{project_root}/tools/dorado-{version}-linux-x64"
 
     print(f"Checking for dorado at {dorado_dir}")
 
     if os.path.isdir(dorado_dir):
         print(f"Dorado already found at {dorado_dir}. Writing to config.yaml and skipping download.")
         dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
-        return dorado_exe_path
+        return {'dorado': dorado_exe_path}
     else:
         print(f"Downloading dorado version {version} from {download_url}")
         archive_path = os.path.join(project_root, "tools", archive_filename)
@@ -223,7 +221,7 @@ def install_dorado(config):
     dorado_exe_path = os.path.abspath(os.path.join(dorado_dir, "bin", "dorado"))
     print(f"The dorado executable path is {dorado_exe_path}")
 
-    return dorado_exe_path
+    return {'dorado': dorado_exe_path}
 
 
 def add_args(parser):
@@ -310,10 +308,7 @@ def main(argv=None):
     download_atlas_manifest_files(config)
     # download_and_index_reference_genome(config)
 
-    if config['pipeline_control']['run_setup_tasks']['download_fast5_data']:
-        download_fast5_data(config)
-    if config['pipeline_control']['run_setup_tasks']['convert_fast5_to_pod5']:
-        convert_fast5_to_pod5(config)
+
 
 
 if __name__ == "__main__":
