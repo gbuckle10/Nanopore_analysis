@@ -37,18 +37,16 @@ def install_docker():
     print(">>> Docker setup complete")
 
 
-def install_conda():
+def install_conda(task):
     """
     Creates the Conda environment and the local symlink.
     """
     env_name = "nanopore_analysis"
 
-    command_str = (
-        "mamba env create -f environment.yml && "
-        f"mamba run -n {env_name} python src/run_pipeline.py setup"
-    )
-
-    run_command(['bash', '-c', command_str], "Creating conda environment and running internal setup step.")
+    if task == 'all':
+        run_command([
+            "mamba", "env", "create", "-f", "environment.yml"
+        ], "Creating conda environment and running internal setup step.")
 
     print(">>> Installing Conda activation scripts")
     conda_info = subprocess.check_output(["conda", "info", "--json"], text=True)
@@ -63,6 +61,11 @@ def install_conda():
         os.path.join(activation_dir, 'env_vars.sh')
     )
 
+    command_to_run = [
+        "mamba", "run", "-n", env_name, "python", "-m", "src.setup_logic", task
+    ]
+    run_command(command_to_run, f"Running step logic for '{task}'")
+
     print(">>> Creating local symlink: ./nanopore_analysis")
     if os.path.exists("nanopore_analysis"):
         os.remove("nanopore_analysis")
@@ -75,9 +78,15 @@ def add_args(parser):
     """
     Define command-line arguments for the installer
     """
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--docker', action="store_true", help="Install using Docker")
-    group.add_argument("--conda", action="store_true", help="Install locally using Conda")
+    subparsers = parser.add_subparsers(dest='mode', required=True, help='Installation_mode')
+
+    conda_parser = subparsers.add_parser('conda', help="Install for a local Conda environment.")
+    conda_parser.add_argument(
+        'task', nargs='?', default='all', choices=['all', 'tools', 'submodules'], help='Specific task to run (default: all)'
+    )
+
+    docker_parser = subparsers.add_parser('docker', help="Install by building a Docker image")
+
     return parser
 
 
@@ -85,7 +94,10 @@ def parse_args(argv=None):
     if argv is None:
         # If None is passed to this method, get the list of strings from the command line, excluding the script name.
         argv = sys.argv[1:]
-    parser = argparse.ArgumentParser(description="Installer for the nanopore analysis pipeline.")
+    parser = argparse.ArgumentParser(
+        description="Installer for the nanopore analysis pipeline.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     parser = add_args(parser)
 
     args = parser.parse_args(argv)
@@ -96,10 +108,10 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
 
-    if args.docker:
+    if args.mode == 'docker':
         install_docker()
-    elif args.conda:
-        install_conda()
+    elif args.mode == 'conda':
+        install_conda(args.task)
 
 
 if __name__ == "__main__":
