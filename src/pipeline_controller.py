@@ -11,10 +11,11 @@ from deconvolution import Deconvolution
 
 
 class PipelineController:
-    def __init__(self, config_name="config.yaml"):
+    def __init__(self, args, config_name="config.yaml"):
         """Initialise pipeline, set up logging and load config"""
         run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
+        self.args = args
         self.logger = setup_logger(log_file=log_file_path)
         self.logger.info(f"PIPELINE RUN STARTED AT: {run_timestamp}")
         self.logger.info(f"The log for this run will be saved to: {log_file_path}")
@@ -48,6 +49,20 @@ class PipelineController:
                 'script_name': '04_methylation_summary.py',
                 'description': 'Methylation Summary'
             }
+        }
+
+        self.command_map = {
+            'basecalling': self.run_basecalling,
+            'align': self.run_alignment,
+            'methylation_summary': self.run_methylation_summary,
+            'deconvolution': self.run_deconvolution,
+            'all': self.run_active_steps
+        }
+
+        self.alias_map = {
+            'basecall': 'basecalling',
+            'alignment': 'align',
+            'deconv': 'deconvolution'
         }
 
         try:
@@ -221,7 +236,6 @@ class PipelineController:
             function_to_run = command_map.get(alias_map.get(user_command, user_command))
 
             if function_to_run:
-                print(f"Running function {function_to_run}, giving arguments {remaining_argv}")
                 function_to_run(remaining_argv)
             else:
                 print(f"Error: Unknown command '{args.command}'")
