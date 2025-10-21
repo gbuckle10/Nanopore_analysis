@@ -33,25 +33,28 @@ def download_dorado_model(config, model_name):
     print(f"Dorado model successfully downloaded.")
 
 
-def demultiplex_bam(config, raw_bam_dir):
+def demultiplex_bam(config, raw_bam_dir, output_dir: Path):
     raw_bam_filename = config['paths']['unaligned_bam_name']
     raw_bam_file = os.path.join(project_root, raw_bam_dir, raw_bam_filename)
 
     dorado_exe = config['tools']['dorado']
     dorado_runner = ToolRunner(dorado_exe)
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     demux_cmd = [
-        "dorado",
+        # "dorado",
         "demux",
-        "--output-dir", "analysis/demultiplexed"
-                        "--kit-name", "SQK-NBD114-24",
+        "--output-dir", "analysis/demultiplexed",
+        "--kit-name", "SQK-NBD114-24",
         raw_bam_file
     ]
 
+    print(f"Dorado will run the command: {' '.join(demux_cmd)}")
     dorado_runner.run(demux_cmd)
 
 
-def basecalling_pod5(config, pod5_input, kit_name=None):
+def basecalling_pod5(config, pod5_input, kit_name=None, output_file=None):
     '''
     We will need to make this method modifiable, depending on whether we want to use model speed and modifications or
     specific models. This will change soon.
@@ -59,18 +62,16 @@ def basecalling_pod5(config, pod5_input, kit_name=None):
     :param kit_name:
     :return:
     '''
-    pod5_dir = config['paths']['pod5_dir']
-    basecalling_dir = config['paths']['basecalled_output_dir']
-    basecalled_filename = config['paths']['unaligned_bam_name']
+
     model_speed = config['parameters']['basecalling']['model_speed']
     modifications = config['parameters']['basecalling']['basecalling_modifications']
     batchsize = config['parameters']['basecalling']['batch_size']
 
-    output_file = os.path.join(basecalling_dir, basecalled_filename)
+
 
     basecalling_cmd = ["basecaller",
                        f"{model_speed},{modifications}",
-                       pod5_dir,
+                       str(pod5_input),
                        # "--kit-name", kit_name,
                        "--no-trim",
                        "--batchsize", batchsize
@@ -81,16 +82,76 @@ def basecalling_pod5(config, pod5_input, kit_name=None):
     dorado_exe = Path(config['tools']['dorado'])
     dorado_runner = ToolRunner(dorado_exe)
 
-    dorado_runner.run(basecalling_cmd)
+    dorado_runner.run(basecalling_cmd, output_file)
 
+
+def run_basecalling_command(args, config):
+    """Handles the logic for pod5 basecalling in full-run and basecall commands"""
+    print(f"We will do the full basecalling run.")
+
+    input_pod5 = args.input_file or Path(config['paths']['pod5_dir'])
+    kit_name = args.kit_name or Path(config['parameters']['basecalling']['kit_name'])
+    if args.output_dir:
+        basecalled_output_dir = args.output_dir
+    else:
+        basecalling_dir = config['paths']['basecalled_output_dir']
+        basecalled_filename = config['paths']['unaligned_bam_name']
+        basecalled_output_dir = os.path.join(basecalling_dir, basecalled_filename)
+
+    basecalling_pod5(config, input_pod5, kit_name, basecalled_output_dir)
+
+    if args.command == 'full-run':
+        multiplexed_bam = Path(config['paths']['basecalled_output_dir'])
+        demultiplex_bam(config, multiplexed_bam)
+
+def run_demux_command(args, config):
+    """Handles the logic for demux commands"""
+    input_file = args.input_file or Path(config['paths']['basecalled_output_dir'])
+    output_dir = args.output_dir or Path(config['paths']['demultiplexed_output_dir'])
+    demultiplex_bam(config, input_file, output_dir)
+
+def run_download_command(args, config):
+    model_to_download = args.model_name or Path(config['parameters']['basecalling']['base_model_name'])
+
+    download_dorado_model(config, model_to_download)
 def add_input_file_argument(parser, help_text):
-    """
-    A helper function to add the --input-file argument to a parser.
-    """
     parser.add_argument(
         "--input-file",
         type=Path,
-        help=help_text
+        help=f"{help_text} (Defaults to value in config file)"
+    )
+
+def add_output_dir_argument(parser, help_text):
+    parser.add_argument(
+        "-o", "--output-dir",
+        type=Path,
+        help=f"{help_text} (Defaults to value in config file)"
+    )
+
+def _setup_basecalling_parser(subparsers, name, help_text, parent_parser):
+    parser = subparsers.add_parser(name, help=help_text, parents=[parent_parser])
+    parser.add_argument(
+        "--kit-name", type=str,
+        help="Specify the Nanopore kit name"
+    )
+    add_input_file_argument(parser, help_text="Path to the POD5 file/directory for basecalling.")
+    add_output_dir_argument(parser, help_text="Path to the basecalled BAM file ")
+
+def _setup_demux_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser("demux", help="Demultiplex a multiplexed BAM file", parents=[parent_parser])
+    add_input_file_argument(parser, help_text="Path to the multiplexed BAM file.")
+    add_output_dir_argument(parser, help_text="Path to the demultiplexed BAM files")
+
+def _setup_download_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser(
+        'download-model',
+        help="Download the dorado model specified in the config.",
+        parents=[parent_parser]
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        help="Dorado basecalling model to download"
     )
 
 def parse_args(argv=None):
@@ -118,62 +179,16 @@ def parse_args(argv=None):
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    parser_full = subparsers.add_parser(
-        'full-run',
-        help="Basecall a pod5 file/directory and demultiplex if necessary.",
-        parents=[parent_parser]
-    )
-    parser_full.add_argument(
-        "--input-file",
-        type=Path,
-        help="Path to the pod5 file/directory for basecalling (optional, uses config if not set."
-    )
-    parser_full.add_argument(
-        "--kit-name",
-        type=str,
-        help="Specify the Nanopore analyser kit name (overrides config)."
-    )
-
-    basecall_parser = subparsers.add_parser(
-        'run',
-        help='Run basecalling on a POD5 directory.',
-        parents=[parent_parser]
-    )
-    basecall_parser.add_argument(
-        "--kit-name",
-        type=str,
-        help="Specify the Nanopore analyser kit name (overrides config)."
-    )
-    add_input_file_argument(basecall_parser, help_text="Path to the pod5 file/directory for basecalling.")
-
-    download_parser = subparsers.add_parser(
-        'download-model',
-        help="Download the dorado model specified in the config.",
-        parents=[parent_parser]
-    )
-    download_parser.add_argument(
-        "--model-name",
-        type=str,
-        help="Dorado basecalling model to download"
-    )
-
-    demux_parser = subparsers.add_parser(
-        'demux',
-        help='Demultiplex a multiplexed BAM file',
-        parents=[parent_parser]
-    )
-    add_input_file_argument(demux_parser, help_text="Path to the demultiplexed BAM file.")
+    _setup_basecalling_parser(subparsers, 'full-run', "Basecall a pod5 file/directory and demultiplex if necessary.", parent_parser)
+    _setup_basecalling_parser(subparsers, 'basecall', "Run basecalling on a POD5 directory.", parent_parser)
+    _setup_demux_parser(subparsers, parent_parser)
+    _setup_download_parser(subparsers, parent_parser)
 
     if not any(cmd in subparsers.choices for cmd in argv):
         print("Info: No command specified, defaulting to 'full-run'")
         argv.insert(0, 'full-run')
 
-    print(f"Parsing arguments {argv}")
     args = parser.parse_args(argv)
-
-    print(f"Parsed args {args}")
-
-    print(args)
 
     return args
 
@@ -182,34 +197,26 @@ def main(argv=None):
     setup_logger()
     args = parse_args(argv)
 
-    command_to_run = args.command
-
-    print(f"Command to run - {command_to_run}")
-
     user_config = load_config(args.user_config)
     runtime_config = load_config(args.runtime_config)
 
     config = deep_merge(user_config, runtime_config)
 
-    if command_to_run in ['full-run', 'run']:
-        print(f"We will do the full basecalling run.")
+    command_handlers = {
+        'full-run': run_basecalling_command,
+        'basecall': run_basecalling_command,
+        'demux': run_demux_command,
+        'download-model': run_download_command
+    }
 
-        input_pod5 = args.input_file or Path(config['paths']['pod5_dir'])
-        kit_name = args.kit_name or Path(config['parameters']['basecalling']['kit_name'])
+    handler_to_run = command_handlers.get(args.command)
+    if handler_to_run:
+        print(f"Command to run - {args.command}")
+        handler_to_run(args, config)
+    else:
+        print(f"Unknown command - {args.command}")
+        sys.exit(1)
 
-        basecalling_pod5(config, input_pod5, kit_name)
-
-        multiplexed_bam = Path(config['paths']['basecalled_output_dir'])
-        if command_to_run == 'full-run':
-            demultiplex_bam(config, multiplexed_bam)
-
-    elif command_to_run == 'demux':
-        input_file = args.input_file or Path(config['paths']['basecalled_output_dir'])
-        demultiplex_bam(config, input_file)
-    elif command_to_run == 'download-model':
-        model_to_download = args.model_name or Path(config['parameters']['basecalling']['base_model_name'])
-
-        download_dorado_model(config, model_to_download)
 
 
 if __name__ == "__main__":
