@@ -216,6 +216,7 @@ class PipelineController:
             'alignment': 'align',
             'deconv': 'deconvolution'
         }
+
         function_to_run = command_map.get(alias_map.get(user_command, user_command))
 
         if function_to_run:

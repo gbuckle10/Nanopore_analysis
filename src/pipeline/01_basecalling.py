@@ -12,6 +12,7 @@ CONFIG_PATH = os.path.join(project_root, "config.yaml")
 RUNTIME_CONFIG_PATH = os.path.join(project_root, "runtime_config.yaml")
 logger = logging.getLogger(__name__)
 
+
 def download_dorado_model(config, model_name):
     # This should be better defined - give the base model name and
     # use the specified modifications to download the relevant modification models
@@ -68,12 +69,12 @@ def basecalling_pod5(config, pod5_input, kit_name=None):
     output_file = os.path.join(basecalling_dir, basecalled_filename)
 
     basecalling_cmd = ["basecaller",
-        f"{model_speed},{modifications}",
-        pod5_dir,
-        # "--kit-name", kit_name,
-        "--no-trim",
-        "--batchsize", batchsize
-    ]
+                       f"{model_speed},{modifications}",
+                       pod5_dir,
+                       # "--kit-name", kit_name,
+                       "--no-trim",
+                       "--batchsize", batchsize
+                       ]
 
     print(f"Executing command {' '.join(basecalling_cmd)}")
 
@@ -82,65 +83,73 @@ def basecalling_pod5(config, pod5_input, kit_name=None):
 
     dorado_runner.run(basecalling_cmd)
 
+def add_input_file_argument(parser, help_text):
+    """
+    A helper function to add the --input-file argument to a parser.
+    """
+    parser.add_argument(
+        "--input-file",
+        type=Path,
+        help=help_text
+    )
+
 def parse_args(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    commands = {'full-run', 'run', 'download-model', 'demux'}
-
-    user_provided_command = False
-    for arg in argv:
-        if arg in commands:
-            user_provided_command = True
-            break
-
-    if not user_provided_command:
-        argv.insert(0, 'full-run')
-        print(f"INFO: No command specified, so defaulting to 'full-run. Final args = {argv}")
-
-    parser = argparse.ArgumentParser(
-        description="Basecalling using dorado.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-
-    parser.add_argument(
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument(
         '-u', '--user-config',
         type=Path,
         default=CONFIG_PATH,
         help=f"Path to the user config file. Default = {CONFIG_PATH}"
     )
-    parser.add_argument(
+    parent_parser.add_argument(
         '-r', '--runtime-config',
         type=Path,
         default=RUNTIME_CONFIG_PATH,
         help=f"Path to the runtime config file. Default = {RUNTIME_CONFIG_PATH}"
     )
 
+    parser = argparse.ArgumentParser(
+        description="Basecalling using dorado.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     parser_full = subparsers.add_parser(
         'full-run',
-        help="Basecall a pod5 file/directory and demultiplex if necessary."
+        help="Basecall a pod5 file/directory and demultiplex if necessary.",
+        parents=[parent_parser]
     )
     parser_full.add_argument(
         "--input-file",
         type=Path,
-        help="Path to the POD5 directory/file."
+        help="Path to the pod5 file/directory for basecalling (optional, uses config if not set."
+    )
+    parser_full.add_argument(
+        "--kit-name",
+        type=str,
+        help="Specify the Nanopore analyser kit name (overrides config)."
     )
 
-    run_parser = subparsers.add_parser(
+    basecall_parser = subparsers.add_parser(
         'run',
-        help='Run basecalling on a POD5 directory.'
+        help='Run basecalling on a POD5 directory.',
+        parents=[parent_parser]
     )
-    run_parser.add_argument(
-        "--input-file",
-        type=Path,
-        help="Path to the input file/directory."
+    basecall_parser.add_argument(
+        "--kit-name",
+        type=str,
+        help="Specify the Nanopore analyser kit name (overrides config)."
     )
+    add_input_file_argument(basecall_parser, help_text="Path to the pod5 file/directory for basecalling.")
 
     download_parser = subparsers.add_parser(
         'download-model',
-        help="Download the dorado model specified in the config."
+        help="Download the dorado model specified in the config.",
+        parents=[parent_parser]
     )
     download_parser.add_argument(
         "--model-name",
@@ -150,21 +159,22 @@ def parse_args(argv=None):
 
     demux_parser = subparsers.add_parser(
         'demux',
-        help='Demultiplex a multiplexed BAM file'
+        help='Demultiplex a multiplexed BAM file',
+        parents=[parent_parser]
     )
-    demux_parser.add_argument(
-        "--input-file",
-        type=Path,
-        help="Path to the input BAM file to be demultiplexed."
-    )
+    add_input_file_argument(demux_parser, help_text="Path to the demultiplexed BAM file.")
 
-    run_parser.add_argument(
-        "--demultiplex",
-        action='store_true',
-        help='Demultiplex a multiplexed bam file.'
-    )
+    if not any(cmd in subparsers.choices for cmd in argv):
+        print("Info: No command specified, defaulting to 'full-run'")
+        argv.insert(0, 'full-run')
 
+    print(f"Parsing arguments {argv}")
     args = parser.parse_args(argv)
+
+    print(f"Parsed args {args}")
+
+    print(args)
+
     return args
 
 
@@ -172,48 +182,45 @@ def main(argv=None):
     setup_logger()
     args = parse_args(argv)
 
+    command_to_run = args.command
+
+    print(f"Command to run - {command_to_run}")
+
     user_config = load_config(args.user_config)
     runtime_config = load_config(args.runtime_config)
 
     config = deep_merge(user_config, runtime_config)
 
-    command_to_run = args.command
-    if command_to_run is None:
-        command_to_run = 'full-run'
-        logger.info("No step specified, so I'll just do the basecalling and demux")
-
-    print(f"Command to run - {command_to_run}")
-
     if command_to_run in ['full-run', 'run']:
         print(f"We will do the full basecalling run.")
-        if getattr(args, 'input-file', None):
+
+        if args.input_file:
             input_pod5 = args.input_file
+            print(f"Using --input-file from command line: {input_pod5}")
         else:
             input_pod5 = Path(config['paths']['pod5_dir'])
+            print(f"No input file specified on command line, using from config: {input_pod5}")
 
-        if getattr(args, 'kit-name', None):
+        if args.kit_name:
             kit_name = args.kit_name
+            print(f"Using --kit-name from command line: {kit_name}")
         else:
             kit_name = Path(config['parameters']['basecalling']['kit_name'])
-
+            print(f"No kit specified on command line, using from config: {kit_name}")
         basecalling_pod5(config, input_pod5, kit_name)
 
         if command_to_run == 'full-run':
             demultiplex_bam(config)
 
     elif command_to_run == 'demux':
-        if args.input:
-            input_bam_dir = args.input
-        else:
-            input_bam_dir = Path(config['paths']['basecalled_output_dir'])
-
-        demultiplex_bam(config, input_bam_dir)
+        demultiplex_bam(config, args.input_file)
     elif command_to_run == 'download-model':
         if args.dorado_model:
-            model_to_download = args.dorado_model
+            model_to_download = args.model_name
         else:
             model_to_download = Path(config['parameters']['basecalling']['base_model_name'])
         download_dorado_model(config, model_to_download)
+
 
 if __name__ == "__main__":
     main()
