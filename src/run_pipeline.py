@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import logging
-import argparse
-from pipeline_controller import PipelineController
 import subprocess
 import sys
+
+from src import pipeline_controller
+from src.utils.decorators import graceful_exit
 
 COMMAND_MAP = {
     'setup': 'pipeline',
@@ -22,6 +22,7 @@ COMMAND_MAP = {
     'summarise-lengths': 'src/analysis/summarise_lengths.py'
 }
 
+@graceful_exit
 def main():
 
     if len(sys.argv) < 2:

@@ -3,6 +3,8 @@ import os
 import sys
 from pathlib import Path
 import logging
+
+from src.utils.decorators import graceful_exit
 from src.utils.logger import setup_logger
 from src.utils.config_utils import load_config, get_project_root, deep_merge
 from src.utils.tools_runner import ToolRunner
@@ -50,7 +52,6 @@ def demultiplex_bam(config, raw_bam_dir, output_dir: Path):
         raw_bam_file
     ]
 
-    print(f"Dorado will run the command: {' '.join(demux_cmd)}")
     dorado_runner.run(demux_cmd)
 
 
@@ -67,8 +68,6 @@ def basecalling_pod5(config, pod5_input, kit_name=None, output_file=None):
     modifications = config['parameters']['basecalling']['basecalling_modifications']
     batchsize = config['parameters']['basecalling']['batch_size']
 
-
-
     basecalling_cmd = ["basecaller",
                        f"{model_speed},{modifications}",
                        str(pod5_input),
@@ -76,8 +75,6 @@ def basecalling_pod5(config, pod5_input, kit_name=None, output_file=None):
                        "--no-trim",
                        "--batchsize", batchsize
                        ]
-
-    print(f"Executing command {' '.join(basecalling_cmd)}")
 
     dorado_exe = Path(config['tools']['dorado'])
     dorado_runner = ToolRunner(dorado_exe)
@@ -104,16 +101,20 @@ def run_basecalling_command(args, config):
         multiplexed_bam = Path(config['paths']['basecalled_output_dir'])
         demultiplex_bam(config, multiplexed_bam)
 
+
 def run_demux_command(args, config):
     """Handles the logic for demux commands"""
     input_file = args.input_file or Path(config['paths']['basecalled_output_dir'])
     output_dir = args.output_dir or Path(config['paths']['demultiplexed_output_dir'])
     demultiplex_bam(config, input_file, output_dir)
 
+
 def run_download_command(args, config):
     model_to_download = args.model_name or Path(config['parameters']['basecalling']['base_model_name'])
 
     download_dorado_model(config, model_to_download)
+
+
 def add_input_file_argument(parser, help_text):
     parser.add_argument(
         "--input-file",
@@ -121,12 +122,14 @@ def add_input_file_argument(parser, help_text):
         help=f"{help_text} (Defaults to value in config file)"
     )
 
+
 def add_output_dir_argument(parser, help_text):
     parser.add_argument(
         "-o", "--output-dir",
         type=Path,
         help=f"{help_text} (Defaults to value in config file)"
     )
+
 
 def _setup_basecalling_parser(subparsers, name, help_text, parent_parser):
     parser = subparsers.add_parser(name, help=help_text, parents=[parent_parser])
@@ -137,10 +140,12 @@ def _setup_basecalling_parser(subparsers, name, help_text, parent_parser):
     add_input_file_argument(parser, help_text="Path to the POD5 file/directory for basecalling.")
     add_output_dir_argument(parser, help_text="Path to the basecalled BAM file ")
 
+
 def _setup_demux_parser(subparsers, parent_parser):
     parser = subparsers.add_parser("demux", help="Demultiplex a multiplexed BAM file", parents=[parent_parser])
     add_input_file_argument(parser, help_text="Path to the multiplexed BAM file.")
     add_output_dir_argument(parser, help_text="Path to the demultiplexed BAM files")
+
 
 def _setup_download_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
@@ -153,6 +158,7 @@ def _setup_download_parser(subparsers, parent_parser):
         type=str,
         help="Dorado basecalling model to download"
     )
+
 
 def parse_args(argv=None):
     if argv is None:
@@ -179,7 +185,8 @@ def parse_args(argv=None):
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    _setup_basecalling_parser(subparsers, 'full-run', "Basecall a pod5 file/directory and demultiplex if necessary.", parent_parser)
+    _setup_basecalling_parser(subparsers, 'full-run', "Basecall a pod5 file/directory and demultiplex if necessary.",
+                              parent_parser)
     _setup_basecalling_parser(subparsers, 'basecall', "Run basecalling on a POD5 directory.", parent_parser)
     _setup_demux_parser(subparsers, parent_parser)
     _setup_download_parser(subparsers, parent_parser)
@@ -191,7 +198,6 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
 
     return args
-
 
 def main(argv=None):
     setup_logger()
@@ -211,13 +217,12 @@ def main(argv=None):
 
     handler_to_run = command_handlers.get(args.command)
     if handler_to_run:
-        print(f"Command to run - {args.command}")
         handler_to_run(args, config)
     else:
         print(f"Unknown command - {args.command}")
         sys.exit(1)
 
 
-
 if __name__ == "__main__":
+    print("--- ENTRY POINT: Script started in __main__. Calling main(). ---", file=sys.stderr)
     main()

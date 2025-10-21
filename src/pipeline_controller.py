@@ -195,37 +195,40 @@ class PipelineController:
             self.logger.critical("Halting process due to deconvolution script failure.")
             raise e
 
+
     def main(self, argv=None):
+        try:
+            parser = argparse.ArgumentParser(description='Internal pipeline steps.')
+            parser.add_argument('command', help='The pipeline step to run')
 
-        parser = argparse.ArgumentParser(description='Internal pipeline steps.')
-        parser.add_argument('command', help='The pipeline step to run')
+            args, remaining_argv = parser.parse_known_args(argv)
+            user_command = args.command if args.command is not None else 'all'
 
-        args, remaining_argv = parser.parse_known_args(argv)
-        user_command = args.command if args.command is not None else 'all'
+            command_map = {
+                'basecalling': self.run_basecalling,
+                'align': self.run_alignment,
+                'methylation_summary': self.run_methylation_summary,
+                'deconvolution': self.run_deconvolution,
+                'all': self.run_active_steps
+            }
 
-        command_map = {
-            'basecalling': self.run_basecalling,
-            'align': self.run_alignment,
-            'methylation_summary': self.run_methylation_summary,
-            'deconvolution': self.run_deconvolution,
-            'all': self.run_active_steps
-        }
+            alias_map = {
+                'basecall': 'basecalling',
+                'alignment': 'align',
+                'deconv': 'deconvolution'
+            }
 
-        alias_map = {
-            'basecall': 'basecalling',
-            'alignment': 'align',
-            'deconv': 'deconvolution'
-        }
+            function_to_run = command_map.get(alias_map.get(user_command, user_command))
 
-        function_to_run = command_map.get(alias_map.get(user_command, user_command))
-
-        if function_to_run:
-            print(f"Running function {function_to_run}, giving arguments {remaining_argv}")
-            function_to_run(remaining_argv)
-        else:
-            print(f"Error: Unknown command '{args.command}'")
-            parser.print_help()
-
+            if function_to_run:
+                print(f"Running function {function_to_run}, giving arguments {remaining_argv}")
+                function_to_run(remaining_argv)
+            else:
+                print(f"Error: Unknown command '{args.command}'")
+                parser.print_help()
+        except KeyboardInterrupt:
+            print("Process terminated by user.", file=sys.stderr)
+            sys.exit(130)
 
 if __name__ == '__main__':
     controller = PipelineController()
