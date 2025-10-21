@@ -38,7 +38,7 @@ def setup_logger(name='pipeline', log_file=None):
 
     console_handler = logging.StreamHandler()
     console_formatter = ColoredFormatter(
-        '%(log_color)s%(levelname)-8s%(reset)s %(blue)s%(message)s',
+        '%(log_color)s%(levelname)-8s - %(message)s%(reset)s',
         log_colors={
             'DEBUG': 'cyan',
             'INFO': 'green',
@@ -63,6 +63,7 @@ def setup_logger(name='pipeline', log_file=None):
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
     logger.propagate = False
+
     '''
     # Prevent from propagating to the root logger
     logger.propagate = False
