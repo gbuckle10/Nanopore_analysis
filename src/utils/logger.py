@@ -62,7 +62,7 @@ def setup_logger(name='pipeline', log_file=None):
         )
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
-
+    logger.propagate = False
     '''
     # Prevent from propagating to the root logger
     logger.propagate = False
