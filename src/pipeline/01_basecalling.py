@@ -194,31 +194,21 @@ def main(argv=None):
     if command_to_run in ['full-run', 'run']:
         print(f"We will do the full basecalling run.")
 
-        if args.input_file:
-            input_pod5 = args.input_file
-            print(f"Using --input-file from command line: {input_pod5}")
-        else:
-            input_pod5 = Path(config['paths']['pod5_dir'])
-            print(f"No input file specified on command line, using from config: {input_pod5}")
+        input_pod5 = args.input_file or Path(config['paths']['pod5_dir'])
+        kit_name = args.kit_name or Path(config['parameters']['basecalling']['kit_name'])
 
-        if args.kit_name:
-            kit_name = args.kit_name
-            print(f"Using --kit-name from command line: {kit_name}")
-        else:
-            kit_name = Path(config['parameters']['basecalling']['kit_name'])
-            print(f"No kit specified on command line, using from config: {kit_name}")
         basecalling_pod5(config, input_pod5, kit_name)
 
+        multiplexed_bam = Path(config['paths']['basecalled_output_dir'])
         if command_to_run == 'full-run':
-            demultiplex_bam(config)
+            demultiplex_bam(config, multiplexed_bam)
 
     elif command_to_run == 'demux':
-        demultiplex_bam(config, args.input_file)
+        input_file = args.input_file or Path(config['paths']['basecalled_output_dir'])
+        demultiplex_bam(config, input_file)
     elif command_to_run == 'download-model':
-        if args.dorado_model:
-            model_to_download = args.model_name
-        else:
-            model_to_download = Path(config['parameters']['basecalling']['base_model_name'])
+        model_to_download = args.model_name or Path(config['parameters']['basecalling']['base_model_name'])
+
         download_dorado_model(config, model_to_download)
 
 
