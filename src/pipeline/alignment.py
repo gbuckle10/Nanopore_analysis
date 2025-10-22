@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 import sys
@@ -76,7 +77,6 @@ def run_alignment_command(args, config):
         return
 
     try:
-
         # Start sort process
         # stdin is connected to stdout of the first process.
         sort_process = subprocess.Popen(sort_cmd, stdin=align_process.stdout, stderr=subprocess.PIPE)
@@ -115,6 +115,47 @@ def run_alignment_command(args, config):
 
     print("Indexing complete")
 
+def alignment_qc(config):
+    alignment_output_dir = config['paths']['alignment_output_dir']
+    aligned_sorted_file = os.path.join(
+        project_root,
+        alignment_output_dir,
+        config['paths']['aligned_bam_name']
+    )
+    qc_dir = config['paths']['qc_dir']
+    flagstat_report = os.path.join(
+        project_root,
+        qc_dir,
+        config['paths']['alignment_flagstat_name']
+    )
+
+    flagstat_cmd = [
+        "samtools", "flagstat",
+        aligned_sorted_file
+    ]
+
+    print(f"Running command: {' '.join(flagstat_cmd)}")
+
+    try:
+        result = subprocess.run(
+            flagstat_cmd,
+            check=True,
+            capture_output=True,  # Capture stdout/stderr
+            text=True  # Decodes output as strings
+        )
+
+        with open(flagstat_report, 'w') as f:
+            f.write(result.stdout)
+
+        print(f"Flagstat report saved to {flagstat_report}")
+
+    except FileNotFoundError:
+        print(f"CRITICAL: 'samtools' not found.", file=sys.stderr)
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        print(f"CRITICAL: samtools flagstat failed with exit code {e.returncode}", file=sys.stderr)
+        sys.exit(1)
+
 
 def setup_parsers(subparsers, parent_parser):
     io_parser = create_io_parser()
@@ -125,5 +166,19 @@ def setup_parsers(subparsers, parent_parser):
         parents=[parent_parser, io_parser]
     )
 
+    align_args_parser = argparse.ArgumentParser(add_help=False)
+    align_args_parser.add_argument("--ref", type=Path, help="Path to the reference genome")
+
+
     alignment_parser.set_defaults(func=run_alignment_command)
     alignment_subparsers = alignment_parser.add_subparsers(dest='subcommand')
+
+    p_align_and_qc = alignment_subparsers.add_parser(
+        'align-with-qc', help="Align a BAM file to a specified genome and QC the alignment.",
+        parents=[parent_parser, io_parser]
+    )
+
+    p_align_only = alignment_subparsers.add_parser(
+        'align', help="Align a BAM file to a specified genome and QC the alignment",
+        parents=[parent_parser, io_parser]
+    )
