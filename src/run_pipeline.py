@@ -4,18 +4,19 @@ import logging
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
-from src import pipeline_controller
 from src.pipeline import basecalling
+from src.utils import logger
 from src.utils.config_utils import get_project_root, load_config, deep_merge
 
 from src.utils.decorators import graceful_exit
+from src.utils.logger import Logger
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
 RUNTIME_CONFIG_PATH = os.path.join(project_root, "runtime_config.yaml")
-logger = logging.getLogger(__name__)
 
 COMMAND_MAP = {
     'setup': 'pipeline',
@@ -32,6 +33,26 @@ COMMAND_MAP = {
     'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
     'summarise-lengths': 'src/analysis/summarise_lengths.py'
 }
+def run_full_pipeline(args, config):
+    logging.info("--- Running full pipeline from config ---")
+
+    function_map = {
+        'basecalling': basecalling.run_basecalling_command
+        # Add the rest of the commands here as you go.
+        #'align': alignment.run_alignment_command
+    }
+
+    active_steps = config['pipeline_control']['run_steps']
+    if not active_steps:
+        logging.warning("WARNING: No active steps found in config.yaml. Nothing for me to do.")
+        return
+
+    for step_name in active_steps:
+        logging.info(f">>> EXECUTING STEP: {step_name}")
+        step_func = function_map.get(step_name)
+        if not step_func:
+            logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
+            continue
 
 
 def main():
@@ -51,66 +72,51 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="Suite of tools for analysing nanopore data.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser]
     )
 
     subparsers = parser.add_subparsers(dest='command', help='Available command groups')
 
     # Register commands from modules.
+    run_parser = subparsers.add_parser(
+        'run',
+        help="Run the full pipeline using steps defined in the config file.",
+        parents=[parent_parser]
+    )
+    run_parser.set_defaults(func=run_full_pipeline)
+
+    #subparsers.add_parser('basecalling', aliases=['basecall'])
     basecalling.register_subparsers(subparsers, parent_parser)
 
+    print("Just about to parse the args")
     # Parse and dispatch
     args = parser.parse_args()
-
+    print(f"Parsed args: {args}")
     print(f"Loading user config: {args.user_config}")
     print(f"Loading runtime config: {args.runtime_config}")
     user_config = load_config(args.user_config)
     runtime_config = load_config(args.runtime_config)
     config = deep_merge(user_config, runtime_config)
 
+    #log_level = logging.DEBUG if args.verbose else logging.INFO
+    run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
+    Logger.setup_logger(log_level=logging.INFO, log_file=log_file_path)
+
+
     # Call the function that iss attached by set_defaults
-    if hasattr(args, 'func'):
-        print(f"Running function {args.func}")
-        args.func(args, config)
+    if args.command is None:
+        print("INFO: No command specified")
+        run_full_pipeline(args, config)
     else:
-        print("Error: You must specify a subcommand", file=sys.stderr)
-        sys.exit(1)
-
-    '''
-    if len(sys.argv) < 2:
-        user_command = 'all'
-        args_to_send = ['all']
-    else:
-        user_command = sys.argv[1]
-        args_to_send = sys.argv[1:]
-
-    handler = COMMAND_MAP.get(user_command)
-
-    if not handler:
-        print(f"Error: Unknown command '{user_command}'", file=sys.stderr)
-        print(f"Available commands:", ", ".join(sorted(COMMAND_MAP.keys())))
-        sys.exit(1)
-
-    if handler == 'pipeline':
-        script_path = "src/pipeline_controller.py"
-        command_to_run = ["python", script_path] + args_to_send
-
-        try:
-            subprocess.run(command_to_run, check=True)
-        except subprocess.CalledProcessError:
-            sys.exit(1)
-    elif handler:
-        script_path = handler
-        remaining_argv = sys.argv[2:]
-
-        command_to_run = ["python", script_path] + remaining_argv
-
-        print(f"Running command {' '.join(command_to_run)}")
-        try:
-            subprocess.run(command_to_run, check=True)
-        except subprocess.CalledProcessError:
+        if hasattr(args, 'func'):
+            logging.info(f"Running argument {args.func}")
+            args.func(args, config)
+        else:
+            print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
             sys.exit(1)
 
-    '''
+
 if __name__ == '__main__':
     main()

@@ -1,3 +1,4 @@
+import argparse
 import os
 from pathlib import Path
 import logging
@@ -17,7 +18,7 @@ def download_dorado_model(config, model_name):
     # This should be better defined - give the base model name and
     # use the specified modifications to download the relevant modification models
 
-    print(f"Downloading dorado model {model_name}")
+    logger.info(f"Downloading dorado model {model_name}")
 
     download_cmd = [
         "dorado", "download",
@@ -26,11 +27,11 @@ def download_dorado_model(config, model_name):
     ]
     dorado_exe = config['tools']['dorado']
     dorado_runner = ToolRunner(dorado_exe)
-    print(f"Downloading dorado model {model_name} with \n{' '.join(download_cmd)}")
+    logger.info(f"Downloading dorado model {model_name} with \n{' '.join(download_cmd)}")
 
     dorado_runner.run(download_cmd)
 
-    print(f"Dorado model successfully downloaded.")
+    logger.info(f"Dorado model successfully downloaded.")
 
 
 def demultiplex_bam(config, raw_bam_dir, output_dir: Path):
@@ -82,19 +83,17 @@ def basecalling_pod5(config, pod5_input, kit_name=None, output_file=None):
 
 def run_basecalling_command(args, config):
     """Handles the logic for pod5 basecalling in full-run and basecall commands"""
-    print(f"We will do the full basecalling run.")
     input_pod5 = args.input_file or Path(config['paths']['pod5_dir'])
-    print(f"Input pod5 is {input_pod5}")
-    kit_name = args.kit_name or Path(config['parameters']['basecalling']['kit_name'])
+    logger.info(f"Input pod5 is {input_pod5}")
+    kit_name = getattr(args, 'kit-name', None) or Path(config['parameters']['basecalling']['kit_name'])
     if args.output_dir:
         basecalled_output_dir = args.output_dir
-        print(f"Basecalled output dir - {basecalled_output_dir}")
+        logger.info(f"Basecalled output dir - {basecalled_output_dir}")
     else:
         basecalling_dir = config['paths']['basecalled_output_dir']
         basecalled_filename = config['paths']['unaligned_bam_name']
         basecalled_output_dir = os.path.join(basecalling_dir, basecalled_filename)
-        print(f"Basecalled output dir - {basecalled_output_dir}")
-    print(f"Basecalling pod5")
+        logger.info(f"Basecalled output dir - {basecalled_output_dir}")
     basecalling_pod5(config, input_pod5, kit_name, basecalled_output_dir)
 
     if args.command == 'full-run':
@@ -131,45 +130,51 @@ def add_output_dir_argument(parser, help_text):
     )
 
 
-def _setup_basecalling_parser(subparsers, name, help_text, parent_parser):
-    parser = subparsers.add_parser(name, help=help_text, parents=[parent_parser])
-    parser.add_argument(
-        "--kit-name", type=str,
-        help="Specify the Nanopore kit name"
-    )
-    add_input_file_argument(parser, help_text="Path to the POD5 file/directory for basecalling.")
-    add_output_dir_argument(parser, help_text="Path to the basecalled BAM file ")
-    parser.set_defaults(func=run_basecalling_command)
-
-def _setup_demux_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser("demux", help="Demultiplex a multiplexed BAM file", parents=[parent_parser])
-    add_input_file_argument(parser, help_text="Path to the multiplexed BAM file.")
-    add_output_dir_argument(parser, help_text="Path to the demultiplexed BAM files")
-    parser.set_defaults(func=run_demux_command)
-
-def _setup_download_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser(
-        'download-model',
-        help="Download the dorado model specified in the config.",
-        parents=[parent_parser]
-    )
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        help="Dorado basecalling model to download"
-    )
-    parser.set_defaults(func=run_download_command)
-
 def register_subparsers(subparsers, parent_parser):
+    io_parser = argparse.ArgumentParser(add_help=False)
+    add_input_file_argument(io_parser, help_text="Path to the input file/directory")
+    add_output_dir_argument(io_parser, help_text="Path to the output directory")
+
     basecalling_parser = subparsers.add_parser(
         "basecalling",
-        help="Run basecalling and related tasks using Dorado."
+        help="Run basecalling and related tasks using Dorado.",
+        aliases=['basecall'],
+        parents=[parent_parser, io_parser]
     )
 
-    basecalling_subparsers = basecalling_parser.add_subparsers(dest='subcommand', required=True)
+    basecalling_parser.set_defaults(func=run_basecalling_command)
+    basecalling_subparsers = basecalling_parser.add_subparsers(dest='subcommand')
 
-    _setup_basecalling_parser(basecalling_subparsers, 'full-run', "Basecall and demultiplex", parent_parser)
-    _setup_basecalling_parser(basecalling_subparsers, 'basecall', 'Run basecalling only', parent_parser)
-    _setup_download_parser(basecalling_subparsers, parent_parser)
-    _setup_demux_parser(basecalling_subparsers, parent_parser)
+    parser_full_run = basecalling_subparsers.add_parser(
+        'full-run', help="Basecall a POD5 file/directory and demultiplex.",
+        parents=[parent_parser, io_parser]
+    )
+    parser_full_run.add_argument(
+        "--kit-name", type=str, help="Specify the Nanopore kit name"
+    )
+    parser_full_run.set_defaults(func=run_basecalling_command)
 
+    parser_basecalling = basecalling_subparsers.add_parser(
+        'basecall', help="Basecall a POD5 file/directory.",
+        parents=[parent_parser, io_parser]
+    )
+    parser_basecalling.add_argument(
+        "--kit-name", type=str, help="Specify Nanopore kit name"
+    )
+    parser_basecalling.set_defaults(func=run_basecalling_command)
+
+    parser_demux = basecalling_subparsers.add_parser(
+        'demux', help="Demultiplex a multiplexed BAM file.",
+        parents=[parent_parser, io_parser]
+    )
+    parser_demux.add_argument("--kit-name", type=str, help="Specify the Nanopore kit name")
+    parser_demux.set_defaults(func=run_demux_command)
+
+    parser_download = basecalling_subparsers.add_parser(
+        'download-model', help="Download a specific Dorado model",
+        parents=[parent_parser]
+    )
+    parser_download.add_argument(
+        '--model-name', type=str, help="Name of the model to download."
+    )
+    parser_download.set_defaults(func=run_download_command)

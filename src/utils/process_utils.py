@@ -6,7 +6,6 @@ import subprocess
 import sys
 from typing import Callable
 
-from src.utils.logger import setup_logger
 
 logger = logging.getLogger('pipeline')
 
