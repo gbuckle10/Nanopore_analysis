@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.pipeline import basecalling
+from src.pipeline import basecalling, alignment
 from src.utils import logger
 from src.utils.config_utils import get_project_root, load_config, deep_merge
 
@@ -87,7 +87,8 @@ def main():
     run_parser.set_defaults(func=run_full_pipeline)
 
     #subparsers.add_parser('basecalling', aliases=['basecall'])
-    basecalling.register_subparsers(subparsers, parent_parser)
+    basecalling.setup_parsers(subparsers, parent_parser)
+    alignment.setup_parsers(subparsers, parent_parser)
 
     print("Just about to parse the args")
     # Parse and dispatch

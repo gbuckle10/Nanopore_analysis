@@ -45,3 +45,21 @@ class ToolRunner:
                 raise
         else:
             run_command(full_command, output_handler=raw_print_handler)
+
+    def start(self, args: List[str], **kwargs) -> Optional[subprocess.Popen]:
+        """
+        Starts the command using subprocess.Popen and returns the process object.
+        """
+        full_command = [str(self.executable_path)] + args
+
+        logger.info(f"Starting process: {' '.join(full_command)}")
+
+        try:
+            process = subprocess.Popen(full_command, **kwargs)
+            return process
+        except FileNotFoundError:
+            logger.critical(f"Executable not found for command: {full_command[0]}")
+            raise
+        except Exception as e:
+            logger.critical(f"Failed to start process for command:: {' '.join(full_command)}. Error: {e}")
+            raise

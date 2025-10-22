@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 
+from src.utils.cli_utils import add_input_file_argument, add_output_dir_argument, create_io_parser
 from src.utils.config_utils import get_project_root
 from src.utils.tools_runner import ToolRunner
 
@@ -114,27 +115,8 @@ def run_download_command(args, config):
     download_dorado_model(config, model_to_download)
 
 
-def add_input_file_argument(parser, help_text):
-    parser.add_argument(
-        "--input-file",
-        type=Path,
-        help=f"{help_text} (Defaults to value in config file)"
-    )
-
-
-def add_output_dir_argument(parser, help_text):
-    parser.add_argument(
-        "-o", "--output-dir",
-        type=Path,
-        help=f"{help_text} (Defaults to value in config file)"
-    )
-
-
-def register_subparsers(subparsers, parent_parser):
-    io_parser = argparse.ArgumentParser(add_help=False)
-    add_input_file_argument(io_parser, help_text="Path to the input file/directory")
-    add_output_dir_argument(io_parser, help_text="Path to the output directory")
-
+def setup_parsers(subparsers, parent_parser):
+    io_parser = create_io_parser()
     basecalling_parser = subparsers.add_parser(
         "basecalling",
         help="Run basecalling and related tasks using Dorado.",

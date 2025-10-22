@@ -97,7 +97,7 @@ paths:
   # Step 2: Alignment output
   alignment_output_dir: "data/alignment_output/"
   qc_dir: "data/alignment_qc/"
-  reference_genome_name: "hg38.fa"
+  indexed_ref_gen_fasta_name: "hg38.fa"
   indexed_ref_gen_name: "hg38.mmi"
   unaligned_bam_name: "wowowtest.bam"
   aligned_bam_name: "taken_alignment.sorted.bam"
