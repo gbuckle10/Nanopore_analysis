@@ -13,7 +13,9 @@ project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
 RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.sh")
 
-
+def run_full_alignment(args,config):
+    run_alignment_command(args, config)
+    alignment_qc(args, config)
 def run_alignment_command(args, config):
     if args.input_file:
         unaligned_bam = args.input_file
@@ -115,7 +117,7 @@ def run_alignment_command(args, config):
 
     print("Indexing complete")
 
-def alignment_qc(config):
+def alignment_qc(args, config):
     alignment_output_dir = config['paths']['alignment_output_dir']
     aligned_sorted_file = os.path.join(
         project_root,
@@ -158,27 +160,54 @@ def alignment_qc(config):
 
 
 def setup_parsers(subparsers, parent_parser):
+    # Make new parents
     io_parser = create_io_parser()
+    alignment_parent_parser = argparse.ArgumentParser(add_help=False)
+    alignment_parent_parser.add_argument(
+        "--ref", type=Path, help="Path to the reference genome"
+    )
+
     alignment_parser = subparsers.add_parser(
         "align",
-        help="Align basecalled BAM file to a specified genome.",
+        help="Align basecalled BAM file to a specified genome, and QC the alignment. Use subcommands to run "
+             "individual steps.",
+        description="This command group contains tools for aligning reads to a reference and outputting quality "
+                    "analysis on the resulting alignments.",
+        formatter_class=argparse.RawTextHelpFormatter,
         aliases=['alignment'],
-        parents=[parent_parser, io_parser]
+        epilog="""
+Example Usage:
+    nanopore_analysis align run --ref genome.fa --input-file reads.bam --output-dir analysis
+    nanopore_analysis align qc --input-file aligned_reads.bam
+"""
     )
 
-    align_args_parser = argparse.ArgumentParser(add_help=False)
-    align_args_parser.add_argument("--ref", type=Path, help="Path to the reference genome")
+    def show_align_help(args, config):
+        """Default function to show help for the align command group"""
+        alignment_parser.print_help()
 
-
-    alignment_parser.set_defaults(func=run_alignment_command)
-    alignment_subparsers = alignment_parser.add_subparsers(dest='subcommand')
-
-    p_align_and_qc = alignment_subparsers.add_parser(
-        'align-with-qc', help="Align a BAM file to a specified genome and QC the alignment.",
-        parents=[parent_parser, io_parser]
+    alignment_parser.set_defaults(func=show_align_help)
+    alignment_subparsers = alignment_parser.add_subparsers(
+        title="Available Commands",
+        description="Choose one of the following actions to perform.",
+        dest='subcommand',
+        metavar="<command>"
     )
+
+    p_run = alignment_subparsers.add_parser(
+        'run', help="Align a BAM file to a specified genome and QC the alignment.",
+        parents=[parent_parser, io_parser, alignment_parent_parser]
+    )
+    p_run.set_defaults(func=run_alignment_command)
+
+    p_qc_only = alignment_subparsers.add_parser(
+        'qc', help="Generate alignment statistics for a provided BAM file.",
+        parents=[parent_parser, io_parser, alignment_parent_parser]
+    )
+    p_qc_only.set_defaults(func=alignment_qc)
 
     p_align_only = alignment_subparsers.add_parser(
-        'align', help="Align a BAM file to a specified genome and QC the alignment",
-        parents=[parent_parser, io_parser]
+        'align', help="Align a BAM file to a specified genome and index.",
+        parents=[parent_parser, io_parser, alignment_parent_parser]
     )
+    p_align_only.set_defaults(func=run_alignment_command)

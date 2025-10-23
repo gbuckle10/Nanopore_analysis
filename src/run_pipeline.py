@@ -33,13 +33,15 @@ COMMAND_MAP = {
     'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
     'summarise-lengths': 'src/analysis/summarise_lengths.py'
 }
+
+
 def run_full_pipeline(args, config):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
         'basecalling': basecalling.run_basecalling_command
         # Add the rest of the commands here as you go.
-        #'align': alignment.run_alignment_command
+        # 'align': alignment.run_alignment_command
     }
 
     active_steps = config['pipeline_control']['run_steps']
@@ -86,27 +88,22 @@ def main():
     )
     run_parser.set_defaults(func=run_full_pipeline)
 
-    #subparsers.add_parser('basecalling', aliases=['basecall'])
+    # subparsers.add_parser('basecalling', aliases=['basecall'])
     basecalling.setup_parsers(subparsers, parent_parser)
     alignment.setup_parsers(subparsers, parent_parser)
 
-    print("Just about to parse the args")
     # Parse and dispatch
     args = parser.parse_args()
-    print(f"Parsed args: {args}")
-    print(f"Loading user config: {args.user_config}")
-    print(f"Loading runtime config: {args.runtime_config}")
     user_config = load_config(args.user_config)
     runtime_config = load_config(args.runtime_config)
     config = deep_merge(user_config, runtime_config)
 
-    #log_level = logging.DEBUG if args.verbose else logging.INFO
+    # log_level = logging.DEBUG if args.verbose else logging.INFO
     run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
     Logger.setup_logger(log_level=logging.INFO, log_file=log_file_path)
 
-
-    # Call the function that iss attached by set_defaults
+    # Call the function that is attached by set_defaults
     if args.command is None:
         print("INFO: No command specified")
         run_full_pipeline(args, config)
