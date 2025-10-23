@@ -6,6 +6,7 @@ def add_input_file_argument(parser, help_text="Path to the input file/directory"
     parser.add_argument(
         "--input-file",
         type=Path,
+        default=None,
         help=f"{help_text} (Defaults to value in config file)"
     )
 
@@ -14,6 +15,7 @@ def add_output_dir_argument(parser, help_text="Path to the output file/directory
     parser.add_argument(
         "-o", "--output-dir",
         type=Path,
+        default=None,
         help=f"{help_text} (Defaults to value in config file)"
     )
 

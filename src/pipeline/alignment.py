@@ -6,66 +6,129 @@ from pathlib import Path
 
 from src.utils.cli_utils import create_io_parser
 from src.utils.process_utils import run_command
-from src.utils.config_utils import get_project_root
+from src.utils.config_utils import get_project_root, resolve_param
 from src.utils.tools_runner import ToolRunner
 
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
 RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.sh")
 
-def run_full_alignment(args,config):
-    run_alignment_command(args, config)
-    alignment_qc(args, config)
-def run_alignment_command(args, config):
-    if args.input_file:
-        unaligned_bam = args.input_file
-    else:
-        unaligned_bam_dir = args.input_file or os.path.join(
-            project_root,
-            config['paths']['basecalled_output_dir']
-        )
-        unaligned_bam = os.path.join(
-            unaligned_bam_dir,
-            config['paths']['unaligned_bam_name']
-        )
+def full_alignment_handler(args,config):
 
-    threads = getattr(args, 'threads', None) or config['parameters']['general']['threads']
-    reference_index = getattr(args, 'ref', None) or os.path.join(
-        project_root,
-        'reference_genomes',
-        config['paths']['indexed_ref_gen_fasta_name']
+    unaligned_bam = resolve_param(
+        args,
+        config,
+        arg_name='input_file',
+        construct_path=True,
+        config_path=[
+            ['paths', 'basecalled_output_dir'],
+            ['paths', 'unaligned_bam_name']
+        ]
     )
-    sort_memory_limit = getattr(args, 'memory', None) or config['parameters']['general']['sort_memory_limit']
 
-    if args.output_dir:
-        aligned_bam_file = args.output_dir
-    else:
-        aligned_bam_dir = os.path.join(
-            project_root,
-            config['paths']['alignment_output_dir']
-        )
-        aligned_bam_file = os.path.join(
-            aligned_bam_dir,
-            config['paths']['aligned_bam_name']
-        )
+    final_qc_report = resolve_param(
+        args, config, arg_name='output_dir', construct_path=True,
+        config_path=[
+            ['paths', 'qc_dir'],
+            ['paths', 'alignment_flagstat_name']
+        ]
+    )
 
+    threads = resolve_param(
+        args, config, arg_name='threads', config_path=['parameters', 'general', 'threads']
+    )
+
+    reference_index = resolve_param(
+        args, config, arg_name='ref', config_path=['paths', 'indexed_ref_gen_fasta_name']
+    )
+
+    sort_memory_limit = resolve_param(
+        args, config, config_path=['parameters', 'general', 'sort_memory_limit']
+    )
+
+    # Intermediate aligned sorted bam
+    aligned_bam_file = resolve_param(
+        args, config, construct_path=True,
+        config_path=[
+            ['paths', 'alignment_output_dir'],
+            ['paths', 'aligned_bam_name']
+        ]
+    )
+
+    dorado_exe = resolve_param(
+        args, config, config_path=['tools', 'dorado']
+    )
+
+    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
+
+    flagstat_report = resolve_param(
+        args, config, arg_name='output_dir', construct_path=True,
+        config_path=[
+            ['paths', 'flagstat_report'],
+            ['paths', 'alignment_flagstat_name']
+        ]
+    )
+
+    run_qc_command(aligned_bam_file, flagstat_report)
+
+
+def alignment_handler(args, config):
+    unaligned_bam = resolve_param(
+        args,
+        config,
+        arg_name='input_file',
+        construct_path=True,
+        config_path=[
+            ['paths', 'basecalled_output_dir'],
+            ['paths', 'unaligned_bam_name']
+        ]
+    )
+
+    aligned_bam_file = resolve_param(
+        args, config, arg_name='output_dir', construct_path=True,
+        config_path=[
+            ['paths', 'alignment_output_dir'],
+            ['paths', 'aligned_bam_name']
+        ]
+    )
+
+    print(f"Output file - {aligned_bam_file}")
+    threads = resolve_param(
+        args, config, arg_name='threads', config_path=['parameters', 'general', 'threads']
+    )
+
+    reference_index = resolve_param(
+        args, config, arg_name='ref', config_path=['paths', 'indexed_ref_gen_fasta_name']
+    )
+
+    sort_memory_limit = resolve_param(
+        args, config, config_path=['parameters', 'general', 'sort_memory_limit']
+    )
+
+    dorado_exe = resolve_param(
+        args, config, config_path=['tools', 'dorado']
+    )
+
+    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
+
+
+def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads):
     # Add a check - allow the user to decide whether to align a single bam or a directory of bams.
     # If the user wants to a directory, you need to specify an --output-dir
     # Sorting and indexing is automatic if a directory is given instead of a specific file.
     alignment_cmd = [
         'aligner',
-        '-t', threads,
-        reference_index,
+        '-t', str(threads),
+        str(reference_index),
         unaligned_bam
     ]
 
-    dorado_exe = Path(config['tools']['dorado'])
     dorado_runner = ToolRunner(dorado_exe)
 
     # The sort shouldn't happen if the alignment_cmd is for an entire directory.
     sort_cmd = [
         "samtools", "sort",
-        "-@", threads,
+        "-@", str(threads),
         "-m", sort_memory_limit,
         "-o", aligned_bam_file
     ]
@@ -117,19 +180,27 @@ def run_alignment_command(args, config):
 
     print("Indexing complete")
 
-def alignment_qc(args, config):
-    alignment_output_dir = config['paths']['alignment_output_dir']
-    aligned_sorted_file = os.path.join(
-        project_root,
-        alignment_output_dir,
-        config['paths']['aligned_bam_name']
+def qc_handler(args, config):
+    aligned_sorted_file = resolve_param(
+        args, config, arg_name="input_file", construct_path=True,
+        config_path=[
+            ['paths', 'alignment_output_dir'],
+            ['paths', 'aligned_bam_name']
+        ]
     )
-    qc_dir = config['paths']['qc_dir']
-    flagstat_report = os.path.join(
-        project_root,
-        qc_dir,
-        config['paths']['alignment_flagstat_name']
+
+    flagstat_report = resolve_param(
+        args, config, arg_name='output_dir', construct_path=True,
+        config_path=[
+            ['paths', 'flagstat_report'],
+            ['paths', 'alignment_flagstat_name']
+        ]
     )
+
+    run_qc_command(aligned_sorted_file, flagstat_report)
+
+def run_qc_command(aligned_sorted_file, flagstat_report):
+
 
     flagstat_cmd = [
         "samtools", "flagstat",
@@ -164,7 +235,9 @@ def setup_parsers(subparsers, parent_parser):
     io_parser = create_io_parser()
     alignment_parent_parser = argparse.ArgumentParser(add_help=False)
     alignment_parent_parser.add_argument(
-        "--ref", type=Path, help="Path to the reference genome"
+        "--ref",
+        type=Path,
+        help="Path to the reference genome"
     )
 
     alignment_parser = subparsers.add_parser(
@@ -199,6 +272,9 @@ Example Usage:
         parents=[parent_parser, io_parser, alignment_parent_parser]
     )
     p_run.set_defaults(func=run_alignment_command)
+    p_run.add_argument(
+        '--threads', type=int, help="Number of threads for alignment and samtools."
+    )
 
     p_qc_only = alignment_subparsers.add_parser(
         'qc', help="Generate alignment statistics for a provided BAM file.",

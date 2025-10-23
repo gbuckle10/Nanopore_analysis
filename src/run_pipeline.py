@@ -58,6 +58,8 @@ def run_full_pipeline(args, config):
 
 
 def main():
+
+
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument(
         '-u', '--user-config',
@@ -78,6 +80,7 @@ def main():
         parents=[parent_parser]
     )
 
+
     subparsers = parser.add_subparsers(dest='command', help='Available command groups')
 
     # Register commands from modules.
@@ -94,6 +97,8 @@ def main():
 
     # Parse and dispatch
     args = parser.parse_args()
+
+    # Load config
     user_config = load_config(args.user_config)
     runtime_config = load_config(args.runtime_config)
     config = deep_merge(user_config, runtime_config)
