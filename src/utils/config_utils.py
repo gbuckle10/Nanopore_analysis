@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-def resolve_param(args, config, arg_name, config_path=None, construct_path=False):
+def resolve_param(args, config, arg_name=None, config_path=None, construct_path=False):
     """
     Get a parameter from the command line, if provided. Otherwise, find it at the provided
     config location.
