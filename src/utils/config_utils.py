@@ -13,9 +13,10 @@ def resolve_param(args, config, arg_name=None, config_path=None, construct_path=
     """
 
     # If the CLI value is given, then we just return that.
-    cli_value = getattr(args, arg_name, None)
-    if cli_value is not None:
-        return cli_value
+    if arg_name:
+        cli_value = getattr(args, arg_name, None)
+        if cli_value is not None:
+            return cli_value
 
     if not config_path:
         return None # No config path to check
