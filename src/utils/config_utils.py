@@ -1,8 +1,44 @@
+import collections
+import configparser
 import logging
+import os
 from pathlib import Path
 
 import yaml
 
+def resolve_param(args, config, arg_name, config_path=None, construct_path=False):
+    """
+    Get a parameter from the command line, if provided. Otherwise, find it at the provided
+    config location.
+    """
+
+    # If the CLI value is given, then we just return that.
+    cli_value = getattr(args, arg_name, None)
+    if cli_value is not None:
+        return cli_value
+
+    if not config_path:
+        return None # No config path to check
+
+    # Look in the config file
+    try:
+        if construct_path:
+            path_components = []
+            for path_keys in config_path:
+                current_level = config
+                for key in path_keys:
+                    current_level = current_level[key]
+                path_components.append(str(current_level))
+            return os.path.join(*path_components)
+        else:
+            current_level = config
+            for key in config_path:
+                current_level = current_level[key]
+            return current_level
+
+    except (KeyError, TypeError) as e:
+        print(f"Warning: Could not resolve '{arg_name}' from config. Missing key: {e}")
+        return None
 def deep_merge(d1, d2):
     """
     Recursively merges 2 dictionaries. Values from
