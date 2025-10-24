@@ -26,14 +26,6 @@ def full_alignment_handler(args,config):
         ]
     )
 
-    final_qc_report = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'qc_dir'],
-            ['paths', 'alignment_flagstat_name']
-        ]
-    )
-
     threads = resolve_param(
         args, config, arg_name='threads', config_path=['parameters', 'general', 'threads']
     )
@@ -111,6 +103,25 @@ def alignment_handler(args, config):
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
 
+def qc_handler(args, config):
+    aligned_sorted_file = resolve_param(
+        args, config, arg_name="input_file", construct_path=True,
+        config_path=[
+            ['paths', 'alignment_output_dir'],
+            ['paths', 'aligned_bam_name']
+        ]
+    )
+
+    flagstat_report = resolve_param(
+        args, config, arg_name='output_dir', construct_path=True,
+        config_path=[
+            ['paths', 'flagstat_report'],
+            ['paths', 'alignment_flagstat_name']
+        ]
+    )
+
+    run_qc_command(aligned_sorted_file, flagstat_report)
+
 
 def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads):
     # Add a check - allow the user to decide whether to align a single bam or a directory of bams.
@@ -180,24 +191,6 @@ def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference
 
     print("Indexing complete")
 
-def qc_handler(args, config):
-    aligned_sorted_file = resolve_param(
-        args, config, arg_name="input_file", construct_path=True,
-        config_path=[
-            ['paths', 'alignment_output_dir'],
-            ['paths', 'aligned_bam_name']
-        ]
-    )
-
-    flagstat_report = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'flagstat_report'],
-            ['paths', 'alignment_flagstat_name']
-        ]
-    )
-
-    run_qc_command(aligned_sorted_file, flagstat_report)
 
 def run_qc_command(aligned_sorted_file, flagstat_report):
 
@@ -271,19 +264,19 @@ Example Usage:
         'run', help="Align a BAM file to a specified genome and QC the alignment.",
         parents=[parent_parser, io_parser, alignment_parent_parser]
     )
-    p_run.set_defaults(func=run_alignment_command)
     p_run.add_argument(
         '--threads', type=int, help="Number of threads for alignment and samtools."
     )
+    p_run.set_defaults(func=full_alignment_handler)
 
     p_qc_only = alignment_subparsers.add_parser(
         'qc', help="Generate alignment statistics for a provided BAM file.",
         parents=[parent_parser, io_parser, alignment_parent_parser]
     )
-    p_qc_only.set_defaults(func=alignment_qc)
+    p_qc_only.set_defaults(func=qc_handler)
 
     p_align_only = alignment_subparsers.add_parser(
         'align', help="Align a BAM file to a specified genome and index.",
         parents=[parent_parser, io_parser, alignment_parent_parser]
     )
-    p_align_only.set_defaults(func=run_alignment_command)
+    p_align_only.set_defaults(func=alignment_handler)
