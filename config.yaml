@@ -80,6 +80,7 @@ paths:
   fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
   reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
   uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
+  manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
 
   # --- Data Processing pipeline Paths ---
   # Raw data
@@ -102,6 +103,7 @@ paths:
   aligned_bam_name: "taken_alignment.sorted.bam"
   alignment_flagstat_name: "alignment.flagstat.txt"
   alignment_stats_name: "alignment.stats.txt"
+  reference_genome_dir: "reference_genomes/"
 
   # Step 3: Methylation summary outputs
   methylation_dir: "data/methylation/"

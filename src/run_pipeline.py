@@ -7,8 +7,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.pipeline import basecalling, alignment
-from src.utils import logger
+from src.pipeline import basecalling, alignment, deconvolution
+from src.utils import logger, resource_downloader
 from src.utils.config_utils import get_project_root, load_config, deep_merge, resolve_param
 
 from src.utils.decorators import graceful_exit
@@ -31,7 +31,8 @@ COMMAND_MAP = {
     'all': 'pipeline',
 
     'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
-    'summarise-lengths': 'src/analysis/summarise_lengths.py'
+    'summarise-lengths': 'src/analysis/summarise_lengths.py',
+    'download': 'src/utils/resource_downloader.py'
 }
 
 
@@ -94,6 +95,8 @@ def main():
     # subparsers.add_parser('basecalling', aliases=['basecall'])
     basecalling.setup_parsers(subparsers, parent_parser)
     alignment.setup_parsers(subparsers, parent_parser)
+    deconvolution.setup_parsers(subparsers, parent_parser)
+    resource_downloader.setup_parsers(subparsers, parent_parser)
 
     # Parse and dispatch
     args = parser.parse_args()
