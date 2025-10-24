@@ -11,12 +11,13 @@ from tqdm import tqdm
 
 from src.utils.cli_utils import create_io_parser
 from src.utils.config_utils import resolve_param
-from src.utils.file_utils import ensure_dir_exists
+from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.process_utils import run_command
 from src.utils.tools_runner import ToolRunner
 
 project_root = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
+
 
 def _download_file_with_progress(url: str, destination: Path):
     """Downloads a file from a URL, showing a progress bar."""
@@ -30,33 +31,66 @@ def _download_file_with_progress(url: str, destination: Path):
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         with open(destination, 'wb') as f, tqdm(
-            desc=destination.name,
-            total=total_size,
-            unit='iB',
-            unit_scale=True,
-            unit_divisor=1024,
+                desc=destination.name,
+                total=total_size,
+                unit='iB',
+                unit_scale=True,
+                unit_divisor=1024,
         ) as bar:
             for chunk in response.iter_content(chunk_size=8192):
                 size = f.write(chunk)
                 bar.update(size)
-            print("Download complete.")
-            return True
+        logger.info("Download complete.")
+        return destination
     except requests.exceptions.RequestException as e:
-        print(f"Error: Failed to download file from {url}. Reason: {e}")
-        return False
+        logger.info(f"Error: Failed to download file from {url}. Reason: {e}")
+        if destination.exists():
+            destination.unlink() # Delete the partially downloaded file.
+        return None
+
 
 def reference_genome_handler(args, config):
     url = resolve_param(
         args, config, arg_name='url',
         config_path=['paths', 'reference_genome_url']
     )
-    destination = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
+
+    use_wgbs=args.wgbstools
+    if use_wgbs:
+        logger.info("We are going to initialise the genome using wgbstools")
+    else:
+        logger.info("We are going to initialise the genome and index with minimap2")
+
+    ref_fasta = resolve_param(
+        args, config, arg_name="output_dir", construct_path=True,
         config_path=[
             ['paths', 'reference_genome_dir'],
             ['paths', 'indexed_ref_gen_fasta_name']
         ]
     )
+
+    logger.info(f"Setting up reference genome {Path(ref_fasta).name}")
+
+    ref_mmi = Path(ref_fasta).with_suffix('.mmi')
+
+    logger.info(f"We'll index the reference genome to {ref_mmi}")
+    if not os.path.exists(ref_fasta):
+        # Maybe we'll hardcode the reference genome urls in this function...
+        logger.info(f"Reference file {ref_fasta} doesn't exist. Downloading from {url}")
+        run_command([
+            "aws", "s3", "cp", url, str(ref_fasta), "--no-sign-request"
+        ])
+    else:
+        logger.info("Reference genome already exists.")
+
+    if not os.path.exists(ref_mmi):
+        logger.info("Indexing reference genome with minimap2...")
+        run_command([
+            "minimap2", "-d", str(ref_mmi), str(ref_fasta)
+        ])
+    else:
+        logger.info(f"Reference genome index already exists.")
+
 
 def atlas_handler(args, config):
     url = resolve_param(
@@ -80,9 +114,11 @@ def atlas_handler(args, config):
     if is_interactive:
         logger.info("The user provided an output dir, so we are running in interactive mode.")
     else:
-        logger.info("The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
+        logger.info(
+            "The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
 
     final_destination_and_download(url, Path(destination), is_interactive)
+
 
 def manifest_handler(args, config):
     url = resolve_param(
@@ -107,12 +143,13 @@ def manifest_handler(args, config):
     if is_interactive:
         logger.info("The user provided an output dir, so we are running in interactive mode.")
     else:
-        logger.info("The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
+        logger.info(
+            "The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
 
     final_destination_and_download(url, Path(destination), is_interactive)
 
-def final_destination_and_download(url: str, destination: Path, is_interactive: bool=False):
 
+def final_destination_and_download(url: str, destination: Path, is_interactive: bool = False):
     logger.info(f"We will download the file from {url} to the destination {destination}")
     final_destination: Path
 
@@ -133,31 +170,17 @@ def final_destination_and_download(url: str, destination: Path, is_interactive: 
         logger.warning("Directory creation failed or was cancelled by the user. Aborting download.")
         return False
 
-    _download_file_with_progress(url, final_destination)
+    downloaded_file_path = _download_file_with_progress(url, final_destination)
 
-
-
-def download_atlas_manifest_files(config):
-    print("--- Downloading and preparing atlas files and manifests ---")
-
-    gz_path = os.path.join(atlas_dir, "full_atlas.csv.gz")
-    csv_path = os.path.join(atlas_dir, "full_atlas.csv")
-    if os.path.exists(gz_path) and not os.path.exists(csv_path):
-        print("Decompressing full_atlas.csv.gz...")
-        with gzip.open(gz_path, 'rb') as f_in:
-            with open(csv_path, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-
-    # Convert UXM_atlas.tsv to .csv
-    tsv_path = os.path.join(atlas_dir, "UXM_atlas.tsv")
-    uxm_csv_path = os.path.join(atlas_dir, "UXM_atlas.csv")
-    if os.path.exists(tsv_path) and not os.path.exists(uxm_csv_path):
-        print("Converting UXM_atlas.tsv to UXM_atlas.csv")
-        with open(tsv_path, 'r') as tsv_file, open(uxm_csv_path, 'w', newline='') as csv_file:
-            reader = csv.reader(tsv_file, delimiter='\t')
-            writer = csv.writer(uxm_csv_path, delimiter=',')
-            for row in reader:
-                writer.writerow(row)
+    if downloaded_file_path:
+        if downloaded_file_path.suffix.lower() in ['.gz', '.zip']:
+            # The download was successful and it's a compressed file.
+            final_path = decompress_file(downloaded_file_path)
+            return final_path
+        else:
+            return downloaded_file_path
+    else:
+        return None
 
 
 def _download_and_index_reference_genome(config):
@@ -190,6 +213,7 @@ def _download_and_index_reference_genome(config):
     else:
         print(f"Reference genome index already exists.")
 
+
 def download_and_index_reference_genome_wgbs(config):
     """
     Use wgbstools init_genome to initialise the specified genome.
@@ -207,14 +231,12 @@ def download_and_index_reference_genome_wgbs(config):
     wgbstools_runner.run(wgbstools_cmd)
 
 
-
-
 def setup_parsers(subparsers, parent_parser):
     io_parser = create_io_parser()
     download_parent_parser = argparse.ArgumentParser(add_help=False)
     download_parent_parser.add_argument(
         "--url",
-        type=Path,
+        type=str,
         help="URL to download from"
     )
     download_parent_parser.add_argument(
