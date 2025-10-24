@@ -1,4 +1,5 @@
 import os
+import zipfile
 from pathlib import Path
 import logging
 import requests
@@ -11,7 +12,34 @@ from src.utils.process_utils import run_command
 project_root = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
 
+def decompress_file(file_path: Path, delete_original: bool=True):
+    """
+    Decompresses a .gz or .zip file.
+    """
+    suffix = file_path.suffix.lower()
 
+    if suffix == '.gz':
+        output_path = file_path.with_suffix('')
+        logger.info(f"'{file_path.name}' is a .gz file, so we'll unzip it")
+        with gzip.open(file_path, 'rb') as f_in:
+            with open(output_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        logger.info(f"Decompressed to {output_path}")
+    elif suffix == '.zip':
+        logger.info(f"'{file_path.name}' is a .zip file, so we'll unzip it.")
+        output_path = file_path.parent # .zip files extract into a directory
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(output_path)
+        logger.info(f"Extracted contacts of {file_path.name} to {output_path}")
+    else:
+        logger.warning(f"File {file_path.name} is not a .gz or a .zip file. I haven't done anything.")
+        return file_path
+
+    if delete_original:
+        file_path.unlink()
+        logger.info(f"Deleted original file: {file_path.name}")
+
+    return output_path
 def ensure_dir_exists(dir_path: Path, interactive: bool = False) -> bool:
     """
     Checks whether a given directory exists. If in interactive mode, it will prompt the user to create the directory
