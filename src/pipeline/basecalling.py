@@ -146,19 +146,19 @@ def run_model_download(dorado_exe, model_name):
 
 
 def run_demultiplex(dorado_exe, input_file, output_dir):
-    dorado_runner = ToolRunner(dorado_exe)
+    dorado_runner = ToolRunner(dorado_exe, '--output-dir')
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     demux_cmd = [
         # "dorado",
         "demux",
-        "--output-dir", "analysis/demultiplexed",
+        #"--output-dir", "analysis/demultiplexed",
         "--kit-name", "SQK-NBD114-24",
         input_file
     ]
 
-    dorado_runner.run(demux_cmd)
+    dorado_runner.run(demux_cmd, output_dir)
 
 
 def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name, batchsize, output_file=None):

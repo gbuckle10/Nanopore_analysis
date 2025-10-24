@@ -11,7 +11,6 @@ pipeline_control:
   run_steps:
     #- basecalling
     - align
-    #- align_qc
     #- methylation_summary
     #- deconvolution_prep
     #- deconvolution
@@ -46,7 +45,7 @@ parameters:
     batch_size: "64"
   analysis:
     methylation_aggregation_chunksize: '5000000'
-
+    deconv_algorithm: "uxm"
 # ========================================================
 # Paths
 # All file and directory paths
@@ -116,9 +115,11 @@ paths:
   file_for_deconvolution_ilmn: "deconvolution_illumina.csv"
   file_for_deconvolution_gc: "deconvolution_geco.csv"
   file_for_deconvolution_uxm: "deconvolution_uxm.csv"
+  file_to_deconvolute: "deconvolution_uxm.csv"
   atlas_file_ilmn: "full_atlas.csv"
   atlas_file_gc: "full_atlas_gc.csv"
   atlas_file_uxm: "UXM_atlas_deconvolution.csv"
+  atlas_file_name: "UXM_atlas_deconvolution.csv"
   illumina_manifest: "illumina_manifest.csv"
   processed_illumina_manifest: "illumina_manifest.parquet"
   deconvolution_results: "deconvoluted_output.csv"
