@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from src.utils.tools_runner import ToolRunner
 project_root = get_project_root()
 CONFIG_PATH = os.path.join(project_root, "config.yaml")
 RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.sh")
+logger = logging.getLogger(__name__)
 
 def full_alignment_handler(args,config):
 
@@ -84,7 +86,6 @@ def alignment_handler(args, config):
         ]
     )
 
-    print(f"Output file - {aligned_bam_file}")
     threads = resolve_param(
         args, config, arg_name='threads', config_path=['parameters', 'general', 'threads']
     )
@@ -127,11 +128,14 @@ def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference
     # Add a check - allow the user to decide whether to align a single bam or a directory of bams.
     # If the user wants to a directory, you need to specify an --output-dir
     # Sorting and indexing is automatic if a directory is given instead of a specific file.
+
+    # ADD A METHOD TO PRODUCE MMI REFERENCE HERE IF IT DOESN'T ALREADY EXIST
+
     alignment_cmd = [
         'aligner',
         '-t', str(threads),
         str(reference_index),
-        unaligned_bam
+        str(unaligned_bam)
     ]
 
     dorado_runner = ToolRunner(dorado_exe)
@@ -141,7 +145,7 @@ def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference
         "samtools", "sort",
         "-@", str(threads),
         "-m", sort_memory_limit,
-        "-o", aligned_bam_file
+        "-o", str(aligned_bam_file)
     ]
 
     print(f"Executing pipe: {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
@@ -149,6 +153,7 @@ def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference
     align_process = dorado_runner.start(
         alignment_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
+
     if align_process is None:
         return
 

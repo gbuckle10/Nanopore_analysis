@@ -160,53 +160,6 @@ class PipelineController:
             deconv_handler.prepare()
         deconv_handler.run()
 
-    def ___run_deconvolution_submodule(self, script_args):
-        self.logger.info(">>> Starting the deconvolution process using the meth_atlas submodule")
-
-        atlas_file = f"data/atlas/{self.config['paths']['atlas_file_uxm']}"
-        file_to_deconvolve = f"data/processed/{self.config['paths']['file_for_deconvolution_uxm']}"
-
-        self.logger.info(f"Deconvolving file {file_to_deconvolve} using atlas file {atlas_file}")
-
-        deconvolve_script = "externals/meth_atlas/deconvolve_genome_coordinates.py"
-        # deconvolve_script = "externals/meth_atlas/deconvolve.py"
-
-        command = [
-            "python",
-            deconvolve_script,
-            "-a",
-            atlas_file,
-            file_to_deconvolve,
-            "--out_dir", self.config['paths']['analysis_dir']
-        ]
-
-        self.logger.info(f"--- Running : {' '.join(command)} --- ")
-
-        try:
-            with subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True
-            ) as process:
-                if process.stdout:
-                    for line in iter(process.stdout.readline, ''):
-                        self.logger.info(f"[Subprocess] {line.strip()}")
-
-            if process.returncode != 0:
-                self.logger.error(f"Deconvolution script failed with exit code {process.returncode}.")
-                raise subprocess.CalledProcessError(process.returncode, process.args)
-
-            self.logger.info("Deconvolution script completed successfully.")
-        except FileNotFoundError:
-            self.logger.error(f"Command not found: {command[0]}. Make sure python is in PATH")
-            raise
-        except subprocess.CalledProcessError as e:
-            self.logger.critical("Halting process due to deconvolution script failure.")
-            raise e
-
 
     def main(self, argv=None):
         try:

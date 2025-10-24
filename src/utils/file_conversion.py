@@ -106,9 +106,7 @@ def download_fast5_data(config):
     ]
 
     try:
-        result = subprocess.run(
-            cmd_file_list, check=True, capture_output=True, text=True
-        )
+        result = subprocess.run(cmd_file_list)
 
         all_files = []
         for line in result.stdout.strip().split('\n'):
