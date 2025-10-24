@@ -81,7 +81,7 @@ paths:
   reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
   uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
   manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
-
+  full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
   # --- Data Processing pipeline Paths ---
   # Raw data
   fast5_input_dir: "data/fast5_input/"
@@ -98,7 +98,6 @@ paths:
   alignment_output_dir: "data/alignment_output/"
   qc_dir: "data/alignment_qc/"
   indexed_ref_gen_fasta_name: "hg38.fa"
-  indexed_ref_gen_name: "hg38.mmi"
   unaligned_bam_name: "wowowtest.bam"
   aligned_bam_name: "taken_alignment.sorted.bam"
   alignment_flagstat_name: "alignment.flagstat.txt"
