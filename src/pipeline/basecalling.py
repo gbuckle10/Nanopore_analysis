@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 def full_basecalling_handler(args, config):
+
+    logger.info("INFO: Running full basecalling step.")
     input = resolve_param(
         args, config, arg_name='input_file',
         config_path=['paths', 'pod5_dir']
@@ -27,7 +29,7 @@ def full_basecalling_handler(args, config):
         ]
     )
     demultiplexed_output_dir = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
+        args, config, arg_name='output_dir',
         config_path=['paths', 'demultiplexed_output_dir']
     )
     kit_name = resolve_param(

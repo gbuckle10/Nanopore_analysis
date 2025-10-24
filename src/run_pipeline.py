@@ -9,7 +9,7 @@ from pathlib import Path
 
 from src.pipeline import basecalling, alignment
 from src.utils import logger
-from src.utils.config_utils import get_project_root, load_config, deep_merge
+from src.utils.config_utils import get_project_root, load_config, deep_merge, resolve_param
 
 from src.utils.decorators import graceful_exit
 from src.utils.logger import Logger
@@ -39,12 +39,14 @@ def run_full_pipeline(args, config):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
-        'basecalling': basecalling.run_basecalling_command
-        # Add the rest of the commands here as you go.
-        # 'align': alignment.run_alignment_command
+        'basecalling': basecalling.full_basecalling_handler,
+        'align': alignment.full_alignment_handler
     }
 
-    active_steps = config['pipeline_control']['run_steps']
+    active_steps = resolve_param(
+        args, config, config_path=['pipeline_control', 'run_steps']
+    )
+
     if not active_steps:
         logging.warning("WARNING: No active steps found in config.yaml. Nothing for me to do.")
         return
@@ -55,11 +57,9 @@ def run_full_pipeline(args, config):
         if not step_func:
             logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
             continue
-
+        step_func(args, config)
 
 def main():
-
-
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument(
         '-u', '--user-config',
@@ -110,7 +110,6 @@ def main():
 
     # Call the function that is attached by set_defaults
     if args.command is None:
-        print("INFO: No command specified")
         run_full_pipeline(args, config)
     else:
         if hasattr(args, 'func'):

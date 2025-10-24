@@ -52,7 +52,7 @@ class ToolRunner:
         """
         full_command = [str(self.executable_path)] + args
 
-        logger.info(f"Starting process: {' '.join(full_command)}")
+        logger.info(f"Starting process: {' '.join(full_command)} as part of a pipe.")
 
         try:
             process = subprocess.Popen(full_command, **kwargs)
