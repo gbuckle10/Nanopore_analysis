@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def full_basecalling_handler(args, config):
-
     logger.info("INFO: Running full basecalling step.")
     input = resolve_param(
         args, config, arg_name='input_file',
@@ -58,8 +57,9 @@ def full_basecalling_handler(args, config):
 
     run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
 
+
 def basecall_handler(args, config):
-    input = resolve_param(
+    input_file = resolve_param(
         args, config, arg_name='input_file',
         config_path=['paths', 'pod5_dir']
     )
@@ -92,7 +92,8 @@ def basecall_handler(args, config):
         args, config, config_path=['tools', 'dorado']
     )
 
-    run_basecalling(dorado_exe, input, model_speed, modifications, kit_name, batchsize, output)
+    run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, output)
+
 
 def demultiplex_handler(args, config):
     input_file = resolve_param(
@@ -113,6 +114,7 @@ def demultiplex_handler(args, config):
 
     run_demultiplex(dorado_exe, input_file, output_dir)
 
+
 def download_handler(args, config):
     model_name = resolve_param(
         args, config, config_path=['parameters', 'basecalling', 'base_model_name']
@@ -122,6 +124,7 @@ def download_handler(args, config):
     )
 
     run_model_download(dorado_exe, model_name)
+
 
 def run_model_download(dorado_exe, model_name):
     # This should be better defined - give the base model name and
@@ -170,6 +173,7 @@ def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name
     dorado_runner = ToolRunner(dorado_exe)
 
     dorado_runner.run(basecalling_cmd, output_file)
+
 
 def setup_parsers(subparsers, parent_parser):
     io_parser = create_io_parser()
