@@ -222,3 +222,4 @@ __marimo__/
 .idea/
 
 src/runtime_config.sh
+.externals/
