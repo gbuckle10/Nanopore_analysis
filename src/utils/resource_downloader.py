@@ -45,7 +45,7 @@ def _download_file_with_progress(url: str, destination: Path):
     except requests.exceptions.RequestException as e:
         logger.info(f"Error: Failed to download file from {url}. Reason: {e}")
         if destination.exists():
-            destination.unlink() # Delete the partially downloaded file.
+            destination.unlink()  # Delete the partially downloaded file.
         return None
 
 
@@ -55,13 +55,14 @@ def reference_genome_handler(args, config):
         config_path=['paths', 'reference_genome_url']
     )
 
-    use_wgbs=args.wgbstools
+    use_wgbs = args.wgbstools
+
     if use_wgbs:
         logger.info("We are going to initialise the genome using wgbstools")
     else:
         logger.info("We are going to initialise the genome and index with minimap2")
 
-    ref_fasta = resolve_param(
+    ref_path = resolve_param(
         args, config, arg_name="output_dir", construct_path=True,
         config_path=[
             ['paths', 'reference_genome_dir'],
@@ -69,24 +70,43 @@ def reference_genome_handler(args, config):
         ]
     )
 
-    logger.info(f"Setting up reference genome {Path(ref_fasta).name}")
+    user_path = Path(ref_path)
 
-    ref_mmi = Path(ref_fasta).with_suffix('.mmi')
+    # Determine final file path
+    final_ref_path: Path
 
-    logger.info(f"We'll index the reference genome to {ref_mmi}")
-    if not os.path.exists(ref_fasta):
-        # Maybe we'll hardcode the reference genome urls in this function...
-        logger.info(f"Reference file {ref_fasta} doesn't exist. Downloading from {url}")
+    if (user_path.exists() and user_path.is_dir()) or (not user_path.exists() and user_path.suffix == ''):
+        # If the user path exists, it's a directory. If it doesn't exist, there is no file extension.
+        logger.info(f"Reference path '{user_path}' is a directory. Appending default filename.")
+
+        try:
+            default_filename = config['paths']['indexed_ref_gen_fasta_name']
+        except KeyError:
+            logger.error(f"Error: '{user_path}' is a directory, but 'indexed_ref_gen_fasta_name' is not set in config.")
+            sys.exit(1)
+
+        final_ref_path = user_path / default_filename
+    else:
+        logger.info(f"Reference path is a full file path: '{user_path}'")
+        final_ref_path = user_path
+
+    logger.info(f"The final output path will be {final_ref_path}")
+
+    if not os.path.exists(final_ref_path):
+        logger.info(f"Reference file {final_ref_path} doesn't exist. Downloading from {url}")
         run_command([
-            "aws", "s3", "cp", url, str(ref_fasta), "--no-sign-request"
+            "aws", "s3", "cp", url, str(final_ref_path), "--no-sign-request"
         ])
     else:
         logger.info("Reference genome already exists.")
 
+    ref_mmi = final_ref_path.with_suffix('.mmi')
+    logger.info(f"We'll index the reference genome to {ref_mmi}")
+
     if not os.path.exists(ref_mmi):
         logger.info("Indexing reference genome with minimap2...")
         run_command([
-            "minimap2", "-d", str(ref_mmi), str(ref_fasta)
+            "minimap2", "-d", str(ref_mmi), str(final_ref_path)
         ])
     else:
         logger.info(f"Reference genome index already exists.")

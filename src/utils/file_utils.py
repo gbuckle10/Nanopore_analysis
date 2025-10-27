@@ -12,6 +12,7 @@ from src.utils.process_utils import run_command
 project_root = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
 
+
 def decompress_file(file_path: Path, delete_original: bool=True):
     """
     Decompresses a .gz or .zip file.
