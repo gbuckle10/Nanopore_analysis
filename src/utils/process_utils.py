@@ -2,6 +2,7 @@ import logging
 import os
 import pty
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -10,38 +11,71 @@ from typing import Callable
 
 logger = logging.getLogger('pipeline')
 
-class LiveLoggingHandler:
+class LiveDisplayHandler:
+    '''
+    A class that processes a stream of bytes from a subprocess. It displays progress bars on the terminal by
+    overwriting the current line, and prints a clean format to the logging file.
+    '''
+
     def __init__(self, log_level=logging.INFO):
         self.buffer = ""
+        self.is_interactive = sys.stdout.isatty()
         self.log_level = log_level
 
-        self.ansi_escape_pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
     def __call__(self, byte_string: bytes):
         text = byte_string.decode(sys.stdout.encoding, errors='replace')
+        self.buffer += text
 
-        for char in text:
-            if char == '\r':
-                self._flush_buffer(log_level=logging.DEBUG)
-                self.buffer = ""
-            elif char == '\n':
-                self._flush_buffer()
-                self.buffer = ""
-            else:
-                self.buffer += char
+        while '\n' in self.buffer or '\r' in self.buffer:
+            idx_n = self.buffer.find('\n')
+            idx_r = self.buffer.find('\r')
 
-    def _flush_buffer(self, log_level=None):
-        if not self.buffer:
-            return
+            # Which terminator comes first?
+            if idx_n == -1: idx_n = float('inf')
+            if idx_r == -1: idx_r = float('inf')
 
-        clean_line = self.ansi_escape_pattern.sub('', self.buffer).strip()
+            split_idx = min(idx_n, idx_r)
+
+            line = self.buffer[:split_idx]
+            terminator = self.buffer[split_idx]
+            self.buffer = self.buffer[split_idx + 1:]
+
+            if terminator == '\n':
+                self._handle_newline(line)
+            elif terminator == '\r':
+                self._handle_carriage_return(line)
+    def _handle_newline(self, line: str):
+        clean_line = line.strip()
+
+        if self.is_interactive:
+            # Clear the previous line before printing a new, normal log line
+            terminal_width = shutil.get_terminal_size((80, 20)).columns
+            sys.stdout.write('\r' + ' ' * terminal_width + '\r')
+            sys.stdout.flush()
 
         if clean_line:
-            level_to_use = log_level if log_level is not None else self.log_level
-            logger.log(level_to_use, clean_line)
+            logger.info(clean_line)
+
+    def _handle_carriage_return(self, line: str):
+        clean_line = line.strip()
+
+        if clean_line:
+            if self.is_interactive:
+                terminal_width = shutil.get_terminal_size((80, 20)).columns
+                sys.stdout.write(clean_line.ljust(terminal_width) + '\r')
+                sys.stdout.flush()
+        else:
+            logger.debug(clean_line)
 
     def flush(self):
-        self._flush_buffer()
+        if self.buffer:
+            self._handle_newline(self.buffer)
+
+        if self.is_interactive:
+            #sys.stdout.write('\n')
+            sys.stdout.flush()
+
 def kill_process_group(pgid):
     """
     Safely terminates a process group.
@@ -69,12 +103,11 @@ def log_info_handler(line: str):
         logger.info(clean_line)
 
 
-def run_command(command: list, output_handler: Callable[[str], None] = log_info_handler, output_handler_class=LiveLoggingHandler, env=None):
+def run_command(command: list, output_handler: Callable[[str], None] = log_info_handler, output_handler_class=LiveDisplayHandler, env=None, cwd=None):
     '''
     Runs the commands for each step, logs the outputs in real time and handles errors.
     '''
 
-    print(f"Executing command: {' '.join(command)}")
     logger.info(f"Executing command: {' '.join(command)}")
     process = None
     pgid = None
@@ -92,7 +125,8 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
             stderr=child_fd,
             text=False,
             preexec_fn=os.setpgrp,
-            env=env
+            env=env,
+            cwd=cwd
         )
 
         # We don't need the child part of the terminal anymore.
@@ -106,6 +140,8 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
                     chunk = master_file.read(1024)
                     if not chunk:
                         break
+
+                    #print(f"DEBUG CHUNK: {repr(chunk)}")
 
                     handler(chunk)
                     '''
