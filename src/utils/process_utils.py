@@ -74,6 +74,7 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
     Runs the commands for each step, logs the outputs in real time and handles errors.
     '''
 
+    print(f"Executing command: {' '.join(command)}")
     logger.info(f"Executing command: {' '.join(command)}")
     process = None
     pgid = None
@@ -145,7 +146,3 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
         logger.critical(f"An unexpected error occurred: {e}")
         kill_process_group(pgid)
         raise
-
-    finally:
-        if parent_fd is not None:
-            os.close(parent_fd)
