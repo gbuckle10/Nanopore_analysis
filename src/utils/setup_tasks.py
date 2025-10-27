@@ -3,6 +3,7 @@ import platform
 import subprocess
 from pathlib import Path
 
+from src import PROJECT_ROOT
 from src.utils.process_utils import run_command
 from src.utils.config_utils import load_config, get_project_root
 import os
@@ -14,9 +15,8 @@ import gzip
 import shutil
 import yaml
 
-project_root = get_project_root()
-CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.yaml")
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
+RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "src", "runtime_config.yaml")
 
 
 def download_file(url, destination):
@@ -34,11 +34,11 @@ def download_file(url, destination):
 
 def setup_submodules(config):
     print(" --- Setting up git submodules. ---")
-    if not os.path.exists(f"{project_root}/.gitmodules"):
+    if not os.path.exists(f"{PROJECT_ROOT}/.gitmodules"):
         print("No gitmodules file found. Skipping submodule setup.")
         return
 
-    repository_path = "/app"
+    repository_path = PROJECT_ROOT
     executable_paths = {}
 
     print(f">>> Configuring Git to trust {repository_path}")
@@ -49,6 +49,7 @@ def setup_submodules(config):
     sync_command = ["git", "submodule", "sync", "--recursive"]
     update_command = ["git", "submodule", "update", "--init", "--recursive", "--force"]
 
+    print(f"Running sync command {sync_command}")
     run_command(sync_command)
     run_command(update_command)
 
@@ -63,9 +64,9 @@ def setup_submodules(config):
     wgbstools_rel = submodule_paths_config.get('wgbstools_dir', 'externals/wgbs_tools')
     methatlas_rel = submodule_paths_config.get('meth_atlas_dir', 'externals/meth_atlas')
 
-    uxm_abs = project_root / uxm_rel / "uxm"
-    wgbstools_abs = project_root / wgbstools_rel / "wgbstools"
-    methatlas_abs = project_root / methatlas_rel
+    uxm_abs = PROJECT_ROOT / uxm_rel / "uxm"
+    wgbstools_abs = PROJECT_ROOT / wgbstools_rel / "wgbstools"
+    methatlas_abs = PROJECT_ROOT / methatlas_rel
 
     executable_paths['uxm'] = str(uxm_abs)
     executable_paths['wgbstools'] = str(wgbstools_abs)
@@ -83,7 +84,7 @@ def install_dorado(config):
     archive_filename = f"dorado-{version}-linux-x64.tar.gz"
     download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-linux-x64.tar.gz"
 
-    dorado_dir = f"{project_root}/tools/dorado-{version}-linux-x64"
+    dorado_dir = f"{PROJECT_ROOT}/tools/dorado-{version}-linux-x64"
 
     print(f"Checking for dorado at {dorado_dir}")
 
@@ -93,7 +94,7 @@ def install_dorado(config):
         return {'dorado': dorado_exe_path}
     else:
         print(f"Downloading dorado version {version} from {download_url}")
-        archive_path = os.path.join(project_root, "tools", archive_filename)
+        archive_path = os.path.join(PROJECT_ROOT, "tools", archive_filename)
         download_file(download_url, archive_path)
 
         print(f"Extracting {archive_path}...")
