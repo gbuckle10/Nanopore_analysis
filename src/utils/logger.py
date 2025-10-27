@@ -20,7 +20,6 @@ class AnsiStrippingFormatter(logging.Formatter):
         return self.ANSI_ESCAPE_REGEX.sub('', formatted_record)
 
 class Logger:
-
     @staticmethod
     def setup_logger(log_level=logging.INFO, log_file=None):
         """

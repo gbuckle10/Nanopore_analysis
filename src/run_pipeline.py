@@ -6,12 +6,12 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+import traceback
 
 from src.pipeline import basecalling, alignment, deconvolution
 from src.utils import logger, resource_downloader
 from src.utils.config_utils import get_project_root, load_config, deep_merge, resolve_param
 
-from src.utils.decorators import graceful_exit
 from src.utils.logger import Logger
 
 project_root = get_project_root()
@@ -35,7 +35,17 @@ COMMAND_MAP = {
     'download': 'src/utils/resource_downloader.py'
 }
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
 
+    logging.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+    # Print the user-friendly message to the console
+    print("\nFATAL ERROR: The application has crashed unexpectedly.", file=sys.stderr)
+    print(f"Error Type: {exc_type.__name__}", file=sys.stderr)
+    print("Please see the log file for the full technical traceback.", file=sys.stderr)
 def run_full_pipeline(args, config):
     logging.info("--- Running full pipeline from config ---")
 
@@ -60,6 +70,7 @@ def run_full_pipeline(args, config):
             continue
         step_func(args, config)
 
+
 def main():
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument(
@@ -73,6 +84,9 @@ def main():
         type=Path,
         default=RUNTIME_CONFIG_PATH,
         help=f"Path to the runtime config file. Default = {RUNTIME_CONFIG_PATH}"
+    )
+    parent_parser.add_argument(
+        '--debug', action='store_true', help="Enable debug mode. Show full tracebacks on the console."
     )
 
     parser = argparse.ArgumentParser(
@@ -111,16 +125,38 @@ def main():
     log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
     Logger.setup_logger(log_level=logging.INFO, log_file=log_file_path)
 
+    #sys.excepthook = handle_exception
     # Call the function that is attached by set_defaults
-    if args.command is None:
-        run_full_pipeline(args, config)
-    else:
-        if hasattr(args, 'func'):
-            logging.info(f"Running argument {args.func}")
-            args.func(args, config)
+    try:
+        if args.command is None:
+            run_full_pipeline(args, config)
         else:
-            print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
-            sys.exit(1)
+            if hasattr(args, 'func'):
+                logging.info(f"Running argument {args.func}")
+                args.func(args, config)
+            else:
+                print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
+                sys.exit(1)
+    except Exception as e:
+        # Log full details to log file
+        logging.critical("An unexpected error occurred, so the program will exit.")
+        logging.exception(e)
+
+        # Show simpler message on console
+        print("\n" + "="*80, file=sys.stderr)
+        print("FATAL ERROR: The application has crashed", file=sys.stderr)
+        print(f"Error type: {type(e).__name__}", file=sys.stderr)
+        print(f"Error message: {e}", file=sys.stderr)
+
+        if args.debug:
+            print("\n--- DEBUG TRACEBACK ---", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            print("--- END TRACEBACK ---\n", file=sys.stderr)
+        else:
+            print("\n Please see log file for full technical details", file=sys.stderr)
+        print("="*80 + '\n', file=sys.stderr)
+
+        sys.exit(1)
 
 
 if __name__ == '__main__':
