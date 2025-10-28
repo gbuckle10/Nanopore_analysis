@@ -61,9 +61,9 @@ def setup_submodules(config):
     wgbstools_abs = PROJECT_ROOT / wgbstools_rel / "wgbstools"
     methatlas_abs = PROJECT_ROOT / methatlas_rel
 
-    executable_paths['uxm'] = str(uxm_abs)
-    executable_paths['wgbstools'] = str(wgbstools_abs)
-    executable_paths['methatlas'] = str(methatlas_abs)
+    executable_paths['uxm_exe'] = str(uxm_abs)
+    executable_paths['wgbstools_exe'] = str(wgbstools_abs)
+    executable_paths['methatlas_exe'] = str(methatlas_abs)
 
     return executable_paths
 
