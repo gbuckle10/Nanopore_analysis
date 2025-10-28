@@ -1,9 +1,6 @@
 import argparse
-import csv
-import gzip
 import logging
 import os
-import shutil
 import sys
 from pathlib import Path
 import requests

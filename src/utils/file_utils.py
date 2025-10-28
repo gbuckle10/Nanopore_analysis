@@ -2,12 +2,8 @@ import os
 import zipfile
 from pathlib import Path
 import logging
-import requests
-import sys
 import gzip
 import shutil
-
-from src.utils.process_utils import run_command
 
 project_root = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
@@ -74,31 +70,3 @@ def ensure_dir_exists(dir_path: Path, interactive: bool = False) -> bool:
     except OSError as e:
         logger.error(f"Error: Couldn't create directory {dir_path}. Error - {e}")
         return False
-
-def ensure_tool_symlink(link_path, target_path):
-    logger = logging.getLogger('pipeline')
-
-    logger.info(f"Ensuring '{link_path}' is a symlink to '{target_path}'")
-
-    try:
-        if link_path.exists():
-            if link_path.is_symlink():
-                if os.path.realpath(link_path) == os.path.realpath(target_path):
-                    logger.info(f"Correct symlink for {link_path} already exists, so nothing to do.")
-                else:
-                    logger.info(f"Symlink exists, but points to the wrong target. Recreating.")
-                    link_path.unlink()
-                    link_path.symlink_to(target_path)
-                    print("Symlink recreated successfully.")
-            else:
-                logger.info(f"'{link_path}' is a regular file, not a symlink. Removing and replacing.")
-                link_path.unlink()  # remove file
-                link_path.symlink_to(target_path)  # create the symlink
-                logger.info(f"Symlink created successfully.")
-        else:
-            # Directly create the link
-            logger.info(f"'{link_path}' does not exist. Creating symlink.")
-            link_path.symlink_to(target_path)
-            print("Symlink created successfully.")
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")

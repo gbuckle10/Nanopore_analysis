@@ -4,7 +4,7 @@ import sys
 from typing import List, Optional, Union
 from pathlib import Path
 from src.utils.logger import logging
-from src.utils.process_utils import run_command, raw_print_handler, log_info_handler
+from src.utils.process_utils import run_command, log_info_handler
 
 logger = logging.getLogger(__name__)
 

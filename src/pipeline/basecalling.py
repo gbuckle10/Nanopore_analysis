@@ -1,11 +1,9 @@
 import argparse
-import os
-from pathlib import Path
 import logging
 import os
 from pathlib import Path
 
-from src.utils.cli_utils import add_input_file_argument, add_output_dir_argument, create_io_parser
+from src.utils.cli_utils import create_io_parser
 from src.utils.config_utils import get_project_root, resolve_param
 from src.utils.tools_runner import ToolRunner
 

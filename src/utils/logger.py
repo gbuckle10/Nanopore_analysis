@@ -1,11 +1,9 @@
 import logging
 import sys
 
-import colorlog
 from colorlog import ColoredFormatter
 from pathlib import Path
 import re
-import os
 
 class AnsiStrippingFormatter(logging.Formatter):
     """
