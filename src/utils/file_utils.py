@@ -5,7 +5,6 @@ import logging
 import gzip
 import shutil
 
-project_root = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
 
 

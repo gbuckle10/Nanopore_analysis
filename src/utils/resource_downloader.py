@@ -11,8 +11,8 @@ from src.utils.config_utils import resolve_param
 from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.process_utils import run_command
 from src.utils.tools_runner import ToolRunner
+from src import PROJECT_ROOT
 
-project_root = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
 
 
@@ -198,38 +198,6 @@ def final_destination_and_download(url: str, destination: Path, is_interactive: 
             return downloaded_file_path
     else:
         return None
-
-
-def _download_and_index_reference_genome(config):
-    """
-    Downloads the reference genomes with AWS CLI and indexes it with minimap 2.
-    """
-    genome = config['paths']['reference_genome']
-    print(f"--- Setting up reference genome {genome} ---")
-
-    ref_dir = os.path.join(project_root, 'reference_genomes', genome)
-    os.makedirs(ref_dir, exist_ok=True)
-    ref_fasta = os.path.join(ref_dir, config['paths']['reference_genome_fasta_name'])
-    ref_mmi = os.path.join(ref_dir, config['paths']['indexed_ref_gen_fasta_name'])
-
-    if not os.path.exists(ref_fasta):
-        # Maybe we'll hardcode the reference genome urls in this function...
-        ref_url = config['paths']['reference_genome_url']
-        print(f"Reference file {ref_fasta} doesn't exist. Downloading from {ref_url}")
-        run_command([
-            "aws", "c3", "cp", ref_url, ref_fasta, "--no-sign-request"
-        ])
-    else:
-        print("Reference genome already exists.")
-
-    if not os.path.exists(ref_mmi):
-        print("Indexing reference genome with minimap2...")
-        run_command([
-            "minimap2", "-d", ref_mmi, ref_fasta
-        ])
-    else:
-        print(f"Reference genome index already exists.")
-
 
 def download_and_index_reference_genome_wgbs(config):
     """

@@ -62,19 +62,3 @@ def load_config(config_file) -> dict:
         raise FileNotFoundError(f"Config file not found at: {config_file}")
     with open(config_file, 'r') as f:
         return yaml.safe_load(f)
-
-
-def get_project_root() -> Path:
-    """
-    Finds the projects root directory by navigating up from the file's location.
-    """
-
-    current_dir = Path(__file__).resolve().parent
-
-    while current_dir != current_dir.parent:
-        if (current_dir / "config.yaml").is_file():
-            return current_dir
-        # Move up one level
-        current_dir = current_dir.parent
-
-    raise FileNotFoundError("Could not find project root containing 'config.yaml'.")

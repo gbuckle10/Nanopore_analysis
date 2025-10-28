@@ -6,10 +6,9 @@ from pathlib import Path
 from src.utils.cli_utils import create_io_parser
 from src.utils.config_utils import get_project_root, resolve_param
 from src.utils.tools_runner import ToolRunner
-
-project_root = get_project_root()
-CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "runtime_config.yaml")
+from src import PROJECT_ROOT
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
+RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "runtime_config.yaml")
 logger = logging.getLogger(__name__)
 
 

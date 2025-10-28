@@ -6,14 +6,11 @@ from pathlib import Path
 
 from src.utils.cli_utils import create_io_parser
 from src.utils.config_utils import resolve_param
-from src.utils.logger import setup_logger
-from utils.runner import load_config, get_project_root, run_external_command
 
 from src.utils.process_utils import run_command
-
-project_root = get_project_root()
-CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "src", "runtime_config.sh")
+from src import PROJECT_ROOT
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
+RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "src", "runtime_config.sh")
 
 
 def pileup_handler(args, config):

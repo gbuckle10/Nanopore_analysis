@@ -8,13 +8,12 @@ from pathlib import Path
 
 from src.pipeline import basecalling, alignment, deconvolution
 from src.utils import resource_downloader
-from src.utils.config_utils import get_project_root, load_config, deep_merge, resolve_param
-
+from src.utils.config_utils import load_config, deep_merge, resolve_param
 from src.utils.logger import Logger
+from src import PROJECT_ROOT
 
-project_root = get_project_root()
-CONFIG_PATH = os.path.join(project_root, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(project_root, "runtime_config.yaml")
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
+RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "runtime_config.yaml")
 
 COMMAND_MAP = {
     'setup': 'pipeline',
