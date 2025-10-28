@@ -24,6 +24,7 @@ dependencies:
   - matplotlib
   - conda_forge:gxx
   - pysam
+  - tqdm
   - pip
   - pip:
     - pyyaml

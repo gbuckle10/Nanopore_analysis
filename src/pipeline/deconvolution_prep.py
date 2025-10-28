@@ -1,6 +1,4 @@
 import pandas as pd
-import os
-import pybedtools
 import logging
 from pathlib import Path
 import sys

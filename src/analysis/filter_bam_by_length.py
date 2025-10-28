@@ -16,7 +16,7 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
     The default behaviour is to output in the same directory as the input file and to save both above and below.
     :param input_file:
     :param size_cutoff:
-    :param output_file:
+    :param output_dir:
     :return:
     '''
 

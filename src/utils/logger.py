@@ -1,9 +1,9 @@
 import logging
-import colorlog
+import sys
+
 from colorlog import ColoredFormatter
 from pathlib import Path
 import re
-import os
 
 class AnsiStrippingFormatter(logging.Formatter):
     """
@@ -18,82 +18,69 @@ class AnsiStrippingFormatter(logging.Formatter):
 
         # Strip ANSI codes from the result.
         return self.ANSI_ESCAPE_REGEX.sub('', formatted_record)
-def setup_logger(name='pipeline', log_file=None):
+
+class NoTracebackColoredFormatter(ColoredFormatter):
     """
-    Sets up a standardised logger with coloured console output and file output.
-    - If the logger is already configured, it does nothing.
-    - If log_file is provided, it logs to a file in addition to the console.
-    - If log_file is not provided, it logs only to the console.
+    A coloured formatter which suppresses the printing of tracebacks.
     """
-    # Create logger
-    logger = logging.getLogger(name)
 
-    # If the logger already has handlers, it means that it's already been configured.
-    # Therefore, don't add more handlers.
-    if logger.handlers:
-        return
+    def formatException(self, exc_info):
+        """
+        Override regular formatException method, returning an empty string.
+        """
+        return "" # Don't return a traceback.
 
-    logger.setLevel(logging.INFO)
+    def format(self, record):
+        log_message = super().format(record)
 
-    console_handler = logging.StreamHandler()
-    console_formatter = ColoredFormatter(
-        '%(log_color)s%(levelname)-8s%(reset)s %(blue)s%(message)s',
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'red,bg_white',
-        }
-    )
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
+        if record.exc_info:
+            log_message += f"\n  -> Error: {record.exc_info[1]}"
 
-    if log_file:
-        log_path = Path(log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
+        return log_message
+class Logger:
+    @staticmethod
+    def setup_logger(log_level=logging.INFO, log_file=None):
+        """
+        Sets up a standardised logger with coloured console output and file output.
+        - If the logger is already configured, it does nothing.
+        - If log_file is provided, it logs to a file in addition to the console.
+        - If log_file is not provided, it logs only to the console.
+        """
+        # Create logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(log_level)
 
-        file_handler = logging.FileHandler(log_file, mode='w')
+        # If the logger already has handlers, it means that it's already been configured.
+        # Therefore, don't add more handlers.
+        if root_logger.hasHandlers():
+            root_logger.handlers.clear()
 
-        file_formatter = AnsiStrippingFormatter(
-            '%(asctime)s - %(levelname)-8s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+        # The console formatter is just a modified ColoredFormatter without printing stack traces.
+        console_formatter = NoTracebackColoredFormatter(
+            '%(log_color)s%(levelname)-8s - %(message)s%(reset)s',
+            log_colors={
+                'DEBUG': 'cyan',
+                'INFO': 'green',
+                'WARNING': 'yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'red,bg_white',
+            }
         )
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
 
-    '''
-    # Prevent from propagating to the root logger
-    logger.propagate = False
+        console_handler = logging.StreamHandler(sys.stderr) # Errors should go to stderr
+        console_handler.setLevel(log_level)
+        console_handler.setFormatter(console_formatter)
+        root_logger.addHandler(console_handler)
 
-    # Create console handler with colours
-    color_handler = colorlog.StreamHandler()
-    color_format = colorlog.ColoredFormatter(
-        '%(log_color)s%(asctime)s - %(levelname)-8s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        log_colors={
-            'DEBUG':    'cyan',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'bold_red'
-        }
-    )
+        if log_file:
+            log_path = Path(log_file)
+            log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    color_handler.setFormatter(color_format)
+            file_handler = logging.FileHandler(log_file, mode='w')
 
-    # Create file handler
-    log_path = Path(log_file)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.FileHandler(log_file, mode='w')
-    file_format = logging.Formatter(
-        '%(asctime)s - %(levelname)-8s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(file_format)
-
-    if not logger.handlers:
-        logger.addHandler(color_handler)
-        logger.addHandler(file_handler)
-    '''
-    return logger
+            file_formatter = AnsiStrippingFormatter(
+                '%(asctime)s - %(levelname)-8s - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            file_handler.setFormatter(file_formatter)
+            root_logger.addHandler(file_handler)
