@@ -1,62 +1,60 @@
 import argparse
 import logging
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 from src.utils.cli_utils import create_io_parser
 from src.utils.process_utils import run_command
-from src.utils.config_utils import resolve_param
+from src.utils.config_utils import resolve_param, resolve_combined_path
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
 def full_alignment_handler(args,config):
 
-    unaligned_bam = resolve_param(
-        args,
-        config,
-        arg_name='input_file',
-        construct_path=True,
-        config_path=[
-            ['paths', 'basecalled_output_dir'],
-            ['paths', 'unaligned_bam_name']
+    unaligned_bam = resolve_combined_path(
+        args, config, arg_name='input_file', config_path_components=[
+            'paths.basecalled_output_dir',
+            'paths.unaligned_bam_name'
         ]
     )
 
+    if unaligned_bam is None:
+        raise ValueError("Could not determine the path for the unaligned BAM file.")
+
+    print(f"Using unaligned BAM: {unaligned_bam}")
+
     threads = resolve_param(
-        args, config, arg_name='threads', config_path=['parameters', 'general', 'threads']
+        args, config, arg_name='threads', config_path='parameters.general.threads'
     )
 
     reference_index = resolve_param(
-        args, config, arg_name='ref', config_path=['paths', 'indexed_ref_gen_fasta_name']
+        args, config, arg_name='ref', config_path='paths.indexed_ref_gen_fasta_name'
     )
 
     sort_memory_limit = resolve_param(
-        args, config, config_path=['parameters', 'general', 'sort_memory_limit']
+        args, config, config_path='parameters.general.sort_memory_limit'
     )
 
-    # Intermediate aligned sorted bam
-    aligned_bam_file = resolve_param(
-        args, config, construct_path=True,
-        config_path=[
-            ['paths', 'alignment_output_dir'],
-            ['paths', 'aligned_bam_name']
+    aligned_bam_file = resolve_combined_path(
+        args, config, config_path_components=[
+            'paths.alignment_output_dir',
+            'paths.aligned_bam_name'
         ]
     )
 
     dorado_exe = resolve_param(
-        args, config, config_path=['tools', 'dorado']
+        args, config, config_path='tools.dorado'
     )
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
 
-    flagstat_report = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'flagstat_report'],
-            ['paths', 'alignment_flagstat_name']
+    flagstat_report = resolve_combined_path(
+        args, config, arg_name='output_dir',
+        config_path_components=[
+            'paths.flagstat_report',
+            'paths.alignment_flagstat_name'
         ]
     )
 
@@ -64,61 +62,55 @@ def full_alignment_handler(args,config):
 
 
 def alignment_handler(args, config):
-    unaligned_bam = resolve_param(
-        args,
-        config,
-        arg_name='input_file',
-        construct_path=True,
-        config_path=[
-            ['paths', 'basecalled_output_dir'],
-            ['paths', 'unaligned_bam_name']
+    unaligned_bam = resolve_combined_path(
+        args, config, arg_name='input_file', config_path_components=[
+            'paths.basecalled_output_dir',
+            'paths.unaligned_bam_name'
         ]
     )
 
-    aligned_bam_file = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'alignment_output_dir'],
-            ['paths', 'aligned_bam_name']
+    aligned_bam_file = resolve_combined_path(
+        args, config, arg_name='output_dir', config_path_components=[
+            'paths.alignment_output_dir',
+            'paths.aligned_bam_name'
         ]
     )
 
     threads = resolve_param(
-        args, config, arg_name='threads', config_path=['parameters', 'general', 'threads']
+        args, config, arg_name='threads', config_path='parameters.general.threads'
     )
 
     reference_index = resolve_param(
-        args, config, arg_name='ref', config_path=['paths', 'indexed_ref_gen_fasta_name']
+        args, config, arg_name='ref', config_path='paths.indexed_ref_gen_fasta_name'
     )
 
     sort_memory_limit = resolve_param(
-        args, config, config_path=['parameters', 'general', 'sort_memory_limit']
+        args, config, config_path='parameters.general.sort_memory_limit'
     )
 
     dorado_exe = resolve_param(
-        args, config, config_path=['tools', 'dorado']
+        args, config, config_path='tools.dorado'
     )
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
 
 def qc_handler(args, config):
-    aligned_sorted_file = resolve_param(
-        args, config, arg_name="input_file", construct_path=True,
-        config_path=[
-            ['paths', 'alignment_output_dir'],
-            ['paths', 'aligned_bam_name']
+    aligned_bam_file = resolve_combined_path(
+        args, config, arg_name='input_file', config_path_components=[
+            'paths.alignment_output_dir',
+            'paths.aligned_bam_name'
         ]
     )
 
-    flagstat_report = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'flagstat_report'],
-            ['paths', 'alignment_flagstat_name']
+    flagstat_report = resolve_combined_path(
+        args, config, arg_name='output_dir',
+        config_path_components=[
+            'paths.flagstat_report',
+            'paths.alignment_flagstat_name'
         ]
     )
 
-    run_qc_command(aligned_sorted_file, flagstat_report)
+    run_qc_command(aligned_bam_file, flagstat_report)
 
 
 def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads):
