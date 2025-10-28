@@ -1,14 +1,43 @@
+import argparse
 import collections
 import logging
 import os
+from functools import reduce
 from pathlib import Path
-
+from .config import AppSettings
 import yaml
 
-def resolve_param(args, config, arg_name=None, config_path=None, construct_path=False):
+def resolve_combined_path(args: argparse.Namespace, config: AppSettings, arg_name: str, config_path_components: List[str]):
+    """
+    Resolved a path, prioritising a single CLI override argument.
+    If no CLI override is present, it constructs the path from config components.
+    """
+    cli_path = resolve_param(args, config, arg_name=arg_name)
+
+    # If there is a cli override, just return that value
+    if cli_path:
+        return Path(cli_path)
+
+    path_parts = []
+    for component_path in config_path_components:
+        # Get each part of the config ONLY
+        part = resolve_param(args, config, arg_name=None, config_path=component_path)
+        if part is None:
+            # If any part is missing, we can't construct the path.
+            return None
+        path_parts.append(str(part))
+
+    # Join the parts into a single path.
+    if path_parts:
+        return Path(*path_parts)
+
+    # If there are no path_parts, return None
+    return None
+
+def resolve_param(args: argparse.Namespace, config: AppSettings, arg_name=None, config_path=None):
     """
     Get a parameter from the command line, if provided. Otherwise, find it at the provided
-    config location.
+    config location. Values are taken from Pydantic AppSettings objects.
     """
 
     # If the CLI value is given, then we just return that.
@@ -17,28 +46,19 @@ def resolve_param(args, config, arg_name=None, config_path=None, construct_path=
         if cli_value is not None:
             return cli_value
 
-    if not config_path:
-        return None # No config path to check
+    # If no CLI value, or no arg_name was given, check the config.
+    if config_path:
+        try:
+            keys = config_path.split('.')
+            config_value = reduce(getattr, keys, config)
+            return config_value
+        except AttributeError:
+            # The path didn't exist in the config, but it won't cause an error.
+            pass
 
-    # Look in the config file
-    try:
-        if construct_path:
-            path_components = []
-            for path_keys in config_path:
-                current_level = config
-                for key in path_keys:
-                    current_level = current_level[key]
-                path_components.append(str(current_level))
-            return os.path.join(*path_components)
-        else:
-            current_level = config
-            for key in config_path:
-                current_level = current_level[key]
-            return current_level
+    # Default to None
+    return None
 
-    except (KeyError, TypeError) as e:
-        print(f"Warning: Could not resolve '{arg_name}' from config. Missing key: {e}")
-        return None
 def deep_merge(d1, d2):
     """
     Recursively merges 2 dictionaries. Values from
