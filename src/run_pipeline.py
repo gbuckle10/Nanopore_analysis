@@ -2,14 +2,12 @@
 import argparse
 import logging
 import os
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-import traceback
 
 from src.pipeline import basecalling, alignment, deconvolution
-from src.utils import logger, resource_downloader
+from src.utils import resource_downloader
 from src.utils.config_utils import get_project_root, load_config, deep_merge, resolve_param
 
 from src.utils.logger import Logger
