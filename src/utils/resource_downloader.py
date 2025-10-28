@@ -11,7 +11,6 @@ from src.utils.config_utils import resolve_param
 from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.process_utils import run_command
 from src.utils.tools_runner import ToolRunner
-from src import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 

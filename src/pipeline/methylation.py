@@ -8,9 +8,6 @@ from src.utils.cli_utils import create_io_parser
 from src.utils.config_utils import resolve_param
 
 from src.utils.process_utils import run_command
-from src import PROJECT_ROOT
-CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "src", "runtime_config.sh")
 
 
 def pileup_handler(args, config):

@@ -9,10 +9,7 @@ from src.utils.cli_utils import create_io_parser
 from src.utils.process_utils import run_command
 from src.utils.config_utils import resolve_param
 from src.utils.tools_runner import ToolRunner
-from src import PROJECT_ROOT
 
-CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "src", "runtime_config.sh")
 logger = logging.getLogger(__name__)
 
 def full_alignment_handler(args,config):

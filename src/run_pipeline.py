@@ -12,8 +12,8 @@ from src.utils.config_utils import load_config, deep_merge, resolve_param
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
 
-CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "runtime_config.yaml")
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+DEFAULT_RUNTIME_CONFIG_PATH = PROJECT_ROOT / "runtime_config.yaml"
 
 COMMAND_MAP = {
     'setup': 'pipeline',
@@ -73,14 +73,14 @@ def main():
     parent_parser.add_argument(
         '-u', '--user-config',
         type=Path,
-        default=CONFIG_PATH,
-        help=f"Path to the user config file. Default = {CONFIG_PATH}"
+        default=DEFAULT_CONFIG_PATH,
+        help=f"Path to the user config file. Default = {DEFAULT_CONFIG_PATH}"
     )
     parent_parser.add_argument(
         '-r', '--runtime-config',
         type=Path,
-        default=RUNTIME_CONFIG_PATH,
-        help=f"Path to the runtime config file. Default = {RUNTIME_CONFIG_PATH}"
+        default=DEFAULT_RUNTIME_CONFIG_PATH,
+        help=f"Path to the runtime config file. Default = {DEFAULT_RUNTIME_CONFIG_PATH}"
     )
     parent_parser.add_argument(
         '--debug', action='store_true', help="Enable debug mode. Show full tracebacks on the console."
@@ -94,7 +94,6 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         parents=[parent_parser]
     )
-
 
     subparsers = parser.add_subparsers(dest='command', help='Available command groups')
 

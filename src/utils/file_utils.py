@@ -8,7 +8,7 @@ import shutil
 logger = logging.getLogger(__name__)
 
 
-def decompress_file(file_path: Path, delete_original: bool=True):
+def decompress_file(file_path: Path, delete_original: bool = True):
     """
     Decompresses a .gz or .zip file.
     """
@@ -23,7 +23,7 @@ def decompress_file(file_path: Path, delete_original: bool=True):
         logger.info(f"Decompressed to {output_path}")
     elif suffix == '.zip':
         logger.info(f"'{file_path.name}' is a .zip file, so we'll unzip it.")
-        output_path = file_path.parent # .zip files extract into a directory
+        output_path = file_path.parent  # .zip files extract into a directory
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
             zip_ref.extractall(output_path)
         logger.info(f"Extracted contacts of {file_path.name} to {output_path}")
@@ -36,6 +36,8 @@ def decompress_file(file_path: Path, delete_original: bool=True):
         logger.info(f"Deleted original file: {file_path.name}")
 
     return output_path
+
+
 def ensure_dir_exists(dir_path: Path, interactive: bool = False) -> bool:
     """
     Checks whether a given directory exists. If in interactive mode, it will prompt the user to create the directory

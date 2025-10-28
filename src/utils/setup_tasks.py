@@ -11,9 +11,6 @@ import requests
 import tarfile
 import yaml
 
-CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
-RUNTIME_CONFIG_PATH = os.path.join(PROJECT_ROOT, "src", "runtime_config.yaml")
-
 
 def download_file(url, destination):
     print(f"Downloading from {url} to {destination}")
