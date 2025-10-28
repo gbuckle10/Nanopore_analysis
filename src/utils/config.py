@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import collections
+
 import yaml
 from pathlib import Path
 from typing import Optional, Any, Dict, List
@@ -86,26 +88,26 @@ class Paths(BaseModel):
     full_atlas_url: AnyUrl
 
     # Raw data
-    fast5_input_dir: str
-    pod5_dir: str
+    fast5_input_dir: Path
+    pod5_dir: Path
     pod5_name: str
 
     # Step 1: Basecalling output
-    basecalled_output_dir: str
-    demultiplexed_output_dir: str
+    basecalled_output_dir: Path
+    demultiplexed_output_dir: Path
 
     # Step 2: Alignment output
-    alignment_output_dir: str
-    qc_dir: str
+    alignment_output_dir: Path
+    qc_dir: Path
     indexed_ref_gen_fasta_name: str
     unaligned_bam_name: str
     aligned_bam_name: str
     alignment_flagstat_name: str
     alignment_stats_name: str
-    reference_genome_dir: str
+    reference_genome_dir: Path
 
     # Step 3: Methylation summary outputs
-    methylation_dir: str
+    methylation_dir: Path
     methylation_bed_name: str
     methylation_log_file: str
 
@@ -125,4 +127,42 @@ class Paths(BaseModel):
     processed_illumina_manifest: str
     deconvolution_results: str
     uxm_atlas_name: str
+
+class AppSettings(BaseModel):
+    parameters: Parameters
+    paths: Paths
+
+def load_config_from_yaml(config_file: Path) -> AppSettings:
+    """
+    Loads, validates and returns the application settings from a YAML file.
+    """
+    if not config_file.is_file():
+        raise FileNotFoundError(f"Configuration file not found at {config_file}")
+
+    try:
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+        if not config_data:
+            raise ValueError("Config file is empty or invalid.")
+        return AppSettings(**config_data)
+    except ValidationError as e:
+        raise ValueError(f"Configuration error in '{config_file}':\n{e}")
+    except Exception as e:
+        raise ValueError(f"Failed to load or parse config '{config_file}': {e}")
+
+def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recursively merges 2 dictionaries. Values from d1 will overwrite d2.
+
+    This is used to combine config.yaml and runtime_config.yaml. runtime_config.yaml
+    overwrites config.yaml.
+    """
+
+    for k, v in d1.items():
+        if k in d2 and isinstance(d2[k], dict) and isinstance(v, collections.abc.Mapping):
+            deep_merge(v, d2[k])
+        else:
+            d2[k] = v
+
+    return d2
 
