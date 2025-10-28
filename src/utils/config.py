@@ -5,7 +5,7 @@ import collections
 import yaml
 from pathlib import Path
 from typing import Optional, Any, Dict, List, Literal
-from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
+from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
 
 
 class GeneralParameters(BaseModel):
@@ -32,19 +32,38 @@ class BasecallingMethodExplicit(BaseModel):
 
 class BasecallingParameters(BaseModel):
     # Use EITHER the model complex OR the explicit base/mod model names
+
+    # In the end, this will be where the dorado command building happens. That's for the future though.
     method: Literal["complex", "explicit"]
     complex_settings: BasecallingMethodComplex
     explicit_settings: BasecallingMethodExplicit
 
-    model_speed: Optional[str] = None
-    kit_name: Optional[str] = None
-    basecalling_modifications: Optional[str] = None
-
-    base_model_name: Optional[str] = None
-    mod_model_name: Optional[str] = None
-
     # Other settings
     batch_size: int
+
+    @computed_field
+    @property
+    def resolved_base_model(self) -> str:
+        """Returns the final base model name"""
+        if self.method == 'complex':
+            if self.complex_settings.basecalling_modifications:
+                base_model = f"{self.complex_settings.kit_name}_{self.complex_settings.model_speed}.cfg"
+                return f"{base_model}_{self.complex_settings.basecalling_modifications}"
+            return None
+        else:
+            return self.explicit_settings.base_model_name
+
+    @computed_field
+    @property
+    def resolved_mod_model(self) -> str:
+        """Returns the final base model name"""
+        if self.method == 'complex':
+            if self.complex_settings.basecalling_modifications:
+                base_model = f"{self.complex_settings.kit_name}_{self.complex_settings.model_speed}.cfg"
+                return f"{base_model}_{self.complex_settings.basecalling_modifications}"
+            return None
+        else:
+            return self.explicit_settings.mod_model_name
 
 
 class AnalysisParameters(BaseModel):
@@ -68,6 +87,9 @@ class Submodules(BaseModel):
     uxm_dir: Path
     wgbstools_dir: Path
     meth_atlas_dir: Path
+    uxm_exe: Path
+    wgbstools_exe: Path
+    methatlas_exe: Path
 
 
 class Paths(BaseModel):
@@ -124,29 +146,13 @@ class Paths(BaseModel):
     uxm_atlas_name: str
 
 
+class Tools(BaseModel):
+    dorado: str
+
 class AppSettings(BaseModel):
     parameters: Parameters
     paths: Paths
-
-
-def load_config_from_yaml(config_file: Path) -> AppSettings:
-    """
-    Loads, validates and returns the application settings from a YAML file.
-    """
-    if not config_file.is_file():
-        raise FileNotFoundError(f"Configuration file not found at {config_file}")
-
-    try:
-        with open(config_file, 'r') as f:
-            config_data = yaml.safe_load(f)
-        if not config_data:
-            raise ValueError("Config file is empty or invalid.")
-        return AppSettings(**config_data)
-    except ValidationError as e:
-        raise ValueError(f"Configuration error in '{config_file}':\n{e}")
-    except Exception as e:
-        raise ValueError(f"Failed to load or parse config '{config_file}': {e}")
-
+    tools: Tools
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """
