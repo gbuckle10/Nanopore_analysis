@@ -6,6 +6,8 @@ from pathlib import Path
 from src.utils.cli_utils import create_io_parser
 from src.utils.config_utils import resolve_param
 from src.utils.tools_runner import ToolRunner
+from src.utils.file_utils import ensure_dir_exists
+
 logger = logging.getLogger(__name__)
 
 
@@ -147,7 +149,7 @@ def run_demultiplex(dorado_exe, input_file, output_dir):
     demux_cmd = [
         # "dorado",
         "demux",
-        #"--output-dir", "analysis/demultiplexed",
+        # "--output-dir", "analysis/demultiplexed",
         "--kit-name", "SQK-NBD114-24",
         input_file
     ]
@@ -159,13 +161,13 @@ def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name
     basecalling_cmd = ["basecaller",
                        f"{model_speed},{modifications}",
                        str(pod5_input),
-                       # "--kit-name", kit_name,
+                       "--kit-name", kit_name,
                        "--no-trim",
                        "--batchsize", batchsize
                        ]
 
     dorado_runner = ToolRunner(dorado_exe)
-
+    ensure_dir_exists(Path(output_file).parent)
     dorado_runner.run(basecalling_cmd, output_file)
 
 
