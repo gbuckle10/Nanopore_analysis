@@ -8,14 +8,48 @@ from typing import Optional, Any, Dict, List, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
 
 
-class GeneralParameters(BaseModel):
+class Globals(BaseModel):
     threads: int = 4
     sort_memory_limit: str = "2G"
 
 
-class SetupParameters(BaseModel):
-    dorado_version: str
-    num_fast5_files: int
+class RunSteps(BaseModel):
+    basecalling: bool = False
+    align: bool = False
+    methylation_summary: bool = False
+    deconvolution: bool = False
+
+
+class RunSetupTasks(BaseModel):
+    download_fast5_data: bool = False
+    convert_fast5_to_pod5: bool = False
+
+
+class PipelineControl(BaseModel):
+    run_steps: RunSteps
+    run_setup_tasks: RunSetupTasks
+
+
+class SetupDownloads(BaseModel):
+    fast5_download_url: AnyUrl
+    reference_genome_url: AnyUrl
+    uxm_atlas_url: AnyUrl
+    manifest_url: AnyUrl
+    full_atlas_url: AnyUrl
+
+
+class SetupPaths(BaseModel):
+    fast5_input_dir: Path
+    pod5_dir: Path
+    pod5_name: str
+    reference_genome_dir: Path
+    reference_genome_name: str
+
+
+class SetupStep(BaseModel):
+    params: dict
+    downloads: SetupDownloads
+    paths: SetupPaths
 
 
 class BasecallingMethodComplex(BaseModel):
@@ -30,7 +64,7 @@ class BasecallingMethodExplicit(BaseModel):
     mod_model_name: Optional[str] = None
 
 
-class BasecallingParameters(BaseModel):
+class BasecallingParams(BaseModel):
     # Use EITHER the model complex OR the explicit base/mod model names
 
     # In the end, this will be where the dorado command building happens. That's for the future though.
@@ -66,24 +100,46 @@ class BasecallingParameters(BaseModel):
             return self.explicit_settings.mod_model_name
 
 
-class AnalysisParameters(BaseModel):
+class BasecallingPaths(BaseModel):
+    basecalled_output_dir: Path
+    demultiplexed_output_dir: Path
+    unaligned_bam_name: Path
+
+
+class BasecallingStep(BaseModel):
+    params: BasecallingParams
+    paths: BasecallingPaths
+
+
+class AlignmentPaths(BaseModel):
+    alignment_output_dir: Path
+    qc_dir: Path
+    indexed_ref_gen_fasta_name: str
+    aligned_bam_name: str
+    alignment_flagstat_name: str
+    alignment_stats_name: str
+
+
+class AlignmentStep(BaseModel):
+    paths: AlignmentPaths
+
+
+class MethylationPaths(BaseModel):
+    methylation_dir: Path
+    methylation_bed_name: str
+    methylation_log_file: str
+
+
+class MethylationStep(BaseModel):
+    paths: MethylationPaths
+
+
+class AnalysisParams(BaseModel):
     methylation_aggregation_chunksize: int
     deconv_algorithm: str
 
 
-class Parameters(BaseModel):
-    """ Container for all tool parameters """
-    general: GeneralParameters
-    setup: SetupParameters
-    basecalling: BasecallingParameters
-    analysis: AnalysisParameters
-
-
-# ==================================================
-# Pydantic tools for 'paths' section of config.yaml
-# ==================================================
-
-class Submodules(BaseModel):
+class AnalysisTools(BaseModel):
     uxm_dir: Path
     wgbstools_dir: Path
     meth_atlas_dir: Path
@@ -92,43 +148,7 @@ class Submodules(BaseModel):
     methatlas_exe: Path
 
 
-class Paths(BaseModel):
-    """ Container for all file and directory paths. """
-    core_directories: List[Path]
-    submodules: Submodules
-
-    # External download urls
-    fast5_download_url: AnyUrl
-    reference_genome_url: AnyUrl
-    uxm_atlas_url: AnyUrl
-    manifest_url: AnyUrl
-    full_atlas_url: AnyUrl
-
-    # Raw data
-    fast5_input_dir: Path
-    pod5_dir: Path
-    pod5_name: str
-
-    # Step 1: Basecalling output
-    basecalled_output_dir: Path
-    demultiplexed_output_dir: Path
-
-    # Step 2: Alignment output
-    alignment_output_dir: Path
-    qc_dir: Path
-    indexed_ref_gen_fasta_name: str
-    unaligned_bam_name: str
-    aligned_bam_name: str
-    alignment_flagstat_name: str
-    alignment_stats_name: str
-    reference_genome_dir: Path
-
-    # Step 3: Methylation summary outputs
-    methylation_dir: Path
-    methylation_bed_name: str
-    methylation_log_file: str
-
-    # Step 4: Analysis and Deconvolution outputs
+class AnalysisPaths(BaseModel):
     analysis_dir: Path
     atlas_dir: Path
     deconvolution_dir: Path
@@ -146,13 +166,29 @@ class Paths(BaseModel):
     uxm_atlas_name: str
 
 
+class AnalysisStep(BaseModel):
+    params: AnalysisParams
+    tools: AnalysisTools
+    paths: AnalysisPaths
+
+
+class PipelineSteps(BaseModel):
+    setup: SetupStep
+    basecalling: BasecallingStep
+    alignment: AlignmentStep
+    methylation: MethylationStep
+    analysis: AnalysisStep
+
+
 class Tools(BaseModel):
     dorado: str
 
+
 class AppSettings(BaseModel):
-    parameters: Parameters
-    paths: Paths
-    tools: Tools
+    globals: Globals
+    pipeline_control: PipelineControl
+    pipeline_steps: PipelineSteps
+
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """

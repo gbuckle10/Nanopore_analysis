@@ -9,11 +9,10 @@ globals:
 
 pipeline_control:
   run_steps:
-    #- basecalling
-    - align
-    #- methylation_summary
-    #- deconvolution_prep
-    #- deconvolution
+    - basecalling: false
+    - align: false
+    - methylation_summary: false
+    - deconvolution: false
 
   run_setup_tasks:
     download_fast5_data: false
@@ -26,6 +25,7 @@ pipeline_steps:
   setup:
     params:
       dorado_version: "0.9.6"
+      num_fast5_files: "2"
     downloads:
       fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
       reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
@@ -71,7 +71,6 @@ pipeline_steps:
       alignment_output_dir: "data/alignment_output/"
       qc_dir: "data/alignment_qc/"
       indexed_ref_gen_fasta_name: "hg38.fa"
-
       aligned_bam_name: "taken_alignment.sorted.bam"
       alignment_flagstat_name: "alignment.flagstat.txt"
       alignment_stats_name: "alignment.stats.txt"
@@ -112,16 +111,4 @@ pipeline_steps:
       processed_illumina_manifest: "illumina_manifest.parquet"
       deconvolution_results: "deconvoluted_output.csv"
       uxm_atlas_name: "UXM_atlas.tsv"
-
-
-# ========================================================
-# Parameters
-# Contains all of the variables and settings for tools.
-# ========================================================
-parameters:
-  general:
-    threads: "4"
-    sort_memory_limit: "2G"
-
-  analysis:
 
