@@ -5,7 +5,7 @@ import collections
 import yaml
 from pathlib import Path
 from typing import Optional, Any, Dict, List
-from pydantic import BaseModel, ValidationError, AnyUrl
+from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
 
 
 class GeneralParameters(BaseModel):
@@ -166,3 +166,30 @@ def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
 
     return d2
 
+def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> AppSettings:
+    """
+    Loads two YAML config files (runtime_config.yaml and config.yaml), deep-merges them, and validates them with
+    Pydantic. The config in the second position will override values from the config in the first position.
+    """
+
+    # Load the YAML files into dictionaries
+    try:
+        with open(config_path, 'r') as f:
+            user_config_data = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Base config file not found: {config_path}")
+
+    try:
+        with open(runtime_config_path, 'r') as f:
+            runtime_config_data = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Base config file not found: {config_path}")
+
+    # Do the deep merge (on a copy of the config data so we don't change in-place)
+    config_data = deep_merge(runtime_config_data, user_config_data.copy())
+
+    # Validate the final merged dictionary with Pydantic
+    try:
+        return AppSettings(**config_data)
+    except ValidationError as e:
+        raise ValueError(f"Configuration error after merging configs:\n{e}")

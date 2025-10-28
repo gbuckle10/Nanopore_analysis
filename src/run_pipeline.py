@@ -8,6 +8,7 @@ from pathlib import Path
 
 from src.pipeline import basecalling, alignment, deconvolution
 from src.utils import resource_downloader
+from src.utils.config import load_and_validate_configs
 from src.utils.config_utils import load_config, deep_merge, resolve_param
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
@@ -115,9 +116,13 @@ def main():
     args = parser.parse_args()
 
     # Load config
-    user_config = load_config(args.user_config)
-    runtime_config = load_config(args.runtime_config)
-    config = deep_merge(user_config, runtime_config)
+    try:
+        config = load_and_validate_configs(
+            args.user_config, args.runtime_config
+        )
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading configuration: {e}", file=sys.stderr)
+        sys.exit(1)
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO
