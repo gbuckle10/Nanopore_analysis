@@ -4,20 +4,24 @@ import logging
 import os
 from functools import reduce
 from pathlib import Path
+from typing import List
+
 from .config import AppSettings
 import yaml
 
-def resolve_combined_path(args: argparse.Namespace, config: AppSettings, arg_name: str, config_path_components: List[str]):
+def resolve_combined_path(args: argparse.Namespace, config: AppSettings, config_path_components: List[str], arg_name: str = None):
     """
     Resolved a path, prioritising a single CLI override argument.
     If no CLI override is present, it constructs the path from config components.
     """
-    cli_path = resolve_param(args, config, arg_name=arg_name)
+    # Check for CLI override, but only if an arg_name was provided.
+    if arg_name:
+        cli_path = resolve_param(args, config, arg_name=arg_name)
+        # If there is a cli override, just return that value
+        if cli_path:
+            return Path(cli_path)
 
-    # If there is a cli override, just return that value
-    if cli_path:
-        return Path(cli_path)
-
+    # If no CLI override was found, construct from the config.
     path_parts = []
     for component_path in config_path_components:
         # Get each part of the config ONLY
