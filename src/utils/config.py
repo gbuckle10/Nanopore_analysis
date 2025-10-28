@@ -4,7 +4,7 @@ import collections
 
 import yaml
 from pathlib import Path
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
 
 
@@ -18,39 +18,33 @@ class SetupParameters(BaseModel):
     num_fast5_files: int
 
 
-class BasecallingParameters(BaseModel):
-    # Use EITHER the model complex OR the explicit base/mod model names
-    # Method A: Model complex
-    model_speed: Optional[str] = None
+class BasecallingMethodComplex(BaseModel):
+    """Settings for the model complex selection method"""
+    model_speed: str
     basecalling_modifications: Optional[str] = None
     kit_name: Optional[str] = None
 
-    # Method B: Explicit Model Names
+
+class BasecallingMethodExplicit(BaseModel):
+    base_model_name: str
+    mod_model_name: Optional[str] = None
+
+
+class BasecallingParameters(BaseModel):
+    # Use EITHER the model complex OR the explicit base/mod model names
+    method: Literal["complex", "explicit"]
+    complex_settings: BasecallingMethodComplex
+    explicit_settings: BasecallingMethodExplicit
+
+    model_speed: Optional[str] = None
+    kit_name: Optional[str] = None
+    basecalling_modifications: Optional[str] = None
+
     base_model_name: Optional[str] = None
     mod_model_name: Optional[str] = None
 
     # Other settings
     batch_size: int
-
-    @model_validator(mode='after')
-    def check_excusive_basecalling_methods(self) -> 'BasecallingParameters':
-        """ Validate that only one basecalling method is specified (model complex or explicit model name) """
-        method_a_vars = [self.model_speed, self.basecalling_modifications, self.kit_name]
-        method_b_vars = [self.base_model_name, self.mod_model_name]
-
-        use_method_a = any(variable is not None for variable in method_a_vars)
-        use_method_b = any(variable is not None for variable in method_b_vars)
-
-        if use_method_a and use_method_b:
-            raise ValueError(
-                "Configuration Error: Cannot specify both 'model_speed'/'kit_name' (Method A) and "
-                "'base_model_name'/'mod_model_name' (Method B). Please choose a single method for basecalling."
-            )
-        if not use_method_a and not use_method_b:
-            raise ValueError(
-                "Configuration Error: Must specify a basecalling method."
-            )
-        return self
 
 
 class AnalysisParameters(BaseModel):
@@ -74,6 +68,7 @@ class Submodules(BaseModel):
     uxm_dir: Path
     wgbstools_dir: Path
     meth_atlas_dir: Path
+
 
 class Paths(BaseModel):
     """ Container for all file and directory paths. """
@@ -128,9 +123,11 @@ class Paths(BaseModel):
     deconvolution_results: str
     uxm_atlas_name: str
 
+
 class AppSettings(BaseModel):
     parameters: Parameters
     paths: Paths
+
 
 def load_config_from_yaml(config_file: Path) -> AppSettings:
     """
@@ -150,6 +147,7 @@ def load_config_from_yaml(config_file: Path) -> AppSettings:
     except Exception as e:
         raise ValueError(f"Failed to load or parse config '{config_file}': {e}")
 
+
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """
     Recursively merges 2 dictionaries. Values from d1 will overwrite d2.
@@ -165,6 +163,7 @@ def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
             d2[k] = v
 
     return d2
+
 
 def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> AppSettings:
     """

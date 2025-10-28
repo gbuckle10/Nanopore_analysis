@@ -33,13 +33,17 @@ parameters:
   basecalling:
     # Use EITHER the model complex OR the explicit base/mod model names
     # Method A: Model Complex
-    model_speed: "fast"
-    basecalling_modifications: "5mCG_5hmCG"
-    kit_name: "SQK-NBD114-24"
+    method: "complex"
+
+    complex_settings:
+      model_speed: "fast"
+      basecalling_modifications: "5mCG_5hmCG"
+      kit_name: "SQK-NBD114-24"
 
     # Method B: Explicit Model Names
-    base_model_name: "dna_r9.4.1_e8_sup@v3.3"
-    mod_model_name: "dna_r9.4.1_e8_sup@v3.3_5mCG_5hmCG@v0"
+    explicit_settings:
+      base_model_name: "dna_r9.4.1_e8_sup@v3.3"
+      mod_model_name: "dna_r9.4.1_e8_sup@v3.3_5mCG_5hmCG@v0"
 
     # Other basecalling settings
     batch_size: "64"
