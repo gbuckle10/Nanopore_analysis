@@ -40,8 +40,6 @@ class SetupDownloads(BaseModel):
 
 class SetupPaths(BaseModel):
     fast5_input_dir: Path
-    pod5_dir: Path
-    pod5_name: str
     reference_genome_dir: Path
     reference_genome_name: str
 
@@ -104,6 +102,8 @@ class BasecallingPaths(BaseModel):
     basecalled_output_dir: Path
     demultiplexed_output_dir: Path
     unaligned_bam_name: Path
+    pod5_dir: Path
+    pod5_name: str
 
 
 class BasecallingStep(BaseModel):

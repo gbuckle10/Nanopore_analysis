@@ -9,10 +9,10 @@ globals:
 
 pipeline_control:
   run_steps:
-    - basecalling: false
-    - align: false
-    - methylation_summary: false
-    - deconvolution: false
+    basecalling: false
+    align: false
+    methylation_summary: false
+    deconvolution: false
 
   run_setup_tasks:
     download_fast5_data: false
@@ -34,8 +34,6 @@ pipeline_steps:
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
       fast5_input_dir: "data/fast5_input/"
-      pod5_dir: "data/pod5_output/"
-      pod5_name: "all_pods.pod5"
       reference_genome_dir: "reference_genomes/"
       reference_genome_name: "hg38.fa"
 
@@ -59,6 +57,8 @@ pipeline_steps:
       # Other basecalling settings
       batch_size: "64"
     paths:
+      pod5_dir: "data/pod5_output/"
+      pod5_name: "all_pods.pod5"
       basecalled_output_dir: "data/basecalled_output/"
       demultiplexed_output_dir: "data/demultiplexed_output/"
       unaligned_bam_name: "wowowtest.bam"

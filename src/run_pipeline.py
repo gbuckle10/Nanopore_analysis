@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.pipeline import basecalling, alignment, deconvolution
+from src.pipeline import basecalling, alignment, deconvolution, methylation
 from src.utils import resource_downloader
 from src.utils.config import load_and_validate_configs
 from src.utils.config_utils import load_config, deep_merge, resolve_param
@@ -33,6 +33,7 @@ COMMAND_MAP = {
     'download': 'src/utils/resource_downloader.py'
 }
 
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -44,16 +45,20 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print("\nFATAL ERROR: The application has crashed unexpectedly.", file=sys.stderr)
     print(f"Error Type: {exc_type.__name__}", file=sys.stderr)
     print("Please see the log file for the full technical traceback.", file=sys.stderr)
+
+
 def run_full_pipeline(args, config):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
         'basecalling': basecalling.full_basecalling_handler,
-        'align': alignment.full_alignment_handler
+        'align': alignment.full_alignment_handler,
+        'methylation': methylation.pileup_handler,
+        'deconvolution': deconvolution.deconvolution_handler
     }
 
     active_steps = resolve_param(
-        args, config, config_path=['pipeline_control', 'run_steps']
+        args, config, config_path='pipeline_control.run_steps'
     )
 
     if not active_steps:
@@ -142,7 +147,6 @@ def main():
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
             sys.exit(1)
-
 
 
 if __name__ == '__main__':
