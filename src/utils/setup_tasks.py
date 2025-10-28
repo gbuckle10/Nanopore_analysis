@@ -167,8 +167,7 @@ def main(argv=None):
 
     if args.command in ['all', 'submodules']:
         submodule_paths = setup_submodules(config)
-        runtime_config.setdefault('paths', {}).setdefault('submodules', {}).update(submodule_paths)
-
+        runtime_config.setdefault('pipeline_steps', {}).setdefault('analysis', {}).setdefault('tools', {}).update(submodule_paths)
     print(">>> Writing updated runtime_config.yaml...")
     with open('runtime_config.yaml', 'w') as f:
         yaml.dump(runtime_config, f, sort_keys=False)

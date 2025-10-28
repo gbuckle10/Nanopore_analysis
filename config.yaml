@@ -3,10 +3,10 @@
 # ========================================================
 conda_env_name: "nanopore_analysis"
 
-# ========================================================
-# pipeline Control
-# High-level control over which steps are to be done.
-# ========================================================
+globals:
+  threads: "4"
+  sort_memory_limit: "2G"
+
 pipeline_control:
   run_steps:
     #- basecalling
@@ -19,6 +19,101 @@ pipeline_control:
     download_fast5_data: false
     convert_fast5_to_pod5: true
 
+pipeline_steps:
+  # ---------------
+  # Step 0: Setup
+  # ---------------
+  setup:
+    params:
+      dorado_version: "0.9.6"
+    downloads:
+      fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
+      reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
+      uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
+      manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
+      full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
+    paths:
+      fast5_input_dir: "data/fast5_input/"
+      pod5_dir: "data/pod5_output/"
+      pod5_name: "all_pods.pod5"
+      reference_genome_dir: "reference_genomes/"
+      reference_genome_name: "hg38.fa"
+
+  # --------------------
+  # Step 1: Basecalling
+  # --------------------
+  basecalling:
+    params:
+      method: "complex"
+
+      complex_settings:
+        model_speed: "fast"
+        basecalling_modifications: "5mCG_5hmCG"
+        kit_name: "SQK-NBD114-24"
+
+      # Method B: Explicit Model Names
+      explicit_settings:
+        base_model_name: "dna_r9.4.1_e8_sup@v3.3"
+        mod_model_name: "dna_r9.4.1_e8_sup@v3.3_5mCG_5hmCG@v0"
+
+      # Other basecalling settings
+      batch_size: "64"
+    paths:
+      basecalled_output_dir: "data/basecalled_output/"
+      demultiplexed_output_dir: "data/demultiplexed_output/"
+      unaligned_bam_name: "wowowtest.bam"
+
+  # -------------------------
+  # Step 2: Alignment
+  # -------------------------
+  alignment:
+    paths:
+      alignment_output_dir: "data/alignment_output/"
+      qc_dir: "data/alignment_qc/"
+      indexed_ref_gen_fasta_name: "hg38.fa"
+
+      aligned_bam_name: "taken_alignment.sorted.bam"
+      alignment_flagstat_name: "alignment.flagstat.txt"
+      alignment_stats_name: "alignment.stats.txt"
+
+  # -------------------------------
+  # Step 3: Methylation Summary
+  # -------------------------------
+  methylation:
+    paths:
+      methylation_dir: "data/methylation/"
+      methylation_bed_name: "comfy.bed"
+      methylation_log_file: "pileup_wowow.log"
+
+  # ------------------------------------
+  # Step 4: Deconvolution and Analysis
+  # ------------------------------------
+  analysis:
+    params:
+      methylation_aggregation_chunksize: '5000000'
+      deconv_algorithm: "uxm"
+    tools:
+      uxm_dir: "externals/UXM_deconv"
+      wgbstools_dir: "externals/wgbs_tools"
+      meth_atlas_dir: "externals/meth_atlas"
+    paths:
+      analysis_dir: "analysis/"
+      atlas_dir: "data/atlas/"
+      deconvolution_dir: "analysis/deconvolution/"
+      file_for_deconvolution_ilmn: "deconvolution_illumina.csv"
+      file_for_deconvolution_gc: "deconvolution_geco.csv"
+      file_for_deconvolution_uxm: "deconvolution_uxm.csv"
+      file_to_deconvolute: "deconvolution_uxm.csv"
+      atlas_file_ilmn: "full_atlas.csv"
+      atlas_file_gc: "full_atlas_gc.csv"
+      atlas_file_uxm: "UXM_atlas_deconvolution.csv"
+      atlas_file_name: "UXM_atlas_deconvolution.csv"
+      illumina_manifest: "illumina_manifest.csv"
+      processed_illumina_manifest: "illumina_manifest.parquet"
+      deconvolution_results: "deconvoluted_output.csv"
+      uxm_atlas_name: "UXM_atlas.tsv"
+
+
 # ========================================================
 # Parameters
 # Contains all of the variables and settings for tools.
@@ -27,108 +122,6 @@ parameters:
   general:
     threads: "4"
     sort_memory_limit: "2G"
-  setup:
-    dorado_version: "0.9.6"
-    num_fast5_files: "2"
-  basecalling:
-    # Use EITHER the model complex OR the explicit base/mod model names
-    # Method A: Model Complex
-    method: "complex"
 
-    complex_settings:
-      model_speed: "fast"
-      basecalling_modifications: "5mCG_5hmCG"
-      kit_name: "SQK-NBD114-24"
-
-    # Method B: Explicit Model Names
-    explicit_settings:
-      base_model_name: "dna_r9.4.1_e8_sup@v3.3"
-      mod_model_name: "dna_r9.4.1_e8_sup@v3.3_5mCG_5hmCG@v0"
-
-    # Other basecalling settings
-    batch_size: "64"
   analysis:
-    methylation_aggregation_chunksize: '5000000'
-    deconv_algorithm: "uxm"
-# ========================================================
-# Paths
-# All file and directory paths
-# ========================================================
-
-paths:
-  # --- Core Directories ---
-  core_directories:
-    - "reference_genomes/"
-    - "analysis/"
-    - "tools/"
-    - "models/"
-    - "results/"
-    - "data/"
-    - "data/alignment_output/"
-    - "data/atlas/"
-    - "data/basecalled_output/"
-    - "data/fast5_input/"
-    - "data/methylation/"
-    - "data/pod5_output/"
-    - "data/alignment_qc/"
-    - "data/raw/"
-    - "data/processed/"
-    - "logs/"
-
-  submodules:
-    uxm_dir: "externals/UXM_deconv"
-    wgbstools_dir: "externals/wgbs_tools"
-    meth_atlas_dir: "externals/meth_atlas"
-
-  # --- External Data URLs ---
-  fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
-  reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
-  uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
-  manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
-  full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
-  # --- Data Processing pipeline Paths ---
-  # Raw data
-  fast5_input_dir: "data/fast5_input/"
-  pod5_dir: "data/pod5_output/"
-  pod5_name: "all_pods.pod5"
-
-  # Step 0: Setup output
-
-  # Step 1: Basecalling output
-  basecalled_output_dir: "data/basecalled_output/"
-  demultiplexed_output_dir: "data/demultiplexed_output/"
-
-  # Step 2: Alignment output
-  alignment_output_dir: "data/alignment_output/"
-  qc_dir: "data/alignment_qc/"
-  indexed_ref_gen_fasta_name: "hg38.fa"
-  unaligned_bam_name: "wowowtest.bam"
-  aligned_bam_name: "taken_alignment.sorted.bam"
-  alignment_flagstat_name: "alignment.flagstat.txt"
-  alignment_stats_name: "alignment.stats.txt"
-  reference_genome_dir: "reference_genomes/"
-
-  # Step 3: Methylation summary outputs
-  methylation_dir: "data/methylation/"
-  methylation_bed_name: "comfy.bed"
-  methylation_log_file: "pileup_wowow.log"
-
-  # Step 4: Analysis and Deconvolution outputs
-  analysis_dir: "analysis/"
-  atlas_dir: "data/atlas/"
-  deconvolution_dir: "analysis/deconvolution/"
-  file_for_deconvolution_ilmn: "deconvolution_illumina.csv"
-  file_for_deconvolution_gc: "deconvolution_geco.csv"
-  file_for_deconvolution_uxm: "deconvolution_uxm.csv"
-  file_to_deconvolute: "deconvolution_uxm.csv"
-  atlas_file_ilmn: "full_atlas.csv"
-  atlas_file_gc: "full_atlas_gc.csv"
-  atlas_file_uxm: "UXM_atlas_deconvolution.csv"
-  atlas_file_name: "UXM_atlas_deconvolution.csv"
-  illumina_manifest: "illumina_manifest.csv"
-  processed_illumina_manifest: "illumina_manifest.parquet"
-  deconvolution_results: "deconvoluted_output.csv"
-  uxm_atlas_name: "UXM_atlas.tsv"
-
-
 
