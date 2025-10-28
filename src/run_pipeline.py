@@ -88,6 +88,9 @@ def main():
     parent_parser.add_argument(
         '--debug', action='store_true', help="Enable debug mode. Show full tracebacks on the console."
     )
+    parent_parser.add_argument(
+        '--no-log', action='store_true', help='Disable logging for this run'
+    )
 
     parser = argparse.ArgumentParser(
         description="Suite of tools for analysing nanopore data.",
@@ -120,10 +123,11 @@ def main():
     runtime_config = load_config(args.runtime_config)
     config = deep_merge(user_config, runtime_config)
 
+    log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO
     run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
-    Logger.setup_logger(log_level=logging.INFO, log_file=log_file_path)
+    log_file_path = f"logs/{run_timestamp}_pipeline_run.log" if not args.no_log else None
+    Logger.setup_logger(log_level=log_level, log_file=log_file_path)
 
     sys.excepthook = handle_exception
     # Call the function that is attached by set_defaults
@@ -132,7 +136,7 @@ def main():
         run_full_pipeline(args, config)
     else:
         if hasattr(args, 'func'):
-            logger.info(f"Running argument {args.func}")
+            logging.info(f"Running argument {args.func}")
             args.func(args, config)
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
