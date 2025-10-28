@@ -4,50 +4,50 @@ import os
 from pathlib import Path
 
 from src.utils.cli_utils import create_io_parser
-from src.utils.config_utils import resolve_param
+from src.utils.config_utils import resolve_param, resolve_combined_path
 from src.utils.tools_runner import ToolRunner
 logger = logging.getLogger(__name__)
 
 
 def full_basecalling_handler(args, config):
     logger.info("INFO: Running full basecalling step.")
-    input = resolve_param(
+
+    input_file = resolve_param(
         args, config, arg_name='input_file',
-        config_path=['paths', 'pod5_dir']
+        config_path='paths.pod5_dir'
     )
-    basecalled_bam = resolve_param(
-        args, config, construct_path=True, config_path=[
-            ['paths', 'basecalled_output_dir'],
-            ['paths', 'unaligned_bam_name']
+    basecalled_bam = resolve_combined_path(
+        args, config, config_path_components=[
+            'paths.basecalled_output_dir',
+            'paths.unaligned_bam_name'
         ]
     )
     demultiplexed_output_dir = resolve_param(
         args, config, arg_name='output_dir',
-        config_path=['paths', 'demultiplexed_output_dir']
+        config_path='paths.demultiplexed_output_dir'
     )
     kit_name = resolve_param(
         args, config, arg_name='kit_name',
-        config_path=['parameters', 'basecalling', 'kit_name']
+        config_path='parameters.basecalling.kit_name'
     )
-
     model_speed = resolve_param(
         args, config, arg_name='model_speed',
-        config_path=['parameters', 'basecalling', 'model_speed']
+        config_path='parameters.basecalling.model_speed'
     )
     modifications = resolve_param(
         args, config, arg_name='base_mods',
-        config_path=['parameters', 'basecalling', 'basecalling_modifications']
+        config_path='parameters.basecalling.basecalling_modifications'
     )
     batchsize = resolve_param(
         args, config, arg_name='batchsize',
-        config_path=['parameters', 'basecalling', 'batch_size']
+        config_path='parameters.basecalling.batch_size'
     )
 
     dorado_exe = resolve_param(
-        args, config, config_path=['tools', 'dorado']
+        args, config, config_path='tools.dorado'
     )
 
-    run_basecalling(dorado_exe, input, model_speed, modifications, kit_name, batchsize, basecalled_bam)
+    run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, basecalled_bam)
 
     run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
 
@@ -55,55 +55,52 @@ def full_basecalling_handler(args, config):
 def basecall_handler(args, config):
     input_file = resolve_param(
         args, config, arg_name='input_file',
-        config_path=['paths', 'pod5_dir']
+        config_path='paths.pod5_dir'
     )
-    output = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'basecalled_output_dir'],
-            ['paths', 'unaligned_bam_name']
+    output = resolve_combined_path(
+        args, config, arg_name='output_dir',
+        config_path_components=[
+            'paths.basecalled_output_dir',
+            'paths.unaligned_bam_name'
         ]
     )
     kit_name = resolve_param(
         args, config, arg_name='kit_name',
-        config_path=['parameters', 'basecalling', 'kit_name']
+        config_path='parameters.basecalling.kit_name'
     )
-
     model_speed = resolve_param(
         args, config, arg_name='model_speed',
-        config_path=['parameters', 'basecalling', 'model_speed']
+        config_path='parameters.basecalling.model_speed'
     )
     modifications = resolve_param(
         args, config, arg_name='base_mods',
-        config_path=['parameters', 'basecalling', 'basecalling_modifications']
+        config_path='parameters.basecalling.basecalling_modifications'
     )
     batchsize = resolve_param(
         args, config, arg_name='batchsize',
-        config_path=['parameters', 'basecalling', 'batch_size']
+        config_path='parameters.basecalling.batch_size'
     )
-
     dorado_exe = resolve_param(
-        args, config, config_path=['tools', 'dorado']
+        args, config, config_path='tools.dorado'
     )
 
     run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, output)
 
 
 def demultiplex_handler(args, config):
-    input_file = resolve_param(
-        args, config, arg_name="input_file", construct_path=True,
-        config_path=[
-            ['paths', 'basecalled_output_dir'],
-            ['paths', 'unaligned_bam_name']
+    input_file = resolve_combined_path(
+        args, config, arg_name='input_file', config_path_components=[
+            'paths.basecalled_output_dir',
+            'paths.unaligned_bam_name'
         ]
     )
     output_dir = resolve_param(
-        args, config, arg_name="output_dir",
-        config_path=['paths', 'demultiplexed_output_dir']
+        args, config, arg_name='output_dir',
+        config_path='paths.demultiplexed_output_dir'
     )
 
     dorado_exe = resolve_param(
-        args, config, config_path=['tools', 'dorado']
+        args, config, config_path='tools.dorado'
     )
 
     run_demultiplex(dorado_exe, input_file, output_dir)
@@ -111,10 +108,10 @@ def demultiplex_handler(args, config):
 
 def download_handler(args, config):
     model_name = resolve_param(
-        args, config, config_path=['parameters', 'basecalling', 'base_model_name']
+        args, config, config_path='parameters.basecalling.base_model_name'
     )
     dorado_exe = resolve_param(
-        args, config, config_path=['tools', 'dorado']
+        args, config, config_path='tools.dorado'
     )
 
     run_model_download(dorado_exe, model_name)

@@ -1,29 +1,24 @@
 import argparse
-import os
-import subprocess
-import sys
-from pathlib import Path
-
 from src.utils.cli_utils import create_io_parser
-from src.utils.config_utils import resolve_param
+from src.utils.config_utils import resolve_param, resolve_combined_path
 
 from src.utils.process_utils import run_command
 
 
 def pileup_handler(args, config):
-    aligned_file = resolve_param(
-        args, config, arg_name="input_file", construct_path=True,
-        config_path=[
-            ['paths', 'alignment_output_dir'],
-            ['paths', 'aligned_bam_name']
+    aligned_file = resolve_combined_path(
+        args, config, arg_name="input_file",
+        config_path_components=[
+            'paths.alignment_output_dir',
+            'paths.aligned_bam_name'
         ]
     )
 
-    output_bed = resolve_param(
-        args, config, arg_name="output_dir", construct_path=True,
-        config_path=[
-            ['paths', 'methylation_dir'],
-            ['paths', 'methylation_bed_name']
+    output_bed = resolve_combined_path(
+        args, config, arg_name="output_dir",
+        config_path_components=[
+            'paths.methylation_dir',
+            'paths.methylation_bed_name'
         ]
     )
 

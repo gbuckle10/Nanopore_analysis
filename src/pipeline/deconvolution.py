@@ -3,7 +3,7 @@ import logging
 import sys
 
 from src.utils.cli_utils import create_io_parser
-from src.utils.config_utils import resolve_param
+from src.utils.config_utils import resolve_param, resolve_combined_path
 from src.utils.process_utils import run_command
 from pathlib import Path
 
@@ -13,38 +13,36 @@ logger = logging.getLogger(__name__)
 
 
 def deconvolution_handler(args, config):
-    input_data_path = resolve_param(
+    input_data_path = resolve_combined_path(
         args, config, arg_name="input_file",
-        construct_path=True,
-        config_path=[
-            ['paths', 'deconvolution_dir'],
-            ['paths', 'file_to_deconvolute']
+        config_path_components=[
+            'paths.deconvolution_dir',
+            'paths.file_to_deconvolute'
         ]
     )
-    atlas_path = resolve_param(
+    atlas_path = resolve_combined_path(
         args, config, arg_name="atlas",
-        construct_path=True,
-        config_path=[
-            ['paths', 'atlas_dir'],
-            ['paths', 'atlas_file_name']
+        config_path_components=[
+            'paths.atlas_dir',
+            'paths.atlas_file_name'
         ]
     )
     output_dir = resolve_param(
         args, config, arg_name='output_dir',
-        config_path=['paths', 'deconvolution_dir']
+        config_path='paths.deconvolution_dir'
     )
     algorithm = resolve_param(
         args, config, arg_name='algorithm',
-        config_path=['parameters', 'analysis', 'deconv_algorithm']
+        config_path='parameters.analysis.deconv_algorithm'
     )
 
     if algorithm == "uxm":
-        wgbstools_exe = resolve_param(args, config, config_path=['submodules', 'wgbstools'])
-        uxm_exe = resolve_param(args, config, config_path=['submodules', 'uxm'])
+        wgbstools_exe = resolve_param(args, config, config_path='paths.submodules.wgbstools_exe')
+        uxm_exe = resolve_param(args, config, config_path='paths.submodules.uxm_exe')
         _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, output_dir)
     elif algorithm == "nnls":
         logger.info("Running deconvolution with NNLS algorithm")
-        nnls_exe = resolve_param(args, config, config_path=['submodules', 'methatlas'])
+        nnls_exe = resolve_param(args, config, config_path='paths.submodules.methatlas_exe')
         _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path)
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
