@@ -182,3 +182,5 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
         logger.critical(f"An unexpected error occurred: {e}")
         kill_process_group(pgid)
         raise
+
+

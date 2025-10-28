@@ -1,4 +1,6 @@
 import logging
+import sys
+
 import colorlog
 from colorlog import ColoredFormatter
 from pathlib import Path
@@ -19,6 +21,24 @@ class AnsiStrippingFormatter(logging.Formatter):
         # Strip ANSI codes from the result.
         return self.ANSI_ESCAPE_REGEX.sub('', formatted_record)
 
+class NoTracebackColoredFormatter(ColoredFormatter):
+    """
+    A coloured formatter which suppresses the printing of tracebacks.
+    """
+
+    def formatException(self, exc_info):
+        """
+        Override regular formatException method, returning an empty string.
+        """
+        return "" # Don't return a traceback.
+
+    def format(self, record):
+        log_message = super().format(record)
+
+        if record.exc_info:
+            log_message += f"\n  -> Error: {record.exc_info[1]}"
+
+        return log_message
 class Logger:
     @staticmethod
     def setup_logger(log_level=logging.INFO, log_file=None):
@@ -37,7 +57,8 @@ class Logger:
         if root_logger.hasHandlers():
             root_logger.handlers.clear()
 
-        console_formatter = ColoredFormatter(
+        # The console formatter is just a modified ColoredFormatter without printing stack traces.
+        console_formatter = NoTracebackColoredFormatter(
             '%(log_color)s%(levelname)-8s - %(message)s%(reset)s',
             log_colors={
                 'DEBUG': 'cyan',
@@ -48,7 +69,8 @@ class Logger:
             }
         )
 
-        console_handler = logging.StreamHandler()
+        console_handler = logging.StreamHandler(sys.stderr) # Errors should go to stderr
+        console_handler.setLevel(log_level)
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
 

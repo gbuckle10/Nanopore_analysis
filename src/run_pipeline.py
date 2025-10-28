@@ -125,38 +125,19 @@ def main():
     log_file_path = f"logs/{run_timestamp}_pipeline_run.log"
     Logger.setup_logger(log_level=logging.INFO, log_file=log_file_path)
 
-    #sys.excepthook = handle_exception
+    sys.excepthook = handle_exception
     # Call the function that is attached by set_defaults
-    try:
-        if args.command is None:
-            run_full_pipeline(args, config)
+
+    if args.command is None:
+        run_full_pipeline(args, config)
+    else:
+        if hasattr(args, 'func'):
+            logger.info(f"Running argument {args.func}")
+            args.func(args, config)
         else:
-            if hasattr(args, 'func'):
-                logging.info(f"Running argument {args.func}")
-                args.func(args, config)
-            else:
-                print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
-                sys.exit(1)
-    except Exception as e:
-        # Log full details to log file
-        logging.critical("An unexpected error occurred, so the program will exit.")
-        logging.exception(e)
+            print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
+            sys.exit(1)
 
-        # Show simpler message on console
-        print("\n" + "="*80, file=sys.stderr)
-        print("FATAL ERROR: The application has crashed", file=sys.stderr)
-        print(f"Error type: {type(e).__name__}", file=sys.stderr)
-        print(f"Error message: {e}", file=sys.stderr)
-
-        if args.debug:
-            print("\n--- DEBUG TRACEBACK ---", file=sys.stderr)
-            traceback.print_exc(file=sys.stderr)
-            print("--- END TRACEBACK ---\n", file=sys.stderr)
-        else:
-            print("\n Please see log file for full technical details", file=sys.stderr)
-        print("="*80 + '\n', file=sys.stderr)
-
-        sys.exit(1)
 
 
 if __name__ == '__main__':
