@@ -1,31 +1,12 @@
 import argparse
-import os
-import subprocess
-import sys
-from pathlib import Path
-
-from src.utils.cli_utils import create_io_parser
-from src.utils.config_utils import resolve_param
+from src.utils.cli_utils import add_io_arguments
 
 from src.utils.process_utils import run_command
 
 
 def pileup_handler(args, config):
-    aligned_file = resolve_param(
-        args, config, arg_name="input_file", construct_path=True,
-        config_path=[
-            ['paths', 'alignment_output_dir'],
-            ['paths', 'aligned_bam_name']
-        ]
-    )
-
-    output_bed = resolve_param(
-        args, config, arg_name="output_dir", construct_path=True,
-        config_path=[
-            ['paths', 'methylation_dir'],
-            ['paths', 'methylation_bed_name']
-        ]
-    )
+    aligned_file = args.input_file
+    output_bed = args.output_dir
 
     run_methylation_pileup(aligned_file, output_bed)
 
@@ -40,15 +21,14 @@ def run_methylation_pileup(aligned_sorted_file, output_bed):
     run_command(pileup_cmd)
 
 
-def setup_parsers(subparsers, parent_parser):
-    io_parser = create_io_parser()
+def setup_parsers(subparsers, parent_parser, config):
     methylation_parser = subparsers.add_parser(
         "methylation-summary",
         help="Run tasks related to summarising the methylation pattern of an aligned BAM file.",
         description="This command groups contains tools for summarising and analysing the methylation in an aligned BAM file.",
         formatter_class=argparse.RawTextHelpFormatter,
         aliases=['methylation'],
-        parents=[parent_parser, io_parser]
+        parents=[parent_parser]
     )
 
     def show_methylation_help(args, config):
@@ -66,6 +46,14 @@ def setup_parsers(subparsers, parent_parser):
 
     p_pileup = methylation_subparsers.add_parser(
         'run', help="Summarise methylation in an aligned BAM file using modkit pileup",
-        parents=[parent_parser, io_parser]
+        parents=[parent_parser]
+    )
+    add_io_arguments(
+        p_pileup, config,
+        default_input=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
+        default_output=config.pipeline_steps.methylation.paths.full_bed_path,
+        input_file_help="Path to the aligned BAM path",
+        output_dir_help="Path to the BED file"
     )
     p_pileup.set_defaults(func=pileup_handler)
+

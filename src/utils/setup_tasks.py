@@ -51,7 +51,7 @@ def setup_submodules(config):
     comp_command = ["python", "install.py"]
     # run_external_command(comp_command, cwd=wgbstools_dir)
 
-    submodule_paths_config = config.get('path', {}).get('submodules', {})
+    submodule_paths_config = config.get('pipeline_steps', {}).get('analysis', {}).get('tools', {})
 
     uxm_rel = submodule_paths_config.get('uxm_dir', 'externals/UXM_deconv')
     wgbstools_rel = submodule_paths_config.get('wgbstools_dir', 'externals/wgbs_tools')
@@ -61,9 +61,9 @@ def setup_submodules(config):
     wgbstools_abs = PROJECT_ROOT / wgbstools_rel / "wgbstools"
     methatlas_abs = PROJECT_ROOT / methatlas_rel
 
-    executable_paths['uxm'] = str(uxm_abs)
-    executable_paths['wgbstools'] = str(wgbstools_abs)
-    executable_paths['methatlas'] = str(methatlas_abs)
+    executable_paths['uxm_exe'] = str(uxm_abs)
+    executable_paths['wgbstools_exe'] = str(wgbstools_abs)
+    executable_paths['methatlas_exe'] = str(methatlas_abs)
 
     return executable_paths
 
@@ -152,7 +152,7 @@ def main(argv=None):
     # If dorado version is in args, override config
     if args.dorado_version is not None:
         print(f"Overriding config with user-defined dorado version '{args.dorado_version}'")
-        config['parameters']['setup']['dorado_version'] = args.dorado_version
+        config['pipeline_steps']['setup']['params']['dorado_version'] = args.dorado_version
 
     # Load existing runtime_config, otherwise make a new one.
     try:
@@ -167,8 +167,7 @@ def main(argv=None):
 
     if args.command in ['all', 'submodules']:
         submodule_paths = setup_submodules(config)
-        runtime_config.setdefault('submodules', {}).update(submodule_paths)
-
+        runtime_config.setdefault('pipeline_steps', {}).setdefault('analysis', {}).setdefault('tools', {}).update(submodule_paths)
     print(">>> Writing updated runtime_config.yaml...")
     with open('runtime_config.yaml', 'w') as f:
         yaml.dump(runtime_config, f, sort_keys=False)

@@ -90,12 +90,6 @@ def kill_process_group(pgid):
     except Exception as e:
         logger.error(f"Error during process group termination: {e}")
 
-
-def raw_print_handler(line: str):
-    print(line)
-    sys.stdout.write(line)
-
-
 def log_info_handler(line: str):
     clean_line = line.strip()
     if clean_line:

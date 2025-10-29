@@ -51,9 +51,7 @@ class ToolRunner:
         Constructs and runs the tool command.
         """
         full_command = [str(self.executable_path)] + args
-
         if output_path:
-            print(f"Output path given - {output_path}")
             if self.output_flag:
                 print(f"Output flag given - {self.output_flag}")
                 # The tool uses a flag like '-o', so I'll add it to the command.

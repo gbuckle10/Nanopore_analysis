@@ -6,9 +6,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.pipeline import basecalling, alignment, deconvolution
+from src.config.models import load_and_validate_configs, AppSettings
+from src.config.paths import build_config_paths
+from src.pipeline import basecalling, alignment, deconvolution, methylation
 from src.utils import resource_downloader
-from src.utils.config_utils import load_config, deep_merge, resolve_param
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
 
@@ -32,6 +33,7 @@ COMMAND_MAP = {
     'download': 'src/utils/resource_downloader.py'
 }
 
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -43,21 +45,28 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print("\nFATAL ERROR: The application has crashed unexpectedly.", file=sys.stderr)
     print(f"Error Type: {exc_type.__name__}", file=sys.stderr)
     print("Please see the log file for the full technical traceback.", file=sys.stderr)
-def run_full_pipeline(args, config):
+
+
+def run_full_pipeline(args, config: AppSettings):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
         'basecalling': basecalling.full_basecalling_handler,
-        'align': alignment.full_alignment_handler
+        'align': alignment.full_alignment_handler,
+        'methylation': methylation.pileup_handler,
+        'deconvolution': deconvolution.deconvolution_handler
     }
 
-    active_steps = resolve_param(
-        args, config, config_path=['pipeline_control', 'run_steps']
-    )
+    steps_to_run = config.pipeline_control.run_steps
+    active_steps = [step_name for step_name, should_run in steps_to_run if should_run]
 
     if not active_steps:
-        logging.warning("WARNING: No active steps found in config.yaml. Nothing for me to do.")
-        return
+        logging.warning("WARNING: No active steps found in the final configuration. Nothing to do.")
+
+    logging.info("STEPS TO RUN: ")
+    for i, step_name in enumerate(active_steps, 1):
+        logging.info(f"    Step {i}: {step_name}")
+    logging.info("----------------------------------")
 
     for step_name in active_steps:
         logging.info(f">>> EXECUTING STEP: {step_name}")
@@ -69,55 +78,65 @@ def run_full_pipeline(args, config):
 
 
 def main():
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument(
+    conf_parser = argparse.ArgumentParser(description="Nanopore Analysis Pipeline", add_help=False)
+    conf_parser.add_argument(
         '-u', '--user-config',
         type=Path,
         default=DEFAULT_CONFIG_PATH,
         help=f"Path to the user config file. Default = {DEFAULT_CONFIG_PATH}"
     )
-    parent_parser.add_argument(
+    conf_parser.add_argument(
         '-r', '--runtime-config',
         type=Path,
         default=DEFAULT_RUNTIME_CONFIG_PATH,
         help=f"Path to the runtime config file. Default = {DEFAULT_RUNTIME_CONFIG_PATH}"
     )
-    parent_parser.add_argument(
+    # Use parse_known_args() to only read the arguments that the main_parser knows about - config and user config.
+    conf_args, _ = conf_parser.parse_known_args()
+
+    # Load config
+    try:
+        config = load_and_validate_configs(
+            conf_args.user_config, conf_args.runtime_config
+        )
+        build_config_paths(config)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading configuration: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    global_opts_parser = argparse.ArgumentParser(add_help=False)
+
+    global_opts_parser.add_argument(
         '--debug', action='store_true', help="Enable debug mode. Show full tracebacks on the console."
     )
-    parent_parser.add_argument(
+    global_opts_parser.add_argument(
         '--no-log', action='store_true', help='Disable logging for this run'
     )
 
-    parser = argparse.ArgumentParser(
+    main_parser = argparse.ArgumentParser(
         description="Suite of tools for analysing nanopore data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        parents=[parent_parser]
+        parents=[conf_parser, global_opts_parser]
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available command groups')
+    subparsers = main_parser.add_subparsers(dest='command', help='Available command groups')
 
     # Register commands from modules.
     run_parser = subparsers.add_parser(
         'run',
         help="Run the full pipeline using steps defined in the config file.",
-        parents=[parent_parser]
+        parents=[global_opts_parser]
     )
     run_parser.set_defaults(func=run_full_pipeline)
 
-    # subparsers.add_parser('basecalling', aliases=['basecall'])
-    basecalling.setup_parsers(subparsers, parent_parser)
-    alignment.setup_parsers(subparsers, parent_parser)
-    deconvolution.setup_parsers(subparsers, parent_parser)
-    resource_downloader.setup_parsers(subparsers, parent_parser)
+    basecalling.setup_parsers(subparsers, global_opts_parser, config)
+    alignment.setup_parsers(subparsers, global_opts_parser, config)
+    methylation.setup_parsers(subparsers, global_opts_parser, config)
+    deconvolution.setup_parsers(subparsers, global_opts_parser, config)
+    resource_downloader.setup_parsers(subparsers, global_opts_parser, config)
 
     # Parse and dispatch
-    args = parser.parse_args()
-
-    # Load config
-    user_config = load_config(args.user_config)
-    runtime_config = load_config(args.runtime_config)
-    config = deep_merge(user_config, runtime_config)
+    args = main_parser.parse_args()
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -132,12 +151,10 @@ def main():
         run_full_pipeline(args, config)
     else:
         if hasattr(args, 'func'):
-            logging.info(f"Running argument {args.func}")
             args.func(args, config)
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
             sys.exit(1)
-
 
 
 if __name__ == '__main__':
