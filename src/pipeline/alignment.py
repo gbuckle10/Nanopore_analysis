@@ -4,111 +4,48 @@ import subprocess
 import sys
 from pathlib import Path
 
-from src.utils.cli_utils import create_io_parser
+from src.config.models import AppSettings
+from src.utils.cli_utils import add_io_arguments
 from src.utils.process_utils import run_command
-from src.utils.config_utils import resolve_param, resolve_combined_path
+from src.config.loader import resolve_param, resolve_combined_path
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
-def full_alignment_handler(args,config):
 
-    unaligned_bam = resolve_combined_path(
-        args, config, arg_name='input_file', config_path_components=[
-            'pipeline_steps.basecalling.paths.basecalled_output_dir',
-            'pipeline_steps.basecalling.paths.unaligned_bam_name'
-        ]
-    )
+def full_alignment_handler(args, config: AppSettings):
+    unaligned_bam = args.input_file
 
     if unaligned_bam is None:
         raise ValueError("Could not determine the path for the unaligned BAM file.")
 
-    print(f"Using unaligned BAM: {unaligned_bam}")
-
-    threads = resolve_param(
-        args, config, arg_name='threads', config_path='globals.threads'
-    )
-
-    reference_index = resolve_param(
-        args, config, arg_name='ref', config_path='pipeline_steps.alignment.paths.indexed_ref_gen_fasta_name'
-    )
-
-    sort_memory_limit = resolve_param(
-        args, config, config_path='globals.sort_memory_limit'
-    )
-
-    aligned_bam_file = resolve_combined_path(
-        args, config, config_path_components=[
-            'pipeline_steps.alignment.paths.alignment_output_dir',
-            'pipeline_steps.alignment.paths.aligned_bam_name'
-        ]
-    )
-
-    dorado_exe = resolve_param(
-        args, config, config_path='tools.dorado'
-    )
+    aligned_bam_file = args.output_dir
+    threads = args.threads
+    reference_index = args.ref
+    sort_memory_limit = config.globals.sort_memory_limit
+    dorado_exe = config.tools.dorado
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
 
-    flagstat_report = resolve_combined_path(
-        args, config, arg_name='output_dir',
-        config_path_components=[
-            'pipeline_steps.alignment.paths.alignment_output_dir',
-            'pipeline_steps.alignment.paths.alignment_flagstat_name'
-        ]
-    )
+    flagstat_report = config.pipeline_steps.alignment.paths.full_flagstat_path
 
     run_qc_command(aligned_bam_file, flagstat_report)
 
 
 def alignment_handler(args, config):
-    unaligned_bam = resolve_combined_path(
-        args, config, arg_name='input_file', config_path_components=[
-            'pipeline_steps.basecalling.paths.basecalled_output_dir',
-            'pipeline_steps.basecalling.paths.unaligned_bam_name'
-        ]
-    )
-
-    aligned_bam_file = resolve_combined_path(
-        args, config, config_path_components=[
-            'pipeline_steps.alignment.paths.alignment_output_dir',
-            'pipeline_steps.alignment.paths.aligned_bam_name'
-        ]
-    )
-
-    threads = resolve_param(
-        args, config, arg_name='threads', config_path='globals.threads'
-    )
-
-    reference_index = resolve_param(
-        args, config, arg_name='ref', config_path='pipeline_steps.alignment.paths.indexed_ref_gen_fasta_name'
-    )
-
-    sort_memory_limit = resolve_param(
-        args, config, config_path='globals.sort_memory_limit'
-    )
-
-    dorado_exe = resolve_param(
-        args, config, config_path='tools.dorado'
-    )
+    unaligned_bam = args.input_file
+    aligned_bam_file = args.output_dir
+    threads = args.threads
+    reference_index = args.ref
+    sort_memory_limit = config.globals.sort_memory_limit
+    dorado_exe = config.tools.dorado
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
 
-def qc_handler(args, config):
-    aligned_bam_file = resolve_combined_path(
-        args, config, config_path_components=[
-            'pipeline_steps.alignment.paths.alignment_output_dir',
-            'pipeline_steps.alignment.paths.aligned_bam_name'
-        ]
-    )
 
-    flagstat_report = resolve_combined_path(
-        args, config, arg_name='output_dir',
-        config_path_components=[
-            'pipeline_steps.alignment.paths.alignment_output_dir',
-            'pipeline_steps.alignment.paths.alignment_flagstat_name'
-        ]
-    )
+def qc_handler(args, config):
+    aligned_bam_file = args.input_file
+    flagstat_report = args.output_file
 
     run_qc_command(aligned_bam_file, flagstat_report)
 
@@ -187,8 +124,6 @@ def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference
 
 
 def run_qc_command(aligned_sorted_file, flagstat_report):
-
-
     flagstat_cmd = [
         "samtools", "flagstat",
         aligned_sorted_file
@@ -217,14 +152,19 @@ def run_qc_command(aligned_sorted_file, flagstat_report):
         sys.exit(1)
 
 
-def setup_parsers(subparsers, parent_parser):
+def setup_parsers(subparsers, parent_parser, config):
     # Make new parents
-    io_parser = create_io_parser()
     alignment_parent_parser = argparse.ArgumentParser(add_help=False)
     alignment_parent_parser.add_argument(
         "--ref",
+        default=config.pipeline_steps.setup.paths.reference_genome_dir,
         type=Path,
         help="Path to the reference genome"
+    )
+    alignment_parent_parser.add_argument(
+        "--threads",
+        default=config.globals.threads,
+        help="Number of threads for alignment and samtools."
     )
 
     alignment_parser = subparsers.add_parser(
@@ -253,24 +193,46 @@ Example Usage:
         dest='subcommand',
         metavar="<command>"
     )
-
     p_run = alignment_subparsers.add_parser(
         'run', help="Align a BAM file to a specified genome and QC the alignment.",
-        parents=[parent_parser, io_parser, alignment_parent_parser]
+        parents=[parent_parser, alignment_parent_parser]
     )
-    p_run.add_argument(
-        '--threads', type=int, help="Number of threads for alignment and samtools."
+    add_io_arguments(
+        p_run, config,
+        default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
+        default_output=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
+        input_file_help="Path to full unaligned BAM file",
+        output_dir_help="Path to aligned, sorted and indexed BAM file"
     )
     p_run.set_defaults(func=full_alignment_handler)
 
     p_qc_only = alignment_subparsers.add_parser(
         'qc', help="Generate alignment statistics for a provided BAM file.",
-        parents=[parent_parser, io_parser, alignment_parent_parser]
+        parents=[parent_parser, alignment_parent_parser]
     )
-    p_qc_only.set_defaults(func=qc_handler)
+    add_io_arguments(
+        p_qc_only, config,
+        default_input=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
+        default_output=config.pipeline_steps.alignment.paths.full_flagstat_path,
+        input_file_help="Path to aligned, sorted and indexed BAM file",
+        output_dir_help="Filepath of saved output"
+    )
+    p_qc_only.set_defaults(
+        func=qc_handler
+    )
 
     p_align_only = alignment_subparsers.add_parser(
         'align', help="Align a BAM file to a specified genome and index.",
-        parents=[parent_parser, io_parser, alignment_parent_parser]
+        parents=[parent_parser, alignment_parent_parser]
     )
-    p_align_only.set_defaults(func=alignment_handler)
+    add_io_arguments(
+        p_align_only, config,
+        default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
+        default_output=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
+        input_file_help="Path to full unaligned BAM file",
+        output_dir_help="Path to aligned, sorted and indexed BAM file"
+    )
+
+    p_align_only.set_defaults(
+        func=alignment_handler
+    )
