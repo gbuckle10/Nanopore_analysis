@@ -114,6 +114,7 @@ class BasecallingPaths(BaseModel):
     basecalled_output_dir_name: str = "basecalled_output"
     demultiplexed_dir_name: str = "demultiplexed_output"
     pod5_dir_name: str = "pod5"
+    dorado_model_dir_name: str = "models"
     unaligned_bam_name: str
     pod5_name: str
 
@@ -122,14 +123,14 @@ class BasecallingPaths(BaseModel):
     pod5_dir: Optional[Path] = None
     full_pod5_path: Optional[Path] = None
     full_unaligned_bam_path: Optional[Path] = None
-
+    dorado_model_dir: Optional[Path] = None
     def build_paths(self, common_paths: Paths):
         self.basecalled_output_dir = common_paths.data_dir / self.basecalled_output_dir_name
         self.demultiplexed_output_dir = common_paths.data_dir / self.demultiplexed_dir_name
         self.pod5_dir = common_paths.data_dir / self.pod5_dir_name
         self.full_pod5_path = self.pod5_dir / self.pod5_name
         self.full_unaligned_bam_path = self.basecalled_output_dir / self.unaligned_bam_name
-
+        self.dorado_model_dir = common_paths.root / self.dorado_model_dir_name
 
 class BasecallingStep(BaseModel):
     params: BasecallingParams
@@ -301,3 +302,9 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
         return AppSettings(**config_data)
     except ValidationError as e:
         raise ValueError(f"Configuration error after merging configs:\n{e}")
+
+def print_config(part_to_print: AppSettings):
+    config_dict = part_to_print.model_dump(mode='json')
+    yaml_str = yaml.dump(config_dict, sort_keys=False, indent=2)
+    print(f"\n--- Config {part_to_print} Configuration ---")
+    print(yaml_str)
