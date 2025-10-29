@@ -7,7 +7,6 @@ from pathlib import Path
 from src.config.models import AppSettings
 from src.utils.cli_utils import add_io_arguments
 from src.utils.process_utils import run_command
-from src.config.loader import resolve_param, resolve_combined_path
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
@@ -175,6 +174,7 @@ def setup_parsers(subparsers, parent_parser, config):
                     "analysis on the resulting alignments.",
         formatter_class=argparse.RawTextHelpFormatter,
         aliases=['alignment'],
+        parents=[parent_parser],
         epilog="""
 Example Usage:
     nanopore_analysis align run --ref genome.fa --input-file reads.bam --output-dir analysis
@@ -217,9 +217,7 @@ Example Usage:
         input_file_help="Path to aligned, sorted and indexed BAM file",
         output_dir_help="Filepath of saved output"
     )
-    p_qc_only.set_defaults(
-        func=qc_handler
-    )
+    p_qc_only.set_defaults(func=qc_handler)
 
     p_align_only = alignment_subparsers.add_parser(
         'align', help="Align a BAM file to a specified genome and index.",
