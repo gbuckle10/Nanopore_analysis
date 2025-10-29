@@ -78,64 +78,65 @@ def run_full_pipeline(args, config: AppSettings):
         step_func(args, config)
 
 
-
 def main():
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument(
+    conf_parser = argparse.ArgumentParser(description="Nanopore Analysis Pipeline", add_help=False)
+    conf_parser.add_argument(
         '-u', '--user-config',
         type=Path,
         default=DEFAULT_CONFIG_PATH,
         help=f"Path to the user config file. Default = {DEFAULT_CONFIG_PATH}"
     )
-    parent_parser.add_argument(
+    conf_parser.add_argument(
         '-r', '--runtime-config',
         type=Path,
         default=DEFAULT_RUNTIME_CONFIG_PATH,
         help=f"Path to the runtime config file. Default = {DEFAULT_RUNTIME_CONFIG_PATH}"
     )
-    parent_parser.add_argument(
+    # Use parse_known_args() to only read the arguments that the main_parser knows about - config and user config.
+    conf_args, _ = conf_parser.parse_known_args()
+
+    # Load config
+    try:
+        config = load_and_validate_configs(
+            conf_args.user_config, conf_args.runtime_config
+        )
+        build_config_paths(config)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading configuration: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    global_opts_parser = argparse.ArgumentParser(add_help=False)
+
+    global_opts_parser.add_argument(
         '--debug', action='store_true', help="Enable debug mode. Show full tracebacks on the console."
     )
-    parent_parser.add_argument(
+    global_opts_parser.add_argument(
         '--no-log', action='store_true', help='Disable logging for this run'
     )
 
-    parser = argparse.ArgumentParser(
+    main_parser = argparse.ArgumentParser(
         description="Suite of tools for analysing nanopore data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        parents=[parent_parser]
+        parents=[conf_parser, global_opts_parser]
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available command groups')
+    subparsers = main_parser.add_subparsers(dest='command', help='Available command groups')
 
     # Register commands from modules.
     run_parser = subparsers.add_parser(
         'run',
         help="Run the full pipeline using steps defined in the config file.",
-        parents=[parent_parser]
+        parents=[global_opts_parser]
     )
     run_parser.set_defaults(func=run_full_pipeline)
 
-    # subparsers.add_parser('basecalling', aliases=['basecall'])
-    basecalling.setup_parsers(subparsers, parent_parser)
-    alignment.setup_parsers(subparsers, parent_parser)
-    deconvolution.setup_parsers(subparsers, parent_parser)
-    resource_downloader.setup_parsers(subparsers, parent_parser)
+    basecalling.setup_parsers(subparsers, global_opts_parser, config)
+    alignment.setup_parsers(subparsers, global_opts_parser, config)
+    deconvolution.setup_parsers(subparsers, global_opts_parser, config)
+    resource_downloader.setup_parsers(subparsers, global_opts_parser, config)
 
     # Parse and dispatch
-    args = parser.parse_args()
-
-    # Load config
-    try:
-        config = load_and_validate_configs(
-            args.user_config, args.runtime_config
-        )
-
-    except (FileNotFoundError, ValueError) as e:
-        print(f"Error loading configuration: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    build_config_paths(config)
+    args = main_parser.parse_args()
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO
