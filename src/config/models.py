@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
 
 
 class Globals(BaseModel):
-    threads: int = 4final
+    threads: int = 4
     sort_memory_limit: str = "2G"
 
 
