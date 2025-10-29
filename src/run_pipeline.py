@@ -6,10 +6,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from src.config.models import load_and_validate_configs, AppSettings
+from src.config.paths import build_config_paths
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 from src.utils import resource_downloader
-from src.utils.config import load_and_validate_configs
-from src.utils.config_utils import load_config, deep_merge, resolve_param
+from src.config.loader import resolve_param
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
 
@@ -47,7 +48,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print("Please see the log file for the full technical traceback.", file=sys.stderr)
 
 
-def run_full_pipeline(args, config):
+def run_full_pipeline(args, config: AppSettings):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
@@ -57,13 +58,16 @@ def run_full_pipeline(args, config):
         'deconvolution': deconvolution.deconvolution_handler
     }
 
-    active_steps = resolve_param(
-        args, config, config_path='pipeline_control.run_steps'
-    )
+    steps_to_run = config.pipeline_control.run_steps
+    active_steps = [step_name for step_name, should_run in steps_to_run if should_run]
 
     if not active_steps:
-        logging.warning("WARNING: No active steps found in config.yaml. Nothing for me to do.")
-        return
+        logging.warning("WARNING: No active steps found in the final configuration. Nothing to do.")
+
+    logging.info("STEPS TO RUN: ")
+    for i, step_name in enumerate(active_steps, 1):
+        logging.info(f"    Step {i}: {step_name}")
+    logging.info("----------------------------------")
 
     for step_name in active_steps:
         logging.info(f">>> EXECUTING STEP: {step_name}")
@@ -72,6 +76,7 @@ def run_full_pipeline(args, config):
             logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
             continue
         step_func(args, config)
+
 
 
 def main():
@@ -125,9 +130,12 @@ def main():
         config = load_and_validate_configs(
             args.user_config, args.runtime_config
         )
+
     except (FileNotFoundError, ValueError) as e:
         print(f"Error loading configuration: {e}", file=sys.stderr)
         sys.exit(1)
+
+    build_config_paths(config)
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -142,7 +150,6 @@ def main():
         run_full_pipeline(args, config)
     else:
         if hasattr(args, 'func'):
-            logging.info(f"Running argument {args.func}")
             args.func(args, config)
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
