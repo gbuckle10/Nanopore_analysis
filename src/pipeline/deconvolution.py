@@ -2,9 +2,7 @@ import argparse
 import logging
 import sys
 
-from src.utils.cli_utils import create_io_parser
-from src.utils.config_utils import resolve_param, resolve_combined_path
-from src.utils.process_utils import run_command
+from src.utils.cli_utils import add_io_arguments
 from pathlib import Path
 
 from src.utils.tools_runner import ToolRunner
@@ -13,36 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 def deconvolution_handler(args, config):
-    input_data_path = resolve_combined_path(
-        args, config, arg_name="input_file",
-        config_path_components=[
-            'pipeline_steps.analysis.paths.deconvolution_dir',
-            'pipeline_steps.analysis.paths.file_to_deconvolute'
-        ]
-    )
-    atlas_path = resolve_combined_path(
-        args, config, arg_name="atlas",
-        config_path_components=[
-            'pipeline_steps.analysis.paths.atlas_dir',
-            'pipeline_steps.analysis.paths.atlas_file_name'
-        ]
-    )
-    output_dir = resolve_param(
-        args, config, arg_name='output_dir',
-        config_path='pipeline_steps.analysis.paths.deconvolution_dir'
-    )
-    algorithm = resolve_param(
-        args, config, arg_name='algorithm',
-        config_path='pipeline_steps.analysis.params.deconv_algorithm'
-    )
+    input_data_path = args.input_file
+    atlas_path = args.atlas
+    output_dir = args.output_dir
+    algorithm = args.algorithm
+
 
     if algorithm == "uxm":
-        wgbstools_exe = resolve_param(args, config, config_path='pipeline_steps.analysis.tools.wgbstools_exe')
-        uxm_exe = resolve_param(args, config, config_path='pipeline_steps.analysis.tools.uxm_exe')
+        wgbstools_exe = config.pipeline_steps.analysis.tools.wgbstools_exe
+        uxm_exe = config.pipeline_steps.analysis.tools.uxm_exe
         _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, output_dir)
     elif algorithm == "nnls":
         logger.info("Running deconvolution with NNLS algorithm")
-        nnls_exe = resolve_param(args, config, config_path='pipeline_steps.analysis.tools.methatlas_exe')
+        nnls_exe = config.pipeline_steps.analysis.tools.methatlas_exe
         _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path)
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
@@ -114,8 +95,7 @@ def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
     ]
 
 
-def setup_parsers(subparsers, parent_parser):
-    io_parser = create_io_parser()
+def setup_parsers(subparsers, parent_parser, config):
 
     deconv_parser = subparsers.add_parser(
         'deconvolution',
@@ -123,14 +103,22 @@ def setup_parsers(subparsers, parent_parser):
         description="This command group contains tools for deconvolution of sequenced and aligned data.",
         formatter_class=argparse.RawTextHelpFormatter,
         aliases=['deconv'],
-        parents=[parent_parser, io_parser]
-    )
-
-    deconv_parser.add_argument(
-        '--atlas', type=Path, default=None, help="Path to the atlas used for deconvolution"
+        parents=[parent_parser]
     )
     deconv_parser.add_argument(
-        '-a', '--algorithm',
-        type=str, default='uxm', choices=['uxm', 'nnls']
+        '--atlas', type=Path,
+        default=config.pipeline_steps.analysis.paths.full_path_atlas_file,
+        help="Path to the atlas used for deconvolution"
+    )
+    deconv_parser.add_argument(
+        '-a', '--algorithm', type=str,
+        default=config.pipeline_steps.analysis.params.deconv_algorithm, choices=['uxm', 'nnls']
+    )
+    add_io_arguments(
+        deconv_parser, config,
+        default_input=config.pipeline_steps.analysis.paths.file_to_deconvolute,
+        default_output=config.pipeline_steps.analysis.paths.full_path_deconvolution_results,
+        input_file_help="Path to file for deconvolution.",
+        output_dir_help="File to save the deconvolution results in."
     )
     deconv_parser.set_defaults(func=deconvolution_handler)

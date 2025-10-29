@@ -10,7 +10,6 @@ from src.config.models import load_and_validate_configs, AppSettings
 from src.config.paths import build_config_paths
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 from src.utils import resource_downloader
-from src.config.loader import resolve_param
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
 
@@ -132,6 +131,7 @@ def main():
 
     basecalling.setup_parsers(subparsers, global_opts_parser, config)
     alignment.setup_parsers(subparsers, global_opts_parser, config)
+    methylation.setup_parsers(subparsers, global_opts_parser, config)
     deconvolution.setup_parsers(subparsers, global_opts_parser, config)
     resource_downloader.setup_parsers(subparsers, global_opts_parser, config)
 

@@ -6,8 +6,7 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
-from src.config.loader import resolve_param
-from src.utils.cli_utils import create_io_parser
+from src.utils.cli_utils import add_io_arguments
 from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.process_utils import run_command
 from src.utils.tools_runner import ToolRunner
@@ -46,11 +45,7 @@ def _download_file_with_progress(url: str, destination: Path):
 
 
 def reference_genome_handler(args, config):
-    url = resolve_param(
-        args, config, arg_name='url',
-        config_path=['paths', 'reference_genome_url']
-    )
-
+    url = args.url
     use_wgbs = args.wgbstools
 
     if use_wgbs:
@@ -58,13 +53,7 @@ def reference_genome_handler(args, config):
     else:
         logger.info("We are going to initialise the genome and index with minimap2")
 
-    ref_path = resolve_param(
-        args, config, arg_name="output_dir", construct_path=True,
-        config_path=[
-            ['paths', 'reference_genome_dir'],
-            ['paths', 'indexed_ref_gen_fasta_name']
-        ]
-    )
+    ref_path = args.output_dir
 
     user_path = Path(ref_path)
 
@@ -76,7 +65,7 @@ def reference_genome_handler(args, config):
         logger.info(f"Reference path '{user_path}' is a directory. Appending default filename.")
 
         try:
-            default_filename = config['paths']['indexed_ref_gen_fasta_name']
+            default_filename = config.pipeline_steps.setup.paths.reference_genome_name
         except KeyError:
             logger.error(f"Error: '{user_path}' is a directory, but 'indexed_ref_gen_fasta_name' is not set in config.")
             sys.exit(1)
@@ -109,18 +98,9 @@ def reference_genome_handler(args, config):
 
 
 def atlas_handler(args, config):
-    url = resolve_param(
-        args, config, arg_name='url',
-        config_path=['paths', 'manifest_url']
-    )
+    url = args.url
 
-    destination = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'atlas_dir'],
-            ['paths', 'illumina_manifest.csv']
-        ]
-    )
+    destination = args.output_dir
     if not destination:
         sys.exit("Error: No output path specified and config doesn't contain the path.")
 
@@ -137,18 +117,9 @@ def atlas_handler(args, config):
 
 
 def manifest_handler(args, config):
-    url = resolve_param(
-        args, config, arg_name='url',
-        config_path=['paths', 'manifest_url']
-    )
+    url = args.url
 
-    destination = resolve_param(
-        args, config, arg_name='output_dir', construct_path=True,
-        config_path=[
-            ['paths', 'atlas_dir'],
-            ['paths', 'illumina_manifest']
-        ]
-    )
+    destination = args.output_dir
 
     if not destination:
         sys.exit("Error: No output path specified and config doesn't contain the path.")
@@ -215,14 +186,8 @@ def download_and_index_reference_genome_wgbs(config):
     wgbstools_runner.run(wgbstools_cmd)
 
 
-def setup_parsers(subparsers, parent_parser):
-    io_parser = create_io_parser()
+def setup_parsers(subparsers, parent_parser, config):
     download_parent_parser = argparse.ArgumentParser(add_help=False)
-    download_parent_parser.add_argument(
-        "--url",
-        type=str,
-        help="URL to download from"
-    )
     download_parent_parser.add_argument(
         '--force',
         action="store_true",
@@ -245,25 +210,55 @@ def setup_parsers(subparsers, parent_parser):
     p_genome = download_subparsers.add_parser(
         'genome',
         help="Download, and prepare the specified genomes. --wgbstools will run the wgbs_tools init_genome.",
-        parents=[io_parser, download_parent_parser]
+        parents=[download_parent_parser]
     )
     p_genome.add_argument(
         '--wgbstools',
         action="store_true",
         help="Downloads and initialises the genome using wgbs_tools' init_genome function"
     )
+    p_genome.add_argument(
+        "--url", type=str,
+        default=config.pipeline_steps.setup.downloads.reference_genome_url,
+        help="URL to download the reference genome from"
+    )
+    p_genome.add_argument(
+        "--output-dir", type=Path,
+        default=config.pipeline_steps.setup.paths.reference_genome_dir,
+        help="Folder to save the reference genome in."
+    )
     p_genome.set_defaults(func=reference_genome_handler)
 
     p_atlas = download_subparsers.add_parser(
         'atlas',
         help="Download the specified methylation atlas.",
-        parents=[io_parser, download_parent_parser]
+        parents=[download_parent_parser]
+    )
+    p_atlas.add_argument(
+        "--url", type=str,
+        default=config.pipeline_steps.setup.downloads.uxm_atlas_url,
+        help="URL to download the reference atlas genome from"
+    )
+    p_atlas.add_argument(
+        "--output-dir", type=Path,
+        default=config.pipeline_steps.analysis.paths.full_path_atlas_file,
+        help="Path to saved atlas file."
     )
     p_atlas.set_defaults(func=atlas_handler)
 
     p_manifest = download_subparsers.add_parser(
         'manifest',
         help="Download the specified Illumina manifest.",
-        parents=[io_parser, download_parent_parser]
+        parents=[download_parent_parser]
+    )
+    p_manifest.add_argument(
+        "--url", type=str,
+        default=config.pipeline_steps.setup.downloads.manifest_url,
+        help="URL to download the reference atlas genome from"
+    )
+    p_manifest.add_argument(
+        "--output-dir", type=Path,
+        default=config.pipeline_steps.analysis.paths.full_path_manifest,
+        help="Path to saved atlas file."
     )
     p_manifest.set_defaults(func=manifest_handler)
