@@ -56,16 +56,28 @@ class Logger:
             root_logger.handlers.clear()
 
         # The console formatter is just a modified ColoredFormatter without printing stack traces.
-        console_formatter = NoTracebackColoredFormatter(
-            '%(log_color)s%(levelname)-8s - %(message)s%(reset)s',
-            log_colors={
-                'DEBUG': 'cyan',
-                'INFO': 'green',
-                'WARNING': 'yellow',
-                'ERROR': 'red',
-                'CRITICAL': 'red,bg_white',
-            }
-        )
+        if log_level == logging.DEBUG:
+            console_formatter = ColoredFormatter(
+                '%(log_color)s%(levelname)-8s - %(message)s%(reset)s',
+                log_colors={
+                    'DEBUG': 'cyan',
+                    'INFO': 'green',
+                    'WARNING': 'yellow',
+                    'ERROR': 'red',
+                    'CRITICAL': 'red,bg_white',
+                }
+            )
+        else:
+            console_formatter = NoTracebackColoredFormatter(
+                '%(log_color)s%(levelname)-8s - %(message)s%(reset)s',
+                log_colors={
+                    'DEBUG': 'cyan',
+                    'INFO': 'green',
+                    'WARNING': 'yellow',
+                    'ERROR': 'red',
+                    'CRITICAL': 'red,bg_white',
+                }
+            )
 
         console_handler = logging.StreamHandler(sys.stderr) # Errors should go to stderr
         console_handler.setLevel(log_level)
