@@ -25,7 +25,7 @@ def resolve_combined_path(args: argparse.Namespace, config: AppSettings, config_
     path_parts = []
     for component_path in config_path_components:
         # Get each part of the config ONLY
-        part = resolve_param(args, config, arg_name=None, config_path=component_path)
+        part = resolve_param(args, config, config_path=component_path)
         if part is None:
             # If any part is missing, we can't construct the path.
             return None

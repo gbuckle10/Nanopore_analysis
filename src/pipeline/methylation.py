@@ -9,16 +9,16 @@ def pileup_handler(args, config):
     aligned_file = resolve_combined_path(
         args, config, arg_name="input_file",
         config_path_components=[
-            'paths.alignment_output_dir',
-            'paths.aligned_bam_name'
+            'pipeline_steps.alignment.paths.alignment_output_dir',
+            'pipeline_steps.alignment.paths.aligned_bam_name'
         ]
     )
 
     output_bed = resolve_combined_path(
         args, config, arg_name="output_dir",
         config_path_components=[
-            'paths.methylation_dir',
-            'paths.methylation_bed_name'
+            'pipeline_steps.methylation.paths.methylation_dir',
+            'pipeline_steps.methylation.paths.methylation_bed_name'
         ]
     )
 

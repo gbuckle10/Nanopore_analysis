@@ -16,33 +16,33 @@ def deconvolution_handler(args, config):
     input_data_path = resolve_combined_path(
         args, config, arg_name="input_file",
         config_path_components=[
-            'paths.deconvolution_dir',
-            'paths.file_to_deconvolute'
+            'pipeline_steps.analysis.paths.deconvolution_dir',
+            'pipeline_steps.analysis.paths.file_to_deconvolute'
         ]
     )
     atlas_path = resolve_combined_path(
         args, config, arg_name="atlas",
         config_path_components=[
-            'paths.atlas_dir',
-            'paths.atlas_file_name'
+            'pipeline_steps.analysis.paths.atlas_dir',
+            'pipeline_steps.analysis.paths.atlas_file_name'
         ]
     )
     output_dir = resolve_param(
         args, config, arg_name='output_dir',
-        config_path='paths.deconvolution_dir'
+        config_path='pipeline_steps.analysis.paths.deconvolution_dir'
     )
     algorithm = resolve_param(
         args, config, arg_name='algorithm',
-        config_path='parameters.analysis.deconv_algorithm'
+        config_path='pipeline_steps.analysis.params.deconv_algorithm'
     )
 
     if algorithm == "uxm":
-        wgbstools_exe = resolve_param(args, config, config_path='paths.submodules.wgbstools_exe')
-        uxm_exe = resolve_param(args, config, config_path='paths.submodules.uxm_exe')
+        wgbstools_exe = resolve_param(args, config, config_path='pipeline_steps.analysis.tools.wgbstools_exe')
+        uxm_exe = resolve_param(args, config, config_path='pipeline_steps.analysis.tools.uxm_exe')
         _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, output_dir)
     elif algorithm == "nnls":
         logger.info("Running deconvolution with NNLS algorithm")
-        nnls_exe = resolve_param(args, config, config_path='paths.submodules.methatlas_exe')
+        nnls_exe = resolve_param(args, config, config_path='pipeline_steps.analysis.tools.methatlas_exe')
         _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path)
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")

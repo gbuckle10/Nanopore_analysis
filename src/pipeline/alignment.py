@@ -15,8 +15,8 @@ def full_alignment_handler(args,config):
 
     unaligned_bam = resolve_combined_path(
         args, config, arg_name='input_file', config_path_components=[
-            'paths.basecalled_output_dir',
-            'paths.unaligned_bam_name'
+            'pipeline_steps.basecalling.paths.basecalled_output_dir',
+            'pipeline_steps.basecalling.paths.unaligned_bam_name'
         ]
     )
 
@@ -26,21 +26,21 @@ def full_alignment_handler(args,config):
     print(f"Using unaligned BAM: {unaligned_bam}")
 
     threads = resolve_param(
-        args, config, arg_name='threads', config_path='parameters.general.threads'
+        args, config, arg_name='threads', config_path='globals.threads'
     )
 
     reference_index = resolve_param(
-        args, config, arg_name='ref', config_path='paths.indexed_ref_gen_fasta_name'
+        args, config, arg_name='ref', config_path='pipeline_steps.alignment.paths.indexed_ref_gen_fasta_name'
     )
 
     sort_memory_limit = resolve_param(
-        args, config, config_path='parameters.general.sort_memory_limit'
+        args, config, config_path='globals.sort_memory_limit'
     )
 
     aligned_bam_file = resolve_combined_path(
         args, config, config_path_components=[
-            'paths.alignment_output_dir',
-            'paths.aligned_bam_name'
+            'pipeline_steps.alignment.paths.alignment_output_dir',
+            'pipeline_steps.alignment.paths.aligned_bam_name'
         ]
     )
 
@@ -53,8 +53,8 @@ def full_alignment_handler(args,config):
     flagstat_report = resolve_combined_path(
         args, config, arg_name='output_dir',
         config_path_components=[
-            'paths.flagstat_report',
-            'paths.alignment_flagstat_name'
+            'pipeline_steps.alignment.paths.alignment_output_dir',
+            'pipeline_steps.alignment.paths.alignment_flagstat_name'
         ]
     )
 
@@ -64,28 +64,28 @@ def full_alignment_handler(args,config):
 def alignment_handler(args, config):
     unaligned_bam = resolve_combined_path(
         args, config, arg_name='input_file', config_path_components=[
-            'paths.basecalled_output_dir',
-            'paths.unaligned_bam_name'
+            'pipeline_steps.basecalling.paths.basecalled_output_dir',
+            'pipeline_steps.basecalling.paths.unaligned_bam_name'
         ]
     )
 
     aligned_bam_file = resolve_combined_path(
-        args, config, arg_name='output_dir', config_path_components=[
-            'paths.alignment_output_dir',
-            'paths.aligned_bam_name'
+        args, config, config_path_components=[
+            'pipeline_steps.alignment.paths.alignment_output_dir',
+            'pipeline_steps.alignment.paths.aligned_bam_name'
         ]
     )
 
     threads = resolve_param(
-        args, config, arg_name='threads', config_path='parameters.general.threads'
+        args, config, arg_name='threads', config_path='globals.threads'
     )
 
     reference_index = resolve_param(
-        args, config, arg_name='ref', config_path='paths.indexed_ref_gen_fasta_name'
+        args, config, arg_name='ref', config_path='pipeline_steps.alignment.paths.indexed_ref_gen_fasta_name'
     )
 
     sort_memory_limit = resolve_param(
-        args, config, config_path='parameters.general.sort_memory_limit'
+        args, config, config_path='globals.sort_memory_limit'
     )
 
     dorado_exe = resolve_param(
@@ -96,17 +96,17 @@ def alignment_handler(args, config):
 
 def qc_handler(args, config):
     aligned_bam_file = resolve_combined_path(
-        args, config, arg_name='input_file', config_path_components=[
-            'paths.alignment_output_dir',
-            'paths.aligned_bam_name'
+        args, config, config_path_components=[
+            'pipeline_steps.alignment.paths.alignment_output_dir',
+            'pipeline_steps.alignment.paths.aligned_bam_name'
         ]
     )
 
     flagstat_report = resolve_combined_path(
         args, config, arg_name='output_dir',
         config_path_components=[
-            'paths.flagstat_report',
-            'paths.alignment_flagstat_name'
+            'pipeline_steps.alignment.paths.alignment_output_dir',
+            'pipeline_steps.alignment.paths.alignment_flagstat_name'
         ]
     )
 

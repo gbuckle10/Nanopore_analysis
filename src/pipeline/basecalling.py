@@ -14,33 +14,33 @@ def full_basecalling_handler(args, config):
 
     input_file = resolve_param(
         args, config, arg_name='input_file',
-        config_path='pipeline_controller.basecalling.paths.pod5_dir'
+        config_path='pipeline_steps.basecalling.paths.pod5_dir'
     )
     basecalled_bam = resolve_combined_path(
         args, config, config_path_components=[
-            'pipeline_controller.basecalling.paths.basecalled_output_dir',
-            'pipeline_controller.basecalling.paths.unaligned_bam_name'
+            'pipeline_steps.basecalling.paths.basecalled_output_dir',
+            'pipeline_steps.basecalling.paths.unaligned_bam_name'
         ]
     )
     demultiplexed_output_dir = resolve_param(
         args, config, arg_name='output_dir',
-        config_path='pipeline_controller.basecalling.paths.demultiplexed_output_dir'
+        config_path='pipeline_steps.basecalling.paths.demultiplexed_output_dir'
     )
     kit_name = resolve_param(
         args, config, arg_name='kit_name',
-        config_path='pipeline_controller.basecalling.params.complex_settings.kit_name'
+        config_path='pipeline_steps.basecalling.params.complex_settings.kit_name'
     )
     model_speed = resolve_param(
         args, config, arg_name='model_speed',
-        config_path='pipeline_controller.basecalling.params.complex_settings.model_speed'
+        config_path='pipeline_steps.basecalling.params.complex_settings.model_speed'
     )
     modifications = resolve_param(
         args, config, arg_name='base_mods',
-        config_path='pipeline_controller.basecalling.params.complex_settings.basecalling_modifications'
+        config_path='pipeline_steps.basecalling.params.complex_settings.basecalling_modifications'
     )
     batchsize = resolve_param(
         args, config, arg_name='batchsize',
-        config_path='pipeline_controller.basecalling.params.batch_size'
+        config_path='pipeline_steps.basecalling.params.batch_size'
     )
 
     dorado_exe = resolve_param(
@@ -55,30 +55,30 @@ def full_basecalling_handler(args, config):
 def basecall_handler(args, config):
     input_file = resolve_param(
         args, config, arg_name='input_file',
-        config_path='pipeline_controller.basecalling.paths.pod5_dir'
+        config_path='pipeline_steps.basecalling.paths.pod5_dir'
     )
     output = resolve_combined_path(
         args, config, arg_name='output_dir',
         config_path_components=[
-            'pipeline_controller.basecalling.paths.basecalled_output_dir',
-            'pipeline_controller.basecalling.paths.unaligned_bam_name'
+            'pipeline_steps.basecalling.paths.basecalled_output_dir',
+            'pipeline_steps.basecalling.paths.unaligned_bam_name'
         ]
     )
     kit_name = resolve_param(
         args, config, arg_name='kit_name',
-        config_path='pipeline_controller.basecalling.params.complex_settings.kit_name'
+        config_path='pipeline_steps.basecalling.params.complex_settings.kit_name'
     )
     model_speed = resolve_param(
         args, config, arg_name='model_speed',
-        config_path='pipeline_controller.basecalling.params.complex_settings.model_speed'
+        config_path='pipeline_steps.basecalling.params.complex_settings.model_speed'
     )
     modifications = resolve_param(
         args, config, arg_name='base_mods',
-        config_path='pipeline_controller.basecalling.params.complex_settings.basecalling_modifications'
+        config_path='pipeline_steps.basecalling.params.complex_settings.basecalling_modifications'
     )
     batchsize = resolve_param(
         args, config, arg_name='batchsize',
-        config_path='pipeline_controller.basecalling.params.batch_size'
+        config_path='pipeline_steps.basecalling.params.batch_size'
     )
     dorado_exe = resolve_param(
         args, config, config_path='tools.dorado'
@@ -90,13 +90,13 @@ def basecall_handler(args, config):
 def demultiplex_handler(args, config):
     input_file = resolve_combined_path(
         args, config, arg_name='input_file', config_path_components=[
-            'pipeline_controller.basecalling.paths.basecalled_output_dir',
-            'pipeline_controller.basecalling.paths.unaligned_bam_name'
+            'pipeline_steps.basecalling.paths.basecalled_output_dir',
+            'pipeline_steps.basecalling.paths.unaligned_bam_name'
         ]
     )
     output_dir = resolve_param(
         args, config, arg_name='output_dir',
-        config_path='pipeline_controller.basecalling.paths.demultiplexed_output_dir'
+        config_path='pipeline_steps.basecalling.paths.demultiplexed_output_dir'
     )
 
     dorado_exe = resolve_param(
@@ -108,7 +108,7 @@ def demultiplex_handler(args, config):
 
 def download_handler(args, config):
     model_name = resolve_param(
-        args, config, config_path='pipeline_controller.basecalling.params.explicit_settings.base_model_name'
+        args, config, config_path='pipeline_steps.basecalling.params.explicit_settings.base_model_name'
     )
     dorado_exe = resolve_param(
         args, config, config_path='tools.dorado'

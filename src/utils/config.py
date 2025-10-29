@@ -188,7 +188,7 @@ class AppSettings(BaseModel):
     globals: Globals
     pipeline_control: PipelineControl
     pipeline_steps: PipelineSteps
-
+    tools: Tools
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """
