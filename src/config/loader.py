@@ -6,7 +6,7 @@ from functools import reduce
 from pathlib import Path
 from typing import List
 
-from .config import AppSettings
+from .models import AppSettings
 import yaml
 
 def resolve_combined_path(args: argparse.Namespace, config: AppSettings, config_path_components: List[str], arg_name: str = None):
