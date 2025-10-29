@@ -4,12 +4,12 @@ import collections
 
 import yaml
 from pathlib import Path
-from typing import Optional, Any, Dict, List, Literal
+from typing import Optional, Any, Dict, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
 
 
 class Globals(BaseModel):
-    threads: int = 4
+    threads: int = 4final
     sort_memory_limit: str = "2G"
 
 
@@ -48,12 +48,12 @@ class SetupPaths(BaseModel):
 
     fast5_input_dir: Optional[Path] = None
     reference_genome_dir: Optional[Path] = None
-
+    full_reference_genome_path: Optional[Path] = None
     def build_paths(self, common_paths: Paths):
         """Builds full paths for setup step """
         self.fast5_input_dir = common_paths.data_dir / self.fast5_input_dir_name
         self.reference_genome_dir = common_paths.reference_genome_dir
-
+        self.full_reference_genome_path = self.reference_genome_dir / self.reference_genome_name
 
 class SetupStep(BaseModel):
     params: dict
@@ -90,8 +90,7 @@ class BasecallingParams(BaseModel):
         """Returns the final base model name"""
         if self.method == 'complex':
             if self.complex_settings.basecalling_modifications:
-                base_model = f"{self.complex_settings.kit_name}_{self.complex_settings.model_speed}.cfg"
-                return f"{base_model}_{self.complex_settings.basecalling_modifications}"
+                return f"{self.complex_settings.kit_name}_{self.complex_settings.model_speed}.cfg"
             return None
         else:
             return self.explicit_settings.base_model_name
@@ -215,6 +214,7 @@ class AnalysisPaths(BaseModel):
     deconvolution_results_name: str
     atlas_dir_name: str = "atlas"
     deconvolution_dir_name: str = "deconvolution"
+    file_to_deconvolute_name: str = "file_to_deconvolute.csv"
 
     analysis_dir: Optional[Path] = None
     atlas_dir: Optional[Path] = None
@@ -222,6 +222,7 @@ class AnalysisPaths(BaseModel):
     full_path_atlas_file: Optional[Path] = None
     full_path_manifest: Optional[Path] = None
     full_path_deconvolution_results: Optional[Path] = None
+    file_to_deconvolute: Optional[Path] = None
 
     def build_paths(self, common_paths: Paths):
         self.analysis_dir = common_paths.results_dir
@@ -230,7 +231,7 @@ class AnalysisPaths(BaseModel):
         self.full_path_atlas_file = self.atlas_dir / self.atlas_file_name
         self.full_path_manifest = self.atlas_dir / self.manifest_name
         self.full_path_deconvolution_results = self.analysis_dir / self.deconvolution_results_name
-
+        self.file_to_deconvolute = self.analysis_dir / self.file_to_deconvolute_name
 
 class AnalysisStep(BaseModel):
     params: AnalysisParams
