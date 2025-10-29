@@ -4,7 +4,7 @@ from pathlib import Path
 import logging
 import gzip
 import shutil
-
+from typing import Union
 logger = logging.getLogger(__name__)
 
 
@@ -38,11 +38,13 @@ def decompress_file(file_path: Path, delete_original: bool = True):
     return output_path
 
 
-def ensure_dir_exists(dir_path: Path, interactive: bool = False) -> bool:
+def ensure_dir_exists(dir_path: Union[str, Path], interactive: bool = False) -> bool:
     """
     Checks whether a given directory exists. If in interactive mode, it will prompt the user to create the directory
     if it doesn't already. In non-interactive mode it will create the directory automatically.
     """
+
+    dir_path = Path(dir_path)
 
     logger.info(f"We are going to check whether the directory {dir_path} exists. Interactive mode? {interactive}")
     if dir_path.is_dir():
