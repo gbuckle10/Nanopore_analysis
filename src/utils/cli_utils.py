@@ -25,6 +25,8 @@ def add_output_dir_argument(parser, default, help_text):
 def add_io_arguments(
         parser: argparse.ArgumentParser,
         config: AppSettings,
+        add_input: bool = True,
+        add_output: bool = True,
         default_input: Path = None,
         default_output: Path = None,
         input_file_help: str = "Path to the input file/directory",
@@ -36,5 +38,7 @@ def add_io_arguments(
     if default_output is None:
         default_output = config.paths.root
 
-    add_input_file_argument(parser, default_input, input_file_help)
-    add_output_dir_argument(parser, default_output, output_dir_help)
+    if add_input:
+        add_input_file_argument(parser, default_input, input_file_help)
+    if add_output:
+        add_output_dir_argument(parser, default_output, output_dir_help)
