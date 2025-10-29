@@ -30,14 +30,8 @@ class RunSteps(BaseModel):
     deconvolution: bool = False
 
 
-class RunSetupTasks(BaseModel):
-    download_fast5_data: bool = False
-    convert_fast5_to_pod5: bool = False
-
-
 class PipelineControl(BaseModel):
     run_steps: RunSteps
-    run_setup_tasks: RunSetupTasks
 
 
 class SetupDownloads(BaseModel):
@@ -186,6 +180,7 @@ class MethylationPaths(BaseModel):
         self.full_bed_path = self.methylation_dir / self.methylation_bed_name
         self.full_meth_log_path = self.methylation_dir / self.methylation_log_name
 
+
 class MethylationStep(BaseModel):
     paths: MethylationPaths
 
@@ -211,6 +206,7 @@ class AnalysisTools(BaseModel):
         self.uxm_dir = common_paths.externals_dir / self.uxm_dir_name
         self.wgbstools_dir = common_paths.externals_dir / self.wgbstools_dir_name
         self.meth_atlas_dir = common_paths.externals_dir / self.methatlas_dir_name
+
 
 class AnalysisPaths(BaseModel):
     atlas_file_name: str
@@ -258,7 +254,7 @@ class AppSettings(BaseModel):
     pipeline_control: PipelineControl
     pipeline_steps: PipelineSteps
     tools: Tools
-    paths: Paths = Paths() # Default to an empty instance
+    paths: Paths = Paths()  # Default to an empty instance
 
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:

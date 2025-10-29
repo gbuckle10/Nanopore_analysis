@@ -10,13 +10,9 @@ globals:
 pipeline_control:
   run_steps:
     basecalling: false
-    align: false
+    align: true
     methylation_summary: false
-    deconvolution: false
-
-  run_setup_tasks:
-    download_fast5_data: false
-    convert_fast5_to_pod5: true
+    deconvolution: true
 
 pipeline_steps:
   # ---------------
@@ -33,8 +29,6 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      fast5_input_dir: "data/fast5_input/"
-      reference_genome_dir: "reference_genomes/"
       reference_genome_name: "hg38.fa"
 
   # --------------------
@@ -43,12 +37,11 @@ pipeline_steps:
   basecalling:
     params:
       method: "complex"
-
+      # Method A: Complex Model Names
       complex_settings:
         model_speed: "fast"
         basecalling_modifications: "5mCG_5hmCG"
         kit_name: "SQK-NBD114-24"
-
       # Method B: Explicit Model Names
       explicit_settings:
         base_model_name: "dna_r9.4.1_e8_sup@v3.3"
@@ -57,20 +50,15 @@ pipeline_steps:
       # Other basecalling settings
       batch_size: "64"
     paths:
-      pod5_dir: "data/pod5_output/"
       pod5_name: "all_pods.pod5"
-      basecalled_output_dir: "data/basecalled_output/"
-      demultiplexed_output_dir: "data/demultiplexed_output/"
-      unaligned_bam_name: "wowowtest.bam"
+      unaligned_bam_name: "basecalled.bam"
 
   # -------------------------
   # Step 2: Alignment
   # -------------------------
   alignment:
     paths:
-      alignment_output_dir: "data/alignment_output/"
-      qc_dir: "data/alignment_qc/"
-      indexed_ref_gen_fasta_name: "hg38.fa"
+      indexed_ref_fasta_name: "hg38.fa"
       aligned_bam_name: "taken_alignment.sorted.bam"
       alignment_flagstat_name: "alignment.flagstat.txt"
       alignment_stats_name: "alignment.stats.txt"
@@ -80,9 +68,8 @@ pipeline_steps:
   # -------------------------------
   methylation:
     paths:
-      methylation_dir: "data/methylation/"
       methylation_bed_name: "comfy.bed"
-      methylation_log_file: "pileup_wowow.log"
+      methylation_log_name: "pileup_wowow.log"
 
   # ------------------------------------
   # Step 4: Deconvolution and Analysis
@@ -92,23 +79,8 @@ pipeline_steps:
       methylation_aggregation_chunksize: '5000000'
       deconv_algorithm: "uxm"
     tools:
-      uxm_dir: "externals/UXM_deconv"
-      wgbstools_dir: "externals/wgbs_tools"
-      meth_atlas_dir: "externals/meth_atlas"
     paths:
-      analysis_dir: "analysis/"
-      atlas_dir: "data/atlas/"
-      deconvolution_dir: "analysis/deconvolution/"
-      file_for_deconvolution_ilmn: "deconvolution_illumina.csv"
-      file_for_deconvolution_gc: "deconvolution_geco.csv"
-      file_for_deconvolution_uxm: "deconvolution_uxm.csv"
-      file_to_deconvolute: "deconvolution_uxm.csv"
-      atlas_file_ilmn: "full_atlas.csv"
-      atlas_file_gc: "full_atlas_gc.csv"
-      atlas_file_uxm: "UXM_atlas_deconvolution.csv"
       atlas_file_name: "UXM_atlas_deconvolution.csv"
-      illumina_manifest: "illumina_manifest.csv"
-      processed_illumina_manifest: "illumina_manifest.parquet"
-      deconvolution_results: "deconvoluted_output.csv"
-      uxm_atlas_name: "UXM_atlas.tsv"
+      manifest_name: "illumina_manifest.csv"
+      deconvolution_results_name: "deconvoluted_output.csv"
 
