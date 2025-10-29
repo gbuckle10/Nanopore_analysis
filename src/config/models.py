@@ -13,6 +13,16 @@ class Globals(BaseModel):
     sort_memory_limit: str = "2G"
 
 
+class Paths(BaseModel):
+    """Holds the common high-level directory structure for the experiment"""
+    root: Optional[Path] = None
+    data_dir: Optional[Path] = None
+    log_dir: Optional[Path] = None
+    results_dir: Optional[Path] = None
+    reference_genome_dir: Optional[Path] = None
+    externals_dir: Optional[Path] = None
+
+
 class RunSteps(BaseModel):
     basecalling: bool = False
     align: bool = False
@@ -39,9 +49,16 @@ class SetupDownloads(BaseModel):
 
 
 class SetupPaths(BaseModel):
-    fast5_input_dir: Path
-    reference_genome_dir: Path
-    reference_genome_name: str
+    reference_genome_name: str = "genome.fa"
+    fast5_input_dir_name: str = "fast5_input"
+
+    fast5_input_dir: Optional[Path] = None
+    reference_genome_dir: Optional[Path] = None
+
+    def build_paths(self, common_paths: Paths):
+        """Builds full paths for setup step """
+        self.fast5_input_dir = common_paths.data_dir / self.fast5_input_dir_name
+        self.reference_genome_dir = common_paths.reference_genome_dir
 
 
 class SetupStep(BaseModel):
@@ -99,11 +116,25 @@ class BasecallingParams(BaseModel):
 
 
 class BasecallingPaths(BaseModel):
-    basecalled_output_dir: Path
-    demultiplexed_output_dir: Path
-    unaligned_bam_name: Path
-    pod5_dir: Path
+    # File names
+    basecalled_output_dir_name: str = "basecalled_output"
+    demultiplexed_dir_name: str = "demultiplexed_output"
+    pod5_dir_name: str = "pod5"
+    unaligned_bam_name: str
     pod5_name: str
+
+    basecalled_output_dir: Optional[Path] = None
+    demultiplexed_output_dir: Optional[Path] = None
+    pod5_dir: Optional[Path] = None
+    full_pod5_path: Optional[Path] = None
+    full_unaligned_bam_path: Optional[Path] = None
+
+    def build_paths(self, common_paths: Paths):
+        self.basecalled_output_dir = common_paths.data_dir / self.basecalled_output_dir_name
+        self.demultiplexed_output_dir = common_paths.data_dir / self.demultiplexed_dir_name
+        self.pod5_dir = common_paths.data_dir / self.pod5_dir_name
+        self.full_pod5_path = self.pod5_dir / self.pod5_name
+        self.full_unaligned_bam_path = self.basecalled_output_dir / self.unaligned_bam_name
 
 
 class BasecallingStep(BaseModel):
@@ -112,12 +143,28 @@ class BasecallingStep(BaseModel):
 
 
 class AlignmentPaths(BaseModel):
-    alignment_output_dir: Path
-    qc_dir: Path
-    indexed_ref_gen_fasta_name: str
+    # File names
+    indexed_ref_fasta_name: str
     aligned_bam_name: str
     alignment_flagstat_name: str
     alignment_stats_name: str
+    alignment_output_dir_name: str = "alignment_output"
+    alignment_qc_dir_name: str = "alignment_qc"
+
+    alignment_output_dir: Optional[Path] = None
+    qc_dir: Optional[Path] = None
+    full_indexed_genome_path: Optional[Path] = None
+    full_aligned_bam_path: Optional[Path] = None
+    full_flagstat_path: Optional[Path] = None
+    full_stats_path: Optional[Path] = None
+
+    def build_paths(self, common_paths: Paths):
+        self.alignment_output_dir = common_paths.data_dir / self.alignment_output_dir_name
+        self.qc_dir = common_paths.data_dir / self.alignment_qc_dir_name
+        self.full_indexed_genome_path = common_paths.reference_genome_dir / self.indexed_ref_fasta_name
+        self.full_aligned_bam_path = self.alignment_output_dir / self.aligned_bam_name
+        self.full_flagstat_path = self.qc_dir / self.alignment_flagstat_name
+        self.full_stats_path = self.qc_dir / self.alignment_stats_name
 
 
 class AlignmentStep(BaseModel):
@@ -125,10 +172,19 @@ class AlignmentStep(BaseModel):
 
 
 class MethylationPaths(BaseModel):
-    methylation_dir: Path
+    # File names
     methylation_bed_name: str
-    methylation_log_file: str
+    methylation_log_name: str
+    methylation_dir_name: str = "methylation"
 
+    methylation_dir: Optional[Path] = None
+    full_bed_path: Optional[Path] = None
+    full_meth_log_path: Optional[Path] = None
+
+    def build_paths(self, common_paths: Paths):
+        self.methylation_dir = common_paths.data_dir / self.methylation_dir_name
+        self.full_bed_path = self.methylation_dir / self.methylation_bed_name
+        self.full_meth_log_path = self.methylation_dir / self.methylation_log_name
 
 class MethylationStep(BaseModel):
     paths: MethylationPaths
@@ -140,30 +196,43 @@ class AnalysisParams(BaseModel):
 
 
 class AnalysisTools(BaseModel):
-    uxm_dir: Path
-    wgbstools_dir: Path
-    meth_atlas_dir: Path
+    uxm_dir_name: str = "UXM_deconv"
+    wgbstools_dir_name: str = "wgbs_tools"
+    methatlas_dir_name: str = "meth_atlas"
+
+    uxm_dir: Optional[Path] = None
+    wgbstools_dir: Optional[Path] = None
+    meth_atlas_dir: Optional[Path] = None
     uxm_exe: Path
     wgbstools_exe: Path
     methatlas_exe: Path
 
+    def build_paths(self, common_paths: Paths):
+        self.uxm_dir = common_paths.externals_dir / self.uxm_dir_name
+        self.wgbstools_dir = common_paths.externals_dir / self.wgbstools_dir_name
+        self.meth_atlas_dir = common_paths.externals_dir / self.methatlas_dir_name
 
 class AnalysisPaths(BaseModel):
-    analysis_dir: Path
-    atlas_dir: Path
-    deconvolution_dir: Path
-    file_for_deconvolution_ilmn: str
-    file_for_deconvolution_gc: str
-    file_for_deconvolution_uxm: str
-    file_to_deconvolute: str
-    atlas_file_ilmn: str
-    atlas_file_gc: str
-    atlas_file_uxm: str
     atlas_file_name: str
-    illumina_manifest: str
-    processed_illumina_manifest: str
-    deconvolution_results: str
-    uxm_atlas_name: str
+    manifest_name: str
+    deconvolution_results_name: str
+    atlas_dir_name: str = "atlas"
+    deconvolution_dir_name: str = "deconvolution"
+
+    analysis_dir: Optional[Path] = None
+    atlas_dir: Optional[Path] = None
+    deconvolution_dir: Optional[Path] = None
+    full_path_atlas_file: Optional[Path] = None
+    full_path_manifest: Optional[Path] = None
+    full_path_deconvolution_results: Optional[Path] = None
+
+    def build_paths(self, common_paths: Paths):
+        self.analysis_dir = common_paths.results_dir
+        self.atlas_dir = common_paths.data_dir / self.atlas_dir_name
+        self.deconvolution_dir = self.analysis_dir / self.deconvolution_dir_name
+        self.full_path_atlas_file = self.atlas_dir / self.atlas_file_name
+        self.full_path_manifest = self.atlas_dir / self.manifest_name
+        self.full_path_deconvolution_results = self.analysis_dir / self.deconvolution_results_name
 
 
 class AnalysisStep(BaseModel):
@@ -189,6 +258,8 @@ class AppSettings(BaseModel):
     pipeline_control: PipelineControl
     pipeline_steps: PipelineSteps
     tools: Tools
+    paths: Paths = Paths() # Default to an empty instance
+
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """
