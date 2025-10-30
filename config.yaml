@@ -50,6 +50,7 @@ pipeline_steps:
       # Other basecalling settings
       batch_size: "64"
     paths:
+      pod5_dir_name: "data/pod5/"
       pod5_name: "all_pods.pod5"
       unaligned_bam_name: "basecalled.bam"
 
