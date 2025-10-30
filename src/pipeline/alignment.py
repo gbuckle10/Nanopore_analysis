@@ -11,6 +11,51 @@ from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
+def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
+    """
+    Given a path to a FASTA file, ensures the corresponding .mmi index exists, and creates it if necessary. It can
+    handle .fa and .fa.gz files.
+
+    """
+    index_path = ref_fasta_path.with_suffix('.mmi')
+
+    if index_path.is_file():
+        logging.info(f"Found existing minimap2 index: {index_path}")
+        return index_path
+
+    # If the index is missing, we need to find the source FASTA.
+    source_fasta_to_index = None
+
+    if ref_fasta_path.is_file():
+        # If the provided fasta exists, just index that.
+        source_fasta_to_index = ref_fasta_path
+    else:
+        # If the provided fasta doesn't exist, check for the gzipped version (.fa.gz)
+        gz_fasta_path = ref_fasta_path.with_suffix('.fa.gz')
+        if gz_fasta_path.is_file():
+            source_fasta_to_index = gz_fasta_path
+
+    # Give an error if we can't find any source fasta
+    if source_fasta_to_index is None:
+        raise FileNotFoundError(f"Couldn't find minimap2 index ({index_path}) or a source fasta file to index at "
+                                f"'{ref_fasta_path}' or {ref_fasta_path.with_suffix('.fa.gz')}")
+
+    logging.info(f"Minimap2 index not found. Building index from {source_fasta_to_index}")
+
+    index_cmd = [
+        "minimap2",
+        "-d", str(index_path),
+        "-t", str(threads),
+        str(source_fasta_to_index)
+    ]
+
+    run_command(index_cmd)
+
+    if not index_path.is_file():
+        raise RuntimeError(f"Minimap2 indexing failed. Index was not created at {index_path}")
+
+    logging.info(f"Successfully built index: {index_path}")
+    return index_path
 
 def full_alignment_handler(args, config: AppSettings):
     unaligned_bam = args.input_file
@@ -20,11 +65,21 @@ def full_alignment_handler(args, config: AppSettings):
 
     aligned_bam_file = args.output_dir
     threads = args.threads
-    reference_index = args.ref
+    reference_fasta_path = args.ref
     sort_memory_limit = config.globals.sort_memory_limit
     dorado_exe = config.tools.dorado
 
-    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
+    if reference_fasta_path is None:
+        raise ValueError("Missing required argument: --ref")
+
+    try:
+        logging.info(f"Checking whether reference index exists at {reference_fasta_path}")
+        reference_index_path = _ensure_mmi_exists(reference_fasta_path, threads)
+    except (FileNotFoundError, RuntimeError) as e:
+        logging.info(f"Error preparing reference genome: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index_path, sort_memory_limit, threads)
 
     flagstat_report = config.pipeline_steps.alignment.paths.full_flagstat_path
 
@@ -49,75 +104,108 @@ def qc_handler(args, config):
     run_qc_command(aligned_bam_file, flagstat_report)
 
 
-def run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads):
+def run_alignment_command(dorado_exe, input_path, output_path, reference_index, sort_memory_limit, threads):
     # Add a check - allow the user to decide whether to align a single bam or a directory of bams.
     # If the user wants to a directory, you need to specify an --output-dir
     # Sorting and indexing is automatic if a directory is given instead of a specific file.
 
-    # ADD A METHOD TO PRODUCE MMI REFERENCE HERE IF IT DOESN'T ALREADY EXIST
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input for alignment doesn't exist: {input_path}")
 
-    alignment_cmd = [
-        'aligner',
-        '-t', str(threads),
-        str(reference_index),
-        str(unaligned_bam)
-    ]
+    input_files_to_align = []
 
-    dorado_runner = ToolRunner(dorado_exe)
+    if input_path.is_file():
+        input_files_to_align.append(input_path)
+    elif input_path.is_dir():
+        found_files = list(input_path.rglob('*.bam'))
+        if not found_files:
+            raise FileNotFoundError(f"No BAM files found in directory {input_path}")
+        input_files_to_align = found_files
+    else:
+        raise ValueError(f"Input path is neither a file nor a directory: {input_path}")
 
-    # The sort shouldn't happen if the alignment_cmd is for an entire directory.
-    sort_cmd = [
-        "samtools", "sort",
-        "-@", str(threads),
-        "-m", sort_memory_limit,
-        "-o", str(aligned_bam_file)
-    ]
+    # Validate output path
+    output_dir = None
+    if len(input_files_to_align) > 1:
+        if output_path.suffix != '':
+            raise ValueError(f"Input is a directory, so output must also be a directory. The provided output path, {output_path}, looks like a file.")
+        output_dir = output_path
+    elif len(input_files_to_align) == 1:
+        if output_path.suffix == '':
+            output_dir = output_path
+        else:
+            output_dir = output_path.parent
 
-    print(f"Executing pipe: {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    logging.info(f"All outputs will be saved in: {output_dir}")
 
-    align_process = dorado_runner.start(
-        alignment_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    for input_file in input_files_to_align:
+        logging.info(f"Processing input file: {input_file.name}")
 
-    if align_process is None:
-        return
+        # Construct the corresponding output filename
+        if len(input_files_to_align) > 1 or output_path.suffix == '':
+            output_bam_file = output_dir / f"{input_file.stem}.aligned.sorted.bam"
+        else:
+            output_bam_file = output_path
+        logging.info(f"Output will be {output_bam_file}")
 
-    try:
-        # Start sort process
-        # stdin is connected to stdout of the first process.
-        sort_process = subprocess.Popen(sort_cmd, stdin=align_process.stdout, stderr=subprocess.PIPE)
+        alignment_cmd = [
+            'aligner',
+            '-t', str(threads),
+            str(reference_index),
+            str(input_file)
+        ]
 
-        # Close the pipe in the alignment process so that it can receive errors from sort process.
-        align_process.stdout.close()
+        sort_cmd = [
+            "samtools", "sort",
+            "-@", str(threads),
+            "-m", sort_memory_limit,
+            "-o", str(output_bam_file)
+        ]
 
-        # Wait for the processes to finish and capture their stderr output.
-        align_stderr = align_process.communicate()[1]
-        sort_stderr = sort_process.communicate()[1]
+        try:
+            dorado_runner = ToolRunner(dorado_exe)
+            print(f"Executing pipe: (input_stream) | dorado {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
+            align_process = dorado_runner.start(
+                alignment_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            if align_process is None:
+                return
+            # Start sort process
+            # stdin is connected to stdout of the first process.
+            sort_process = subprocess.Popen(sort_cmd, stdin=align_process.stdout, stderr=subprocess.PIPE)
 
-        if align_process.returncode != 0:
-            print("---ERROR in alignment step ---", file=sys.stderr)
-            print(align_stderr.decode(), file=sys.stderr)
+            # Close the pipe in the alignment process so that it can receive errors from sort process.
+            align_process.stdout.close()
+
+            # Wait for the processes to finish and capture their stderr output.
+            align_stderr = align_process.communicate()[1]
+            sort_stderr = sort_process.communicate()[1]
+
+            if align_process.returncode != 0:
+                print("---ERROR in alignment step ---", file=sys.stderr)
+                print(align_stderr.decode(), file=sys.stderr)
+                sys.exit(1)
+            if sort_process.returncode != 0:
+                print("--- ERROR in sorting step ---", file=sys.stderr)
+                print(sort_stderr.decode(), file=sys.stderr)
+                sys.exit(1)
+            print(f"--- Alignment and sorting complete. Output sent to {output_bam_file}")
+
+        except FileNotFoundError as e:
+            print(f"CRITICAL: Command '{e.filename}' not found.", file=sys.stderr)
             sys.exit(1)
-        if sort_process.returncode != 0:
-            print("--- ERROR in sorting step ---", file=sys.stderr)
-            print(sort_stderr.decode(), file=sys.stderr)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}", file=sys.stderr)
             sys.exit(1)
-        print(f"--- Alignment and sorting complete. Output sent to {aligned_bam_file}")
 
-    except FileNotFoundError as e:
-        print(f"CRITICAL: Command '{e.filename}' not found.", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}", file=sys.stderr)
-        sys.exit(1)
+        print("Now it's time to index.")
+        index_cmd = [
+            "samtools", "index",
+            output_bam_file
+        ]
 
-    print("Now it's time to index.")
-    index_cmd = [
-        "samtools", "index",
-        aligned_bam_file
-    ]
-
-    run_command(index_cmd)
+        run_command(index_cmd)
 
     print("Indexing complete")
 
@@ -156,7 +244,7 @@ def setup_parsers(subparsers, parent_parser, config):
     alignment_parent_parser = argparse.ArgumentParser(add_help=False)
     alignment_parent_parser.add_argument(
         "--ref",
-        default=config.pipeline_steps.setup.paths.reference_genome_dir,
+        default=config.pipeline_steps.setup.paths.full_reference_genome_path,
         type=Path,
         help="Path to the reference genome"
     )
