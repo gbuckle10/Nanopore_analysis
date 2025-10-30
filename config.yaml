@@ -52,17 +52,18 @@ pipeline_steps:
     paths:
       pod5_dir_name: "data/pod5/"
       pod5_name: "all_pods.pod5"
-      unaligned_bam_name: "basecalled.bam"
+      unaligned_bam_name: "newcalls2.bam"
 
   # -------------------------
   # Step 2: Alignment
   # -------------------------
   alignment:
     paths:
-      indexed_ref_fasta_name: "hg38.fa"
+      indexed_ref_fasta_name: "hg19.mmi"
       aligned_bam_name: "taken_alignment.sorted.bam"
       alignment_flagstat_name: "alignment.flagstat.txt"
       alignment_stats_name: "alignment.stats.txt"
+      ref_genome_subdir: "hg19"
 
   # -------------------------------
   # Step 3: Methylation Summary

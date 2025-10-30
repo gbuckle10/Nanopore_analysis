@@ -156,7 +156,7 @@ def setup_parsers(subparsers, parent_parser, config):
     alignment_parent_parser = argparse.ArgumentParser(add_help=False)
     alignment_parent_parser.add_argument(
         "--ref",
-        default=config.pipeline_steps.setup.paths.reference_genome_dir,
+        default=config.pipeline_steps.alignment.paths.full_indexed_genome_path,
         type=Path,
         help="Path to the reference genome"
     )
