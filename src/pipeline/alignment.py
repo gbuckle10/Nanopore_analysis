@@ -11,6 +11,51 @@ from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
+def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
+    """
+    Given a path to a FASTA file, ensures the corresponding .mmi index exists, and creates it if necessary. It can
+    handle .fa and .fa.gz files.
+
+    """
+    index_path = ref_fasta_path.with_suffix('.mmi')
+
+    if index_path.is_file():
+        print(f"Found existing minimap2 index: {index_path}")
+        return index_path
+
+    # If the index is missing, we need to find the source FASTA.
+    source_fasta_to_index = None
+
+    if ref_fasta_path.is_file():
+        # If the provided fasta exists, just index that.
+        source_fasta_to_index = ref_fasta_path
+    else:
+        # If the provided fasta doesn't exist, check for the gzipped version (.fa.gz)
+        gz_fasta_path = ref_fasta_path.with_suffix('.fa.gz')
+        if gz_fasta_path.is_file():
+            source_fasta_to_index = gz_fasta_path
+
+    # Give an error if we can't find any source fasta
+    if source_fasta_to_index is None:
+        raise FileNotFoundError(f"Couldn't find minimap2 index ({index_path}) or a source fasta file to index at "
+                                f"'{ref_fasta_path}' or {ref_fasta_path.with_suffix('.fa.gz')}")
+
+    logging.info(f"Minimap2 index not found. Building index from {source_fasta_to_index}")
+
+    index_cmd = [
+        "minimap2",
+        "-d", str(index_path),
+        "-t", str(threads),
+        str(source_fasta_to_index)
+    ]
+
+    run_command(index_cmd)
+
+    if not index_path.is_file():
+        raise RuntimeError(f"Minimap2 indexing failed. Index was not created at {index_path}")
+
+    logging.info(f"Successfully built index: {index_path}")
+    return index_path
 
 def full_alignment_handler(args, config: AppSettings):
     unaligned_bam = args.input_file
@@ -20,11 +65,21 @@ def full_alignment_handler(args, config: AppSettings):
 
     aligned_bam_file = args.output_dir
     threads = args.threads
-    reference_index = args.ref
+    reference_fasta_path = args.ref
     sort_memory_limit = config.globals.sort_memory_limit
     dorado_exe = config.tools.dorado
 
-    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
+    if reference_fasta_path is None:
+        raise ValueError("Missing required argument: --ref")
+
+    try:
+        print(f"Checking whether reference index exists at {reference_fasta_path}")
+        reference_index_path = _ensure_mmi_exists(reference_fasta_path, threads)
+    except (FileNotFoundError, RuntimeError) as e:
+        logging.info(f"Error preparing reference genome: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index_path, sort_memory_limit, threads)
 
     flagstat_report = config.pipeline_steps.alignment.paths.full_flagstat_path
 
