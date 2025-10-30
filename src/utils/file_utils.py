@@ -1,10 +1,12 @@
 import os
+import subprocess
 import zipfile
 from pathlib import Path
 import logging
 import gzip
 import shutil
 from typing import Union
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,29 @@ def decompress_file(file_path: Path, delete_original: bool = True):
         logger.info(f"Deleted original file: {file_path.name}")
 
     return output_path
+
+
+def is_bam_multiplexed(bam_path: Path) -> bool:
+    """
+    Checks a BAM header for read groups with common barcode tags. Returns true if multiplexing tags are found, otherwise
+    False
+    """
+    if not bam_path.is_file():
+        logging.warning(f"BAM file not found at {bam_path}. Cannot check for multiplexing.")
+        return False
+
+    logging.info(f"Checking for multiplexing tags in BAM header of {bam_path.name}")
+    try:
+        check_command = f"samtools view -H {bam_path} | grep -qE '@RG.*(BC:|RX:)'"
+        subprocess.run(check_command, shell=True, check=True, capture_output=True)
+        logging.info("Multiplexing tags (BC: or RX:) found. Demultiplexing is required.")
+        return True
+    except subprocess.CalledProcessError:
+        logging.info("No standard multiplexing tags found. No demultiplexing required.")
+        return False
+    except FileNotFoundError:
+        logging.error("'samtools' not found, can't check for demultiplexing")
+        return False
 
 
 def ensure_dir_exists(dir_path: Union[str, Path], interactive: bool = False) -> bool:

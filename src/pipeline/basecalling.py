@@ -5,8 +5,7 @@ from pathlib import Path
 
 from src.utils.cli_utils import add_io_arguments
 from src.utils.tools_runner import ToolRunner
-from src.utils.file_utils import ensure_dir_exists
-from src.utils.validation import validate_path
+from src.utils.file_utils import ensure_dir_exists, is_bam_multiplexed
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +14,8 @@ def full_basecalling_handler(args, config):
     logger.info("INFO: Running full basecalling step.")
 
     input_file = args.input_file
+    if input_file is None:
+        raise ValueError("Could not determine the path for the POD5 data to basecall")
 
     # The output should depend on whether you want to demultiplex or not. Add a tag for that in future.
     basecalled_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
@@ -27,7 +28,12 @@ def full_basecalling_handler(args, config):
 
     run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, basecalled_bam)
 
-    run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
+    if is_bam_multiplexed(basecalled_bam):
+        logging.info(f"The basecalled BAM {basecalled_bam} is multiplexed, so we'll demultiplex it.")
+        run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
+    else:
+        logging.info(f"The basecalled BAM {basecalled_bam} is not multiplexed, so we won't demultiplex it.")
+
 
 
 def basecall_handler(args, config):
@@ -189,7 +195,7 @@ def setup_parsers(subparsers, parent_parser, config):
     p_basecall.add_argument(
         "--kit-name", type=str,
         default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
-        help="Specify Nanopore kit name"
+        help="Specify the Nanopore kit name"
     )
     add_io_arguments(
         p_basecall, config,

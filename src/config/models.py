@@ -46,14 +46,16 @@ class SetupPaths(BaseModel):
     reference_genome_name: str = "genome.fa"
     fast5_input_dir_name: str = "fast5_input"
 
+    reference_genome_subfolder: Optional[Path] = "" # Need to check this and implement in full_reference_genome_path
     fast5_input_dir: Optional[Path] = None
     reference_genome_dir: Optional[Path] = None
     full_reference_genome_path: Optional[Path] = None
+
     def build_paths(self, common_paths: Paths):
         """Builds full paths for setup step """
         self.fast5_input_dir = common_paths.data_dir / self.fast5_input_dir_name
         self.reference_genome_dir = common_paths.reference_genome_dir
-        self.full_reference_genome_path = self.reference_genome_dir / self.reference_genome_name
+        self.full_reference_genome_path = self.reference_genome_dir / self.reference_genome_subfolder / self.reference_genome_name
 
 class SetupStep(BaseModel):
     params: dict
@@ -145,6 +147,7 @@ class AlignmentPaths(BaseModel):
     alignment_output_dir_name: str = "alignment_output"
     alignment_qc_dir_name: str = "alignment_qc"
 
+    ref_genome_subdir: Optional[Path] = ""
     alignment_output_dir: Optional[Path] = None
     qc_dir: Optional[Path] = None
     full_indexed_genome_path: Optional[Path] = None
@@ -155,7 +158,7 @@ class AlignmentPaths(BaseModel):
     def build_paths(self, common_paths: Paths):
         self.alignment_output_dir = common_paths.data_dir / self.alignment_output_dir_name
         self.qc_dir = common_paths.data_dir / self.alignment_qc_dir_name
-        self.full_indexed_genome_path = common_paths.reference_genome_dir / self.indexed_ref_fasta_name
+        self.full_indexed_genome_path = common_paths.reference_genome_dir / self.ref_genome_subdir / self.indexed_ref_fasta_name
         self.full_aligned_bam_path = self.alignment_output_dir / self.aligned_bam_name
         self.full_flagstat_path = self.qc_dir / self.alignment_flagstat_name
         self.full_stats_path = self.qc_dir / self.alignment_stats_name
