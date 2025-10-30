@@ -1,5 +1,17 @@
 from pathlib import Path
 
+from .models import AppSettings
+
+
+def validate_all_paths(config: AppSettings):
+    """
+    Handles the validation of all built paths by calling the validate() method on the relevant sub-model.
+    """
+    config.pipeline_steps.setup.paths.validate()
+    config.pipeline_steps.basecalling.paths.validate()
+    config.pipeline_steps.alignment.paths.validate()
+    config.pipeline_steps.methylation.paths.validate()
+    config.pipeline_steps.analysis.paths.validate()
 
 def path_must_exist(value: Path) -> Path:
     """
