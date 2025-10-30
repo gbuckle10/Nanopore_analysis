@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def full_basecalling_handler(args, config):
-    logger.info("INFO: Running full basecalling step.")
+    logger.info("Running full basecalling step.")
 
     input_file = args.input_file
     if input_file is None:
@@ -181,7 +181,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     add_io_arguments(
         p_run, config,
-        default_input=config.pipeline_steps.basecalling.paths.pod5_dir,
+        default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
         default_output=config.pipeline_steps.basecalling.paths.demultiplexed_output_dir,
         input_file_help="Path to POD5 files",
         output_dir_help="Path to demultiplexed data directory." # Add a tag to differentiate between demultiplex and not demultiplex.
@@ -199,7 +199,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     add_io_arguments(
         p_basecall, config,
-        default_input=config.pipeline_steps.basecalling.paths.pod5_dir,
+        default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
         default_output=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
         input_file_help="Path to POD5 files",
         output_dir_help="Path to basecalled BAM file"

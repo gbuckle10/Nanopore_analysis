@@ -2,8 +2,16 @@
 # Nanopore Analysis Pipeline Configuration
 #
 # HOW TO USE THIS FILE:
-# All paths in this file (filenames and directories) are relative to the root directory. Don't use absolute
-# paths, whatever you do!!
+#   All paths in this file (filenames and directories) are relative to the root directory. Don't use absolute
+#   paths, whatever you do!!
+#
+#   - PATHS
+#     - For OUTPUTS (such as 'aligned_bam_name'): provide a simple filename. It'll be created inside
+#       a standard directory within the root
+#     - For INPUTS (such as pod5_input_path):
+#       - If the data is inside your experiment folder, provide a relative path (e.g. source_data/pod5/)
+#       - If the data is somewhere else, provide the full absolute path (e.g. /mnt/c/data/run123)
+#
 # ========================================================
 conda_env_name: "nanopore_analysis"
 
@@ -33,8 +41,7 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      reference_genome_subfolder: "hg19"
-      reference_genome_name: "hg19.fa"
+      ref_genome_fasta_path: "reference_genomes/hg19/hg19.fa.gz"
 
   # --------------------
   # Step 1: Basecalling

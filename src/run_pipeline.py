@@ -8,7 +8,6 @@ from pathlib import Path
 
 from src.config.models import load_and_validate_configs, AppSettings
 from src.config.paths import build_config_paths
-from src.config.validators import validate_all_paths
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 from src.utils import resource_downloader
 from src.utils.logger import Logger
@@ -101,7 +100,6 @@ def main():
             conf_args.user_config, conf_args.runtime_config
         )
         build_config_paths(config)
-        validate_all_paths(config)
     except (FileNotFoundError, ValueError) as e:
         print(f"Error loading configuration: {e}", file=sys.stderr)
         sys.exit(1)
