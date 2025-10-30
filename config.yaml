@@ -1,5 +1,9 @@
 # ========================================================
-# Execution Environment
+# Nanopore Analysis Pipeline Configuration
+#
+# HOW TO USE THIS FILE:
+# All paths in this file (filenames and directories) are relative to the root directory. Don't use absolute
+# paths, whatever you do!!
 # ========================================================
 conda_env_name: "nanopore_analysis"
 
@@ -51,8 +55,8 @@ pipeline_steps:
       # Other basecalling settings
       batch_size: "64"
     paths:
-      pod5_dir_name: "data/pod5/"
-      pod5_name: "all_pods.pod5"
+      # pod5_input_path can be either a file or a directory.
+      pod5_input_path: "data/pod5_output/"
       unaligned_bam_name: "newcalls2.bam"
 
   # -------------------------
