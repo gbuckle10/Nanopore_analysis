@@ -147,6 +147,7 @@ class AlignmentPaths(BaseModel):
     alignment_output_dir_name: str = "alignment_output"
     alignment_qc_dir_name: str = "alignment_qc"
 
+    ref_genome_subdir: Optional[Path] = ""
     alignment_output_dir: Optional[Path] = None
     qc_dir: Optional[Path] = None
     full_indexed_genome_path: Optional[Path] = None
@@ -157,7 +158,7 @@ class AlignmentPaths(BaseModel):
     def build_paths(self, common_paths: Paths):
         self.alignment_output_dir = common_paths.data_dir / self.alignment_output_dir_name
         self.qc_dir = common_paths.data_dir / self.alignment_qc_dir_name
-        self.full_indexed_genome_path = common_paths.reference_genome_dir / self.indexed_ref_fasta_name
+        self.full_indexed_genome_path = common_paths.reference_genome_dir / self.ref_genome_subdir / self.indexed_ref_fasta_name
         self.full_aligned_bam_path = self.alignment_output_dir / self.aligned_bam_name
         self.full_flagstat_path = self.qc_dir / self.alignment_flagstat_name
         self.full_stats_path = self.qc_dir / self.alignment_stats_name
