@@ -165,7 +165,7 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
 
         try:
             dorado_runner = ToolRunner(dorado_exe)
-            print(f"Executing pipe: (input_stream) | dorado {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
+            print(f"Executing pipe: dorado {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
             align_process = dorado_runner.start(
                 alignment_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
@@ -202,7 +202,7 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
         print("Now it's time to index.")
         index_cmd = [
             "samtools", "index",
-            output_bam_file
+            str(output_bam_file)
         ]
 
         run_command(index_cmd)
