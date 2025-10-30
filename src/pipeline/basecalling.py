@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.utils.cli_utils import add_io_arguments
 from src.utils.tools_runner import ToolRunner
-from src.utils.file_utils import ensure_dir_exists
+from src.utils.file_utils import ensure_dir_exists, is_bam_multiplexed
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,12 @@ def full_basecalling_handler(args, config):
 
     run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, basecalled_bam)
 
-    run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
+    if is_bam_multiplexed(basecalled_bam):
+        logging.info(f"The basecalled BAM {basecalled_bam} is multiplexed, so we'll demultiplex it.")
+        run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
+    else:
+        logging.info(f"The basecalled BAM {basecalled_bam} is not multiplexed, so we won't demultiplex it.")
+
 
 
 def basecall_handler(args, config):

@@ -6,6 +6,7 @@ import logging
 import gzip
 import shutil
 from typing import Union
+
 logger = logging.getLogger(__name__)
 
 
@@ -38,6 +39,7 @@ def decompress_file(file_path: Path, delete_original: bool = True):
 
     return output_path
 
+
 def is_bam_multiplexed(bam_path: Path) -> bool:
     """
     Checks a BAM header for read groups with common barcode tags. Returns true if multiplexing tags are found, otherwise
@@ -59,6 +61,8 @@ def is_bam_multiplexed(bam_path: Path) -> bool:
     except FileNotFoundError:
         logging.error("'samtools' not found, can't check for demultiplexing")
         return False
+
+
 def ensure_dir_exists(dir_path: Union[str, Path], interactive: bool = False) -> bool:
     """
     Checks whether a given directory exists. If in interactive mode, it will prompt the user to create the directory
