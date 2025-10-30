@@ -29,7 +29,8 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      reference_genome_name: "hg38.fa"
+      reference_genome_subfolder: "hg19"
+      reference_genome_name: "hg19.fa"
 
   # --------------------
   # Step 1: Basecalling

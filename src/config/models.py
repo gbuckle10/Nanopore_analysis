@@ -46,14 +46,16 @@ class SetupPaths(BaseModel):
     reference_genome_name: str = "genome.fa"
     fast5_input_dir_name: str = "fast5_input"
 
+    reference_genome_subfolder: Optional[Path] = "" # Need to check this and implement in full_reference_genome_path
     fast5_input_dir: Optional[Path] = None
     reference_genome_dir: Optional[Path] = None
     full_reference_genome_path: Optional[Path] = None
+
     def build_paths(self, common_paths: Paths):
         """Builds full paths for setup step """
         self.fast5_input_dir = common_paths.data_dir / self.fast5_input_dir_name
         self.reference_genome_dir = common_paths.reference_genome_dir
-        self.full_reference_genome_path = self.reference_genome_dir / self.reference_genome_name
+        self.full_reference_genome_path = self.reference_genome_dir / self.reference_genome_subfolder / self.reference_genome_name
 
 class SetupStep(BaseModel):
     params: dict
