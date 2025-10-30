@@ -23,7 +23,7 @@ def full_basecalling_handler(args, config):
     demultiplexed_output_dir = args.output_dir
     kit_name = args.kit_name
     model_speed = config.pipeline_steps.basecalling.params.complex_settings.model_speed
-    modifications = config.basecalling.params.complex_settings.basecalling_modifications
+    modifications = config.pipeline_steps.basecalling.params.complex_settings.basecalling_modifications
     batchsize = config.pipeline_steps.basecalling.params.batch_size
     dorado_exe = config.tools.dorado
 
@@ -138,7 +138,9 @@ def setup_parsers(subparsers, parent_parser, config):
         parents=[parent_parser]
     )
     p_run.add_argument(
-        "--kit-name", type=str, help="Specify the Nanopore kit name"
+        "--kit-name", type=str,
+        default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
+        help="Specify the Nanopore kit name"
     )
     add_io_arguments(
         p_run, config,
@@ -154,7 +156,9 @@ def setup_parsers(subparsers, parent_parser, config):
         parents=[parent_parser]
     )
     p_basecall.add_argument(
-        "--kit-name", type=str, help="Specify Nanopore kit name"
+        "--kit-name", type=str,
+        default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
+        help="Specify the Nanopore kit name"
     )
     add_io_arguments(
         p_basecall, config,
