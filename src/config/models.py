@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Optional, Any, Dict, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
 
+from src.config.validators import validate_path
+
 
 class Globals(BaseModel):
     threads: int = 4
@@ -46,17 +48,23 @@ class SetupPaths(BaseModel):
     reference_genome_name: str = "genome.fa"
     fast5_input_dir_name: str = "fast5_input"
 
-    reference_genome_subfolder: Optional[Path] = "" # Need to check this and implement in full_reference_genome_path
+    reference_genome_subfolder: Optional[Path] = ""  # Need to check this and implement in full_reference_genome_path
     fast5_input_dir: Optional[Path] = None
     reference_genome_dir: Optional[Path] = None
     full_reference_genome_path: Optional[Path] = None
 
-    def build_paths(self, common_paths: Paths):
+    def _validate(self):
+        pass
+
+    def _build(self, common_paths: Paths):
         """Builds full paths for setup step """
         self.fast5_input_dir = common_paths.data_dir / self.fast5_input_dir_name
         self.reference_genome_dir = common_paths.reference_genome_dir
         self.full_reference_genome_path = self.reference_genome_dir / self.reference_genome_subfolder / self.reference_genome_name
 
+    def build_and_validate(self, common_paths: Paths):
+        self._build(common_paths)
+        self._validate()
 class SetupStep(BaseModel):
     params: dict
     downloads: SetupDownloads
@@ -114,24 +122,47 @@ class BasecallingPaths(BaseModel):
     # File names
     basecalled_output_dir_name: str = "basecalled_output"
     demultiplexed_dir_name: str = "demultiplexed_output"
-    pod5_dir_name: str = "pod5"
     dorado_model_dir_name: str = "models"
     unaligned_bam_name: str
-    pod5_name: str
+    pod5_input_path: str
 
     basecalled_output_dir: Optional[Path] = None
     demultiplexed_output_dir: Optional[Path] = None
-    pod5_dir: Optional[Path] = None
-    full_pod5_path: Optional[Path] = None
     full_unaligned_bam_path: Optional[Path] = None
+    full_pod5_path: Optional[Path] = None
     dorado_model_dir: Optional[Path] = None
-    def build_paths(self, common_paths: Paths):
+
+    def _validate(self):
+        # Pod5 path must exist but can be either a file or a directory
+        validate_path(
+            self.full_pod5_path,
+            must_exist=True,
+            param_name="Setup Input Path ('full_pod5_path')"
+        )
+
+        # The unaligned bam directory doesn't need to exist yet, it just needs to have been populated.
+        validate_path(
+            self.full_unaligned_bam_path
+        )
+    def _build(self, common_paths: Paths):
+        user_pod5_path = Path(self.pod5_input_path)
+        if user_pod5_path.is_absolute():
+            print(f"Using absolute path for pod5 input: {user_pod5_path}")
+            self.full_pod5_path = user_pod5_path
+        else:
+            print(f"Resolving relative pod5 input path against experiment root")
+            self.full_pod5_path = common_paths.root / user_pod5_path
+
+
         self.basecalled_output_dir = common_paths.data_dir / self.basecalled_output_dir_name
         self.demultiplexed_output_dir = common_paths.data_dir / self.demultiplexed_dir_name
-        self.pod5_dir = common_paths.data_dir / self.pod5_dir_name
-        self.full_pod5_path = self.pod5_dir / self.pod5_name
+
         self.full_unaligned_bam_path = self.basecalled_output_dir / self.unaligned_bam_name
         self.dorado_model_dir = common_paths.root / self.dorado_model_dir_name
+
+    def build_and_validate(self, common_paths: Paths):
+        self._build(common_paths)
+        self._validate()
 
 class BasecallingStep(BaseModel):
     params: BasecallingParams
@@ -155,7 +186,9 @@ class AlignmentPaths(BaseModel):
     full_flagstat_path: Optional[Path] = None
     full_stats_path: Optional[Path] = None
 
-    def build_paths(self, common_paths: Paths):
+    def _validate(self):
+        pass
+    def _build(self, common_paths: Paths):
         self.alignment_output_dir = common_paths.data_dir / self.alignment_output_dir_name
         self.qc_dir = common_paths.data_dir / self.alignment_qc_dir_name
         self.full_indexed_genome_path = common_paths.reference_genome_dir / self.ref_genome_subdir / self.indexed_ref_fasta_name
@@ -163,6 +196,9 @@ class AlignmentPaths(BaseModel):
         self.full_flagstat_path = self.qc_dir / self.alignment_flagstat_name
         self.full_stats_path = self.qc_dir / self.alignment_stats_name
 
+    def build_and_validate(self, common_paths: Paths):
+        self._build(common_paths)
+        self._validate()
 
 class AlignmentStep(BaseModel):
     paths: AlignmentPaths
@@ -178,11 +214,15 @@ class MethylationPaths(BaseModel):
     full_bed_path: Optional[Path] = None
     full_meth_log_path: Optional[Path] = None
 
-    def build_paths(self, common_paths: Paths):
+    def _validate(self):
+        pass
+    def _build(self, common_paths: Paths):
         self.methylation_dir = common_paths.data_dir / self.methylation_dir_name
         self.full_bed_path = self.methylation_dir / self.methylation_bed_name
         self.full_meth_log_path = self.methylation_dir / self.methylation_log_name
-
+    def build_and_validate(self, common_paths: Paths):
+        self._build(common_paths)
+        self._validate()
 
 class MethylationStep(BaseModel):
     paths: MethylationPaths
@@ -205,10 +245,16 @@ class AnalysisTools(BaseModel):
     wgbstools_exe: Path
     methatlas_exe: Path
 
-    def build_paths(self, common_paths: Paths):
+    def _validate(self):
+        pass
+    def _build(self, common_paths: Paths):
         self.uxm_dir = common_paths.externals_dir / self.uxm_dir_name
         self.wgbstools_dir = common_paths.externals_dir / self.wgbstools_dir_name
         self.meth_atlas_dir = common_paths.externals_dir / self.methatlas_dir_name
+
+    def build_and_validate(self, common_paths: Paths):
+        self._build(common_paths)
+        self._validate()
 
 
 class AnalysisPaths(BaseModel):
@@ -227,7 +273,9 @@ class AnalysisPaths(BaseModel):
     full_path_deconvolution_results: Optional[Path] = None
     file_to_deconvolute: Optional[Path] = None
 
-    def build_paths(self, common_paths: Paths):
+    def _validate(self):
+        pass
+    def _build(self, common_paths: Paths):
         self.analysis_dir = common_paths.results_dir
         self.atlas_dir = common_paths.data_dir / self.atlas_dir_name
         self.deconvolution_dir = self.analysis_dir / self.deconvolution_dir_name
@@ -235,6 +283,11 @@ class AnalysisPaths(BaseModel):
         self.full_path_manifest = self.atlas_dir / self.manifest_name
         self.full_path_deconvolution_results = self.analysis_dir / self.deconvolution_results_name
         self.file_to_deconvolute = self.analysis_dir / self.file_to_deconvolute_name
+
+    def build_and_validate(self, common_paths: Paths):
+        self._build(common_paths)
+        self._validate()
+
 
 class AnalysisStep(BaseModel):
     params: AnalysisParams
@@ -306,6 +359,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
         return AppSettings(**config_data)
     except ValidationError as e:
         raise ValueError(f"Configuration error after merging configs:\n{e}")
+
 
 def print_config(part_to_print: AppSettings):
     config_dict = part_to_print.model_dump(mode='json')

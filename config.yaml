@@ -56,7 +56,7 @@ pipeline_steps:
       batch_size: "64"
     paths:
       # pod5_input_path can be either a file or a directory.
-      pod5_input_path: "data/pod5_output/"
+      pod5_input_path: "data/pod5/"
       unaligned_bam_name: "newcalls2.bam"
 
   # -------------------------
