@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Any, Dict, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
 
-from src.config.validators import validate_path, validate_pod5
+from src.config.validators import validate_path, validate_pod5, resolve_path
 
 
 class Globals(BaseModel):
@@ -53,7 +53,7 @@ class SetupPaths(BaseModel):
 
     def _build(self, common_paths: Paths):
         """Builds full paths for setup step """
-        self.fast5_input_dir = common_paths.data_dir / self.fast5_input_dir_name
+        self.fast5_input_dir = resolve_path(common_paths.data_dir, self.fast5_input_dir_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -118,7 +118,7 @@ class BasecallingPaths(BaseModel):
     pod5_input_path: str
     basecalled_output_dir_name: str = "basecalled_output"
     demultiplexed_dir_name: str = "demultiplexed"
-    dorado_model_dir_name: str = "models/dorado"
+    dorado_model_dir_name: str = "models"
 
     full_pod5_path: Optional[Path] = None
     full_unaligned_bam_path: Optional[Path] = None
@@ -133,19 +133,15 @@ class BasecallingPaths(BaseModel):
 
 
     def _build(self, common_paths: Paths):
-        user_pod5_path = Path(self.pod5_input_path)
-        if user_pod5_path.is_absolute():
-            self.full_pod5_path = user_pod5_path
-        else:
-            self.full_pod5_path = common_paths.root / user_pod5_path
+        root_dir = common_paths.root
+        basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
+        demux_dir = resolve_path(common_paths.data_dir, self.demultiplexed_dir_name)
+        model_dir = resolve_path(root_dir, self.dorado_model_dir_name)
 
-        basecalled_dir = common_paths.data_dir / self.basecalled_output_dir_name
-        demux_dir = common_paths.data_dir / self.demultiplexed_dir_name
-        model_dir = common_paths.data_dir / self.dorado_model_dir_name
-
-        self.full_unaligned_bam_path = basecalled_dir / self.basecalled_bam_name
-        self.full_demultiplexed_output_dir = demux_dir
-        self.full_dorado_model_dir = model_dir
+        self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
+        self.full_unaligned_bam_path = resolve_path(basecalled_dir, self.basecalled_bam_name)
+        self.full_demultiplexed_output_dir = resolve_path(root_dir, demux_dir)
+        self.full_dorado_model_dir = resolve_path(root_dir, model_dir)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -157,7 +153,6 @@ class BasecallingStep(BaseModel):
 
 
 class AlignmentPaths(BaseModel):
-
     reference_genome_dir_name: str = "reference_genomes"
     alignment_dir_name: str = "alignment"
     qc_dir_name: str = "qc"
@@ -179,8 +174,8 @@ class AlignmentPaths(BaseModel):
         if self.custom_fasta_reference:
             # If the user did specify a custom fasta reference, just use that one.
             print(f"Using custom reference FASTA path: {self.custom_fasta_reference}")
-            user_path = Path(self.custom_fasta_reference)
-            return user_path if user_path.is_absolute() else common_paths.root / user_path
+            user_path = self.custom_fasta_reference
+            return resolve_path(common_paths.root, user_path)
 
         elif self.genome_id:
             # If they just provided a genome id (e.g. hg38), look in the expected places.
@@ -220,14 +215,12 @@ class AlignmentPaths(BaseModel):
         )
 
     def _build(self, common_paths: Paths):
-        self.alignment_output_dir = common_paths.data_dir / self.alignment_dir_name
-        self.qc_output_dir = self.alignment_output_dir / self.qc_dir_name
-        self.full_aligned_bam_path = self.alignment_output_dir / self.aligned_bam_name
-        self.full_flagstat_path = self.qc_output_dir / self.alignment_flagstat_name
-        self.full_stats_path = self.qc_output_dir / self.alignment_stats_name
+        self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
+        self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
+        self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
+        self.full_flagstat_path = resolve_path(self.qc_output_dir, self.alignment_flagstat_name)
+        self.full_stats_path = resolve_path(self.qc_output_dir, self.alignment_stats_name)
         self.full_ref_fasta_path = self._find_reference_fasta(common_paths)
-
-
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -249,9 +242,9 @@ class MethylationPaths(BaseModel):
     def _validate(self):
         pass
     def _build(self, common_paths: Paths):
-        self.methylation_output_dir = common_paths.data_dir / self.methylation_output_dir_name
-        self.final_bed_file = self.methylation_output_dir / self.methylation_bed_name
-        self.final_meth_log_file = self.methylation_output_dir / self.methylation_log_name
+        self.methylation_output_dir = resolve_path(common_paths.data_dir, self.methylation_output_dir_name)
+        self.final_bed_file = resolve_path(self.methylation_output_dir, self.methylation_bed_name)
+        self.final_meth_log_file = resolve_path(self.methylation_output_dir, self.methylation_log_name)
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
         self._validate()
@@ -280,9 +273,9 @@ class AnalysisTools(BaseModel):
     def _validate(self):
         pass
     def _build(self, common_paths: Paths):
-        self.uxm_dir = common_paths.externals_dir / self.uxm_dir_name
-        self.wgbstools_dir = common_paths.externals_dir / self.wgbstools_dir_name
-        self.meth_atlas_dir = common_paths.externals_dir / self.methatlas_dir_name
+        self.uxm_dir = resolve_path(common_paths.externals_dir, self.uxm_dir_name)
+        self.wgbstools_dir = resolve_path(common_paths.externals_dir, self.wgbstools_dir_name)
+        self.meth_atlas_dir = resolve_path(common_paths.externals_dir, self.methatlas_dir_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -299,24 +292,22 @@ class AnalysisPaths(BaseModel):
     full_atlas_path: Optional[Path] = None
     full_manifest_path: Optional[Path] = None
     full_deconv_results_path: Optional[Path] = None
-    full_deconv_input_path: Optional[Path] = None
 
     def _validate(self):
         pass
 
     def _build(self, common_paths: Paths):
         analysis_dir = common_paths.results_dir
-        atlas_dir = common_paths.data_dir / self.atlas_dir_name
-        deconvolution_dir = analysis_dir / self.deconvolution_dir_name
+        atlas_dir = resolve_path(common_paths.data_dir, self.atlas_dir_name)
+        deconvolution_dir = resolve_path(analysis_dir, self.deconvolution_dir_name)
 
-        self.full_atlas_path = atlas_dir / self.atlas_file_name
-        self.full_manifest_path = atlas_dir / self.manifest_name
-        self.full_deconv_results_path = deconvolution_dir / self.deconvolution_results_name
+        self.full_atlas_path = resolve_path(atlas_dir, self.atlas_file_name)
+        self.full_manifest_path = resolve_path(atlas_dir, self.manifest_name)
+        self.full_deconv_results_path = resolve_path(deconvolution_dir, self.deconvolution_results_name)
 
         print(f"Full atlas path - {self.full_atlas_path}")
         print(f"Full manifest path - {self.full_manifest_path}")
         print(f"Full deconv results path - {self.full_deconv_results_path}")
-        print(f"Full deconv input path - {self.full_deconv_input_path}")
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
