@@ -146,6 +146,30 @@ def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name
     else:
         dorado_runner.run(full_cmd)
 
+def _add_kit_name_arg(parser, config):
+    parser.add_argument(
+        "--kit-name", type=str,
+        default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
+        help="Specify the Nanopore kit name"
+    )
+
+def _add_model_name_arg(parser, config):
+    parser.add_argument(
+        '--model-name', type=str,
+        default=config.pipeline_steps.basecalling.params.explicit_settings.base_model_name,
+        help="Name of the model to download."
+    )
+
+def add_all_arguments_to_parser(parser, config):
+    """
+    Adds all parameter arguments from the basecalling step to a given parser.
+    It's used by the main run command and doesn't include the I/O args.
+    :param parser:
+    :param config:
+    :return:
+    """
+    _add_kit_name_arg(parser, config)
+    _add_model_name_arg(parser, config)
 
 def setup_parsers(subparsers, parent_parser, config):
     basecalling_parser = subparsers.add_parser(
@@ -174,11 +198,7 @@ def setup_parsers(subparsers, parent_parser, config):
         'run', help="Basecall a POD5 file/directory and demultiplex if necessary.",
         parents=[parent_parser]
     )
-    p_run.add_argument(
-        "--kit-name", type=str,
-        default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
-        help="Specify the Nanopore kit name"
-    )
+    _add_kit_name_arg(p_run, config)
     add_io_arguments(
         p_run, config,
         default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
@@ -192,11 +212,7 @@ def setup_parsers(subparsers, parent_parser, config):
         'basecall', help="Basecall a POD5 file/directory.",
         parents=[parent_parser]
     )
-    p_basecall.add_argument(
-        "--kit-name", type=str,
-        default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
-        help="Specify the Nanopore kit name"
-    )
+    _add_kit_name_arg(p_basecall, config)
     add_io_arguments(
         p_basecall, config,
         default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
@@ -210,11 +226,7 @@ def setup_parsers(subparsers, parent_parser, config):
         'demux', help="Demultiplex a multiplexed BAM file.",
         parents=[parent_parser]
     )
-    p_demux.add_argument(
-        "--kit-name", type=str,
-        default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
-        help="Specify the Nanopore kit name"
-    )
+    _add_kit_name_arg(p_demux, config)
     add_io_arguments(
         p_demux, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
@@ -228,11 +240,7 @@ def setup_parsers(subparsers, parent_parser, config):
         'download-model', help="Download a specific Dorado model",
         parents=[parent_parser]
     )
-    p_download.add_argument(
-        '--model-name', type=str,
-        default=config.pipeline_steps.basecalling.params.explicit_settings.base_model_name,
-        help="Name of the model to download."
-    )
+    _add_model_name_arg(p_download, config)
     add_io_arguments(
         p_download, config,
         add_input=False,
