@@ -1,5 +1,5 @@
 from src import PROJECT_ROOT
-from src.config.models import AppSettings
+from .models import AppSettings
 def build_config_paths(config: AppSettings) -> None:
     """
     Builds all absolute Path objects from the experiment_root and filenames.
@@ -22,7 +22,6 @@ def build_config_paths(config: AppSettings) -> None:
     config.pipeline_steps.alignment.paths.build_and_validate(common_paths)
     config.pipeline_steps.methylation.paths.build_and_validate(common_paths)
     config.pipeline_steps.analysis.paths.build_and_validate(common_paths)
-
 
 
 

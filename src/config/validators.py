@@ -46,3 +46,22 @@ def validate_pod5(path_to_check: Optional[Path], param_name: str):
             )
 
     return True
+
+
+def resolve_path(root_dir: Path, path_from_config: str):
+    """
+    Checks whether the path specified in config is absolute or relative (an absolute path starts with / and a
+    relative path doesn't).
+    - If the path is absolute, it returns the path as-provided.
+    - If the path is relative, it adds the relative path to the root directory and returns the full path.
+    :param root_dir:
+    :param path_from_config:
+    :return:
+    """
+
+    user_path = Path(path_from_config)
+
+    if user_path.is_absolute():
+        return user_path
+    else:
+        return root_dir / user_path
