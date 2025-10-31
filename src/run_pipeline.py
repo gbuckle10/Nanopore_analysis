@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.config.models import load_and_validate_configs, AppSettings
+from src.config.models import load_and_validate_configs, AppSettings, print_config
 from src.config.paths import build_config_paths
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 from src.utils import resource_downloader
@@ -100,6 +100,7 @@ def main():
             conf_args.user_config, conf_args.runtime_config
         )
         build_config_paths(config)
+        #print_config(config)
     except (FileNotFoundError, ValueError) as e:
         print(f"Error loading configuration: {e}", file=sys.stderr)
         sys.exit(1)
@@ -128,7 +129,6 @@ def main():
         parents=[global_opts_parser]
     )
     run_parser.set_defaults(func=run_full_pipeline)
-
     basecalling.setup_parsers(subparsers, global_opts_parser, config)
     alignment.setup_parsers(subparsers, global_opts_parser, config)
     methylation.setup_parsers(subparsers, global_opts_parser, config)
@@ -137,6 +137,7 @@ def main():
 
     # Parse and dispatch
     args = main_parser.parse_args()
+
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO

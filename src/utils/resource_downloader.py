@@ -6,7 +6,6 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
-from src.utils.cli_utils import add_io_arguments
 from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.process_utils import run_command
 from src.utils.tools_runner import ToolRunner
@@ -224,7 +223,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     p_genome.add_argument(
         "--output-dir", type=Path,
-        default=config.pipeline_steps.setup.paths.reference_genome_dir,
+        default=config.pipeline_steps.alignment.paths.full_ref_fasta_path,
         help="Folder to save the reference genome in."
     )
     p_genome.set_defaults(func=reference_genome_handler)

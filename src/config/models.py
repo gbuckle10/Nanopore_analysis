@@ -181,7 +181,7 @@ class AlignmentPaths(BaseModel):
             # If they just provided a genome id (e.g. hg38), look in the expected places.
 
             # Base reference dir is the reference_genomes directory.
-            base_ref_dir = common_paths.root / self.reference_genome_dir_name
+            base_ref_dir = resolve_path(common_paths.root, self.reference_genome_dir_name)
 
             # Define the possible places the genome will be found in.
             search_paths = [
@@ -288,10 +288,12 @@ class AnalysisPaths(BaseModel):
     deconvolution_results_name: str
     atlas_dir_name: str = "atlas"
     deconvolution_dir_name: str = "deconvolution"
+    deconvolution_input_name: str = "to_deconvolute.csv"
 
     full_atlas_path: Optional[Path] = None
     full_manifest_path: Optional[Path] = None
     full_deconv_results_path: Optional[Path] = None
+    full_deconv_input_path: Optional[Path] = None
 
     def _validate(self):
         pass
@@ -304,10 +306,7 @@ class AnalysisPaths(BaseModel):
         self.full_atlas_path = resolve_path(atlas_dir, self.atlas_file_name)
         self.full_manifest_path = resolve_path(atlas_dir, self.manifest_name)
         self.full_deconv_results_path = resolve_path(deconvolution_dir, self.deconvolution_results_name)
-
-        print(f"Full atlas path - {self.full_atlas_path}")
-        print(f"Full manifest path - {self.full_manifest_path}")
-        print(f"Full deconv results path - {self.full_deconv_results_path}")
+        self.full_deconv_input_path = resolve_path(deconvolution_dir, self.deconvolution_input_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)

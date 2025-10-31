@@ -58,6 +58,7 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     return index_path
 
 def full_alignment_handler(args, config: AppSettings):
+    print(args)
     unaligned_bam = args.input_file
 
     if unaligned_bam is None:
@@ -244,7 +245,7 @@ def setup_parsers(subparsers, parent_parser, config):
     alignment_parent_parser = argparse.ArgumentParser(add_help=False)
     alignment_parent_parser.add_argument(
         "--ref",
-        default=config.pipeline_steps.setup.paths.full_reference_genome_path,
+        default=config.pipeline_steps.alignment.paths.full_ref_fasta_path,
         type=Path,
         help="Path to the reference genome"
     )
