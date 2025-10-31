@@ -3,7 +3,7 @@ from src.pipeline import basecalling, alignment, deconvolution, methylation
 import logging
 from src.utils.logger import Logger
 
-def run_full_pipeline(args, config: AppSettings):
+def full_pipeline_handler(args, config: AppSettings):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
@@ -11,6 +11,25 @@ def run_full_pipeline(args, config: AppSettings):
         'align': alignment.full_alignment_handler,
         'methylation': methylation.pileup_handler,
         'deconvolution': deconvolution.deconvolution_handler
+    }
+
+    io_map = {
+        'basecalling': {
+            'input_file': 'config.pipeline_steps.setup.paths.full_pod5_path',
+            'output_file': 'config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir'
+        },
+        'alignment': {
+            'input_file': 'config.pipeline_steps.basecalling.paths.full_unaligned_bam_path',
+            'output_file': 'config.pipeline_steps.alignment.paths.full_aligned_bam_path'
+        },
+        'methylation': {
+            'input_file': 'config.pipeline_steps.alignment.paths.full_aligned_bam_path',
+            'output_file': 'config.pipeline_steps.methylation.paths.final_bed_file'
+        },
+        'deconvolution': {
+            'input_file': 'config.pipeline_steps.analysis.paths.full_deconv_input_path',
+            'output_file': 'config.pipeline_steps.analysis.paths.full_deconv_results_path'
+        }
     }
 
     steps_to_run = config.pipeline_control.run_steps
@@ -27,11 +46,11 @@ def run_full_pipeline(args, config: AppSettings):
     for step_name in active_steps:
         logging.info(f">>> EXECUTING STEP: {step_name}")
         step_func = function_map.get(step_name)
-        print(args.threads)
         if not step_func:
-            print(args)
             logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
             continue
+
+        # Create a deep copy of the main 'args' object
 
 
         step_func(args, config)
@@ -50,4 +69,4 @@ def setup_parsers(subparsers, parent_parser, config):
     basecalling.add_all_arguments_to_parser(run_parser, config)
     alignment.add_all_arguments_to_parser(run_parser, config)
     deconvolution.add_all_arguments_to_parser(run_parser, config)
-    run_parser.set_defaults(func=run_full_pipeline)
+    run_parser.set_defaults(func=full_pipeline_handler)
