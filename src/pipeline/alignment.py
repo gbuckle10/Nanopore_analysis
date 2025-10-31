@@ -58,7 +58,6 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     return index_path
 
 def full_alignment_handler(args, config: AppSettings):
-    print(args)
     unaligned_bam = args.input_file
 
     if unaligned_bam is None:
@@ -239,21 +238,42 @@ def run_qc_command(aligned_sorted_file, flagstat_report):
         print(f"CRITICAL: samtools flagstat failed with exit code {e.returncode}", file=sys.stderr)
         sys.exit(1)
 
-
-def setup_parsers(subparsers, parent_parser, config):
-    # Make new parents
-    alignment_parent_parser = argparse.ArgumentParser(add_help=False)
-    alignment_parent_parser.add_argument(
+def _make_alignment_parent_parser(config):
+    """
+    Creates a parent parser with the shared alignment arguments.
+    :param config:
+    :return:
+    """
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
         "--ref",
         default=config.pipeline_steps.alignment.paths.full_ref_fasta_path,
         type=Path,
         help="Path to the reference genome"
     )
-    alignment_parent_parser.add_argument(
+    parent.add_argument(
         "--threads",
         default=config.globals.threads,
         help="Number of threads for alignment and samtools."
     )
+    return parent
+
+def add_all_arguments_to_parser(parser, config):
+    """
+    Publically available function to add alignment arguments to a given parser
+    :param parser:
+    :param config:
+    :return:
+    """
+    temp_parent = _make_alignment_parent_parser(config)
+    for action in temp_parent._actions:
+        parser._add_action(action)
+
+    # If there are any individual arguments, add those underneath.
+
+def setup_parsers(subparsers, parent_parser, config):
+    # Make new parents
+    alignment_parent_parser = _make_alignment_parent_parser(config)
 
     alignment_parser = subparsers.add_parser(
         "align",
@@ -286,6 +306,7 @@ Example Usage:
         'run', help="Align a BAM file to a specified genome and QC the alignment.",
         parents=[parent_parser, alignment_parent_parser]
     )
+
     add_io_arguments(
         p_run, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,

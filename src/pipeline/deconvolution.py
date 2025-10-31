@@ -94,6 +94,27 @@ def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
         # "--out_dir", str(output_dir)
     ]
 
+def _add_atlas_arg(parser, config):
+    parser.add_argument(
+        '--atlas', type=Path,
+        default=config.pipeline_steps.analysis.paths.full_atlas_path,
+        help="Path to the atlas used for deconvolution"
+    )
+def _add_algorithm_arg(parser, config):
+    parser.add_argument(
+        '-a', '--algorithm', type=str,
+        default=config.pipeline_steps.analysis.params.deconv_algorithm, choices=['uxm', 'nnls']
+    )
+
+def add_all_arguments_to_parser(parser, config):
+    """
+    Publically available function to add deconvolution arguments to a given parser
+    :param parser:
+    :param config:
+    :return:
+    """
+    _add_algorithm_arg(parser, config)
+    _add_atlas_arg(parser, config)
 
 def setup_parsers(subparsers, parent_parser, config):
 
@@ -105,15 +126,9 @@ def setup_parsers(subparsers, parent_parser, config):
         aliases=['deconv'],
         parents=[parent_parser]
     )
-    deconv_parser.add_argument(
-        '--atlas', type=Path,
-        default=config.pipeline_steps.analysis.paths.full_atlas_path,
-        help="Path to the atlas used for deconvolution"
-    )
-    deconv_parser.add_argument(
-        '-a', '--algorithm', type=str,
-        default=config.pipeline_steps.analysis.params.deconv_algorithm, choices=['uxm', 'nnls']
-    )
+    _add_atlas_arg(deconv_parser, config)
+    _add_algorithm_arg(deconv_parser, config)
+
     add_io_arguments(
         deconv_parser, config,
         default_input=config.pipeline_steps.analysis.paths.full_deconv_input_path,

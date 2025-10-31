@@ -20,7 +20,6 @@ def run_methylation_pileup(aligned_sorted_file, output_bed):
 
     run_command(pileup_cmd)
 
-
 def setup_parsers(subparsers, parent_parser, config):
     methylation_parser = subparsers.add_parser(
         "methylation-summary",

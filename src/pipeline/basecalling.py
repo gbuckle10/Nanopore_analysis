@@ -162,7 +162,7 @@ def _add_model_name_arg(parser, config):
 
 def add_all_arguments_to_parser(parser, config):
     """
-    Adds all parameter arguments from the basecalling step to a given parser.
+    Publically available function to add arguments from the basecalling step to a given parser.
     It's used by the main run command and doesn't include the I/O args.
     :param parser:
     :param config:
