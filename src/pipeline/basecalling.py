@@ -182,7 +182,7 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_run, config,
         default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
-        default_output=config.pipeline_steps.basecalling.paths.demultiplexed_output_dir,
+        default_output=config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir,
         input_file_help="Path to POD5 files",
         output_dir_help="Path to demultiplexed data directory." # Add a tag to differentiate between demultiplex and not demultiplex.
     )
@@ -218,7 +218,7 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_demux, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
-        default_output=config.pipeline_steps.basecalling.paths.demultiplexed_output_dir,
+        default_output=config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir,
         input_file_help="Path to basecalled BAM file",
         output_dir_help="Directory to save demultiplexed BAM files to."
     )
@@ -236,7 +236,7 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_download, config,
         add_input=False,
-        default_output=config.pipeline_steps.basecalling.paths.dorado_model_dir,
+        default_output=config.pipeline_steps.basecalling.paths.full_dorado_model_dir,
         output_dir_help="Directory to save demultiplexed BAM files to."
     )
     p_download.set_defaults(func=download_handler)

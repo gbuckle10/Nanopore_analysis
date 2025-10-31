@@ -51,7 +51,7 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_pileup, config,
         default_input=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
-        default_output=config.pipeline_steps.methylation.paths.full_bed_path,
+        default_output=config.pipeline_steps.methylation.paths.final_bed_file,
         input_file_help="Path to the aligned BAM path",
         output_dir_help="Path to the BED file"
     )

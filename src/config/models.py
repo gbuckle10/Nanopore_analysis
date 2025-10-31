@@ -45,13 +45,11 @@ class SetupDownloads(BaseModel):
 
 
 class SetupPaths(BaseModel):
-    reference_genome_name: str = "genome.fa"
+
     fast5_input_dir_name: str = "fast5_input"
 
-    reference_genome_subfolder: Optional[Path] = ""  # Need to check this and implement in full_reference_genome_path
     fast5_input_dir: Optional[Path] = None
-    reference_genome_dir: Optional[Path] = None
-    full_reference_genome_path: Optional[Path] = None
+
 
     def _validate(self):
         pass
@@ -120,17 +118,16 @@ class BasecallingParams(BaseModel):
 
 class BasecallingPaths(BaseModel):
     # File names
-    basecalled_output_dir_name: str = "basecalled_output"
-    demultiplexed_dir_name: str = "demultiplexed_output"
-    dorado_model_dir_name: str = "models"
-    unaligned_bam_name: str
+    basecalled_bam_name: str
     pod5_input_path: str
+    basecalled_output_dir_name: str = "basecalled_output"
+    demultiplexed_dir_name: str = "demultiplexed"
+    dorado_model_dir_name: str = "models/dorado"
 
-    basecalled_output_dir: Optional[Path] = None
-    demultiplexed_output_dir: Optional[Path] = None
-    full_unaligned_bam_path: Optional[Path] = None
     full_pod5_path: Optional[Path] = None
-    dorado_model_dir: Optional[Path] = None
+    full_unaligned_bam_path: Optional[Path] = None
+    full_demultiplexed_output_dir: Optional[Path] = None
+    full_dorado_model_dir: Optional[Path] = None
 
     def _validate(self):
         # Pod5 path must exist but can be either a file or a directory
@@ -153,12 +150,13 @@ class BasecallingPaths(BaseModel):
             print(f"Resolving relative pod5 input path against experiment root")
             self.full_pod5_path = common_paths.root / user_pod5_path
 
+        basecalled_dir = common_paths.data_dir / self.basecalled_output_dir_name
+        demux_dir = common_paths.data_dir / self.demultiplexed_dir_name
+        model_dir = common_paths.data_dir / self.dorado_model_dir_name
 
-        self.basecalled_output_dir = common_paths.data_dir / self.basecalled_output_dir_name
-        self.demultiplexed_output_dir = common_paths.data_dir / self.demultiplexed_dir_name
-
-        self.full_unaligned_bam_path = self.basecalled_output_dir / self.unaligned_bam_name
-        self.dorado_model_dir = common_paths.root / self.dorado_model_dir_name
+        self.full_unaligned_bam_path = basecalled_dir / self.basecalled_bam_name
+        self.full_demultiplexed_output_dir = demux_dir
+        self.full_dorado_model_dir = model_dir
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -171,30 +169,66 @@ class BasecallingStep(BaseModel):
 
 class AlignmentPaths(BaseModel):
     # File names
-    indexed_ref_fasta_name: str
+    genome_id: Optional[str] = None
+    custom_fasta_reference: Optional[str] = None
     aligned_bam_name: str
     alignment_flagstat_name: str
     alignment_stats_name: str
-    alignment_output_dir_name: str = "alignment_output"
-    alignment_qc_dir_name: str = "alignment_qc"
 
-    ref_genome_subdir: Optional[Path] = ""
+    final_aligned_bam: Optional[Path] = None
+    final_flagstat_file: Optional[Path] = None
+    final_stats_file: Optional[Path] = None
     alignment_output_dir: Optional[Path] = None
-    qc_dir: Optional[Path] = None
-    full_indexed_genome_path: Optional[Path] = None
-    full_aligned_bam_path: Optional[Path] = None
-    full_flagstat_path: Optional[Path] = None
-    full_stats_path: Optional[Path] = None
+    qc_output_dir: Optional[Path] = None
+
 
     def _validate(self):
-        pass
+        if not (self.genome_id or self.custom_fasta_reference):
+            raise ValueError("Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
+        if self.genome_id and self.custom_fasta_reference:
+            raise ValueError("Configuration Error in alignment: Don't provide both a 'genome_id' and 'custom_fasta_reference'")
     def _build(self, common_paths: Paths):
-        self.alignment_output_dir = common_paths.data_dir / self.alignment_output_dir_name
-        self.qc_dir = common_paths.data_dir / self.alignment_qc_dir_name
-        self.full_indexed_genome_path = common_paths.reference_genome_dir / self.ref_genome_subdir / self.indexed_ref_fasta_name
+        self.alignment_output_dir = common_paths.data_dir / "alignment"
+        self.qc_output_dir = common_paths.data_dir / "alignment" / "qc"
         self.full_aligned_bam_path = self.alignment_output_dir / self.aligned_bam_name
-        self.full_flagstat_path = self.qc_dir / self.alignment_flagstat_name
-        self.full_stats_path = self.qc_dir / self.alignment_stats_name
+        self.full_flagstat_path = self.qc_output_dir / self.alignment_flagstat_name
+        self.full_stats_path = self.qc_output_dir / self.alignment_stats_name
+
+
+        # Reference fasta depends on what the user defined in the config.yaml file.
+        if self.custom_fasta_reference:
+            # If the user did specify a custom fasta reference, just use that one.
+            print(f"Using custom reference FASTA path: {self.custom_fasta_reference}")
+            user_path = Path(self.custom_fasta_reference)
+            self.final_reference_fasta = user_path if user_path.is_absolute() else common_paths.root / user_path
+        elif self.genome_id:
+            # If they just provided a genome id (e.g. hg38), look in the expected places.
+            print(f"Searching for reference genome with ID: '{self.genome_id}'")
+
+            # Base reference dir is the reference_genomes directory.
+            base_ref_dir = common_paths.root / "reference_genomes"
+
+            # Define the possible places the genome will be found in.
+            search_paths = [
+                # Inside a dedicated folder (e.g. reference_genomes/hg38/hg38.fa)
+                base_ref_dir / self.genome_id / f"{self.genome_id}.fa",
+                base_ref_dir / self.genome_id / f"{self.genome_id}.fa.gz",
+                # Inside a dedicated folder in iGenomes style (e.g. reference_genomes/hg38/genome.fa)
+                base_ref_dir / self.genome_id / "genome.fa",
+                base_ref_dir / self.genome_id / "genome.fa.gz",
+                # Directly inside the reference genome folder (e.g. reference_genomes/hg38.fa)
+                base_ref_dir / f"{self.genome_id}.fa",
+                base_ref_dir / f"{self.genome_id}.fa.gz"
+            ]
+
+            found_path = next((path for path in search_paths if path.is_file()), None)
+
+            if found_path:
+                print(f"Found reference genome at: {found_path}")
+                self.final_reference_fasta = found_path
+            else:
+                print(f"Couldn't find fasta file for genome ID '{self.genome_id}' in the expected locations")
+                self.final_reference_fasta = None
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -208,18 +242,17 @@ class MethylationPaths(BaseModel):
     # File names
     methylation_bed_name: str
     methylation_log_name: str
-    methylation_dir_name: str = "methylation"
 
-    methylation_dir: Optional[Path] = None
-    full_bed_path: Optional[Path] = None
-    full_meth_log_path: Optional[Path] = None
+    methylation_output_dir: Optional[Path] = None
+    final_bed_file: Optional[Path] = None
+    final_meth_log_file: Optional[Path] = None
 
     def _validate(self):
         pass
     def _build(self, common_paths: Paths):
-        self.methylation_dir = common_paths.data_dir / self.methylation_dir_name
-        self.full_bed_path = self.methylation_dir / self.methylation_bed_name
-        self.full_meth_log_path = self.methylation_dir / self.methylation_log_name
+        self.methylation_output_dir = common_paths.data_dir / "methylation"
+        self.final_bed_file = self.methylation_output_dir / self.methylation_bed_name
+        self.final_meth_log_file = self.methylation_output_dir / self.methylation_log_name
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
         self._validate()
@@ -260,29 +293,33 @@ class AnalysisTools(BaseModel):
 class AnalysisPaths(BaseModel):
     atlas_file_name: str
     manifest_name: str
+    file_to_deconvolute_name: str
     deconvolution_results_name: str
     atlas_dir_name: str = "atlas"
     deconvolution_dir_name: str = "deconvolution"
-    file_to_deconvolute_name: str = "file_to_deconvolute.csv"
 
-    analysis_dir: Optional[Path] = None
-    atlas_dir: Optional[Path] = None
-    deconvolution_dir: Optional[Path] = None
-    full_path_atlas_file: Optional[Path] = None
-    full_path_manifest: Optional[Path] = None
-    full_path_deconvolution_results: Optional[Path] = None
-    file_to_deconvolute: Optional[Path] = None
+    full_atlas_path: Optional[Path] = None
+    full_manifest_path: Optional[Path] = None
+    full_deconv_results_path: Optional[Path] = None
+    full_deconv_input_path: Optional[Path] = None
 
     def _validate(self):
         pass
+
     def _build(self, common_paths: Paths):
-        self.analysis_dir = common_paths.results_dir
-        self.atlas_dir = common_paths.data_dir / self.atlas_dir_name
-        self.deconvolution_dir = self.analysis_dir / self.deconvolution_dir_name
-        self.full_path_atlas_file = self.atlas_dir / self.atlas_file_name
-        self.full_path_manifest = self.atlas_dir / self.manifest_name
-        self.full_path_deconvolution_results = self.analysis_dir / self.deconvolution_results_name
-        self.file_to_deconvolute = self.analysis_dir / self.file_to_deconvolute_name
+        analysis_dir = common_paths.results_dir
+        atlas_dir = common_paths.data_dir / self.atlas_dir_name
+        deconvolution_dir = analysis_dir / self.deconvolution_dir_name
+
+        self.full_atlas_path = atlas_dir / self.atlas_file_name
+        self.full_manifest_path = atlas_dir / self.manifest_name
+        self.full_deconv_results_path = analysis_dir / self.deconvolution_results_name
+        self.full_deconv_input_path = analysis_dir / self.file_to_deconvolute_name
+
+        print(f"Full atlas path - {self.full_atlas_path}")
+        print(f"Full manifest path - {self.full_manifest_path}")
+        print(f"Full deconv results path - {self.full_deconv_results_path}")
+        print(f"Full deconv input path - {self.full_deconv_input_path}")
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)

@@ -107,7 +107,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     deconv_parser.add_argument(
         '--atlas', type=Path,
-        default=config.pipeline_steps.analysis.paths.full_path_atlas_file,
+        default=config.pipeline_steps.analysis.paths.full_atlas_path,
         help="Path to the atlas used for deconvolution"
     )
     deconv_parser.add_argument(
@@ -116,8 +116,8 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     add_io_arguments(
         deconv_parser, config,
-        default_input=config.pipeline_steps.analysis.paths.file_to_deconvolute,
-        default_output=config.pipeline_steps.analysis.paths.full_path_deconvolution_results,
+        default_input=config.pipeline_steps.analysis.paths.full_deconv_input_path,
+        default_output=config.pipeline_steps.analysis.paths.full_deconv_results_path,
         input_file_help="Path to file for deconvolution.",
         output_dir_help="File to save the deconvolution results in."
     )

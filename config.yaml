@@ -41,7 +41,7 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      ref_genome_fasta_path: "reference_genomes/hg19/hg19.fa.gz"
+
 
   # --------------------
   # Step 1: Basecalling
@@ -64,18 +64,19 @@ pipeline_steps:
     paths:
       # pod5_input_path can be either a file or a directory.
       pod5_input_path: "data/pod5/"
-      unaligned_bam_name: "newcalls2.bam"
+      basecalled_bam_name: "newcalls2.bam"
 
   # -------------------------
   # Step 2: Alignment
   # -------------------------
   alignment:
     paths:
-      indexed_ref_fasta_name: "hg19.mmi"
+      genome_id: "hg38"
+      # If the genome isn't simply in the reference_genome/ folder, write where it is below.
+      custom_fasta_reference: null
       aligned_bam_name: "taken_alignment.sorted.bam"
       alignment_flagstat_name: "alignment.flagstat.txt"
       alignment_stats_name: "alignment.stats.txt"
-      ref_genome_subdir: "hg19"
 
   # -------------------------------
   # Step 3: Methylation Summary

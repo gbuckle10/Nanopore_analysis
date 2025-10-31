@@ -241,7 +241,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     p_atlas.add_argument(
         "--output-dir", type=Path,
-        default=config.pipeline_steps.analysis.paths.full_path_atlas_file,
+        default=config.pipeline_steps.analysis.paths.full_atlas_path,
         help="Path to saved atlas file."
     )
     p_atlas.set_defaults(func=atlas_handler)
@@ -258,7 +258,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     p_manifest.add_argument(
         "--output-dir", type=Path,
-        default=config.pipeline_steps.analysis.paths.full_path_manifest,
+        default=config.pipeline_steps.analysis.paths.full_manifest_path,
         help="Path to saved atlas file."
     )
     p_manifest.set_defaults(func=manifest_handler)
