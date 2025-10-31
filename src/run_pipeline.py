@@ -74,6 +74,7 @@ def run_full_pipeline(args, config: AppSettings):
         if not step_func:
             logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
             continue
+
         step_func(args, config)
 
 
@@ -128,7 +129,12 @@ def main():
         help="Run the full pipeline using steps defined in the config file.",
         parents=[global_opts_parser]
     )
+    # Add the arguments from each individual step to the run_parser
+    basecalling.add_all_arguments_to_parser(run_parser, config)
+    alignment.add_all_arguments_to_parser(run_parser, config)
     run_parser.set_defaults(func=run_full_pipeline)
+
+
     basecalling.setup_parsers(subparsers, global_opts_parser, config)
     alignment.setup_parsers(subparsers, global_opts_parser, config)
     methylation.setup_parsers(subparsers, global_opts_parser, config)
@@ -137,8 +143,6 @@ def main():
 
     # Parse and dispatch
     args = main_parser.parse_args()
-
-
     log_level = logging.DEBUG if args.debug else logging.INFO
     # log_level = logging.DEBUG if args.verbose else logging.INFO
     run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
