@@ -41,7 +41,7 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-
+      fast5_input_dir_name: "fast5_input"
 
   # --------------------
   # Step 1: Basecalling
@@ -63,7 +63,7 @@ pipeline_steps:
       batch_size: "64"
     paths:
       # pod5_input_path can be either a file or a directory.
-      pod5_input_path: "data/pod5/"
+      pod5_input_path: "data/pod5_output/"
       basecalled_bam_name: "newcalls2.bam"
 
   # -------------------------
