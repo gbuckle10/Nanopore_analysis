@@ -5,7 +5,7 @@ import collections
 import yaml
 from pathlib import Path
 from typing import Optional, Any, Dict, Literal
-from pydantic import BaseModel, ValidationError, AnyUrl, computed_field
+from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
 
 from src.config.validators import validate_path, validate_pod5, resolve_path
 
@@ -27,7 +27,7 @@ class Paths(BaseModel):
 
 class RunSteps(BaseModel):
     basecalling: bool = False
-    align: bool = False
+    alignment: bool = False
     methylation_summary: bool = False
     deconvolution: bool = False
 
@@ -87,29 +87,6 @@ class BasecallingParams(BaseModel):
 
     # Other settings
     batch_size: int
-
-    @computed_field
-    @property
-    def resolved_base_model(self) -> str:
-        """Returns the final base model name"""
-        if self.method == 'complex':
-            if self.complex_settings.basecalling_modifications:
-                return f"{self.complex_settings.kit_name}_{self.complex_settings.model_speed}.cfg"
-            return None
-        else:
-            return self.explicit_settings.base_model_name
-
-    @computed_field
-    @property
-    def resolved_mod_model(self) -> str:
-        """Returns the final base model name"""
-        if self.method == 'complex':
-            if self.complex_settings.basecalling_modifications:
-                base_model = f"{self.complex_settings.kit_name}_{self.complex_settings.model_speed}.cfg"
-                return f"{base_model}_{self.complex_settings.basecalling_modifications}"
-            return None
-        else:
-            return self.explicit_settings.mod_model_name
 
 
 class BasecallingPaths(BaseModel):
@@ -201,7 +178,7 @@ class AlignmentPaths(BaseModel):
         return None
 
 
-    def _validate(self):
+    def _validate(self, config):
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError("Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
         if self.genome_id and self.custom_fasta_reference:
@@ -279,7 +256,7 @@ class AnalysisTools(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        self._validate()
+        #self._validate()
 
 
 class AnalysisPaths(BaseModel):
@@ -338,6 +315,32 @@ class AppSettings(BaseModel):
     tools: Tools
     paths: Paths = Paths()  # Default to an empty instance
 
+    @model_validator(mode='after')
+    def validate_active_steps(self) -> 'AppSettings':
+        """
+        Validates that if a step is active, all of its required inputs are present.
+        :return:
+        """
+        print(f"--- Running conditional validation for active pipeline steps ---")
+        steps = self.pipeline_steps
+
+        for step_name, should_run in self.pipeline_control.run_steps:
+            if not should_run:
+                continue # Skip validation for inactive steps
+
+            print(f"    Validating active step: '{step_name}'")
+            print(f"Finding step in {steps}")
+            step_model = getattr(steps, step_name, None)
+
+            print(f"Step model - {step_model}")
+            if step_model and hasattr(step_model.paths, '_validate'):
+                print(f"{step_model} is being validated.")
+                try:
+                    print(f"Running validation for {step_model.paths}")
+                    step_model.paths._validate(self)
+                except (ValueError, FileNotFoundError) as e:
+                    raise ValueError(f"Validation failed for step '{step_name}': {e}") from e
+        return self
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """

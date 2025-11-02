@@ -22,9 +22,9 @@ globals:
 pipeline_control:
   run_steps:
     basecalling: false
-    align: true
+    alignment: true
     methylation_summary: false
-    deconvolution: true
+    deconvolution: false
 
 pipeline_steps:
   # ---------------
