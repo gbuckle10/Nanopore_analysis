@@ -296,7 +296,7 @@ class AnalysisPaths(BaseModel):
     full_deconv_input_path: Optional[Path] = None
 
     def _validate(self):
-        pass
+        validate_path(self.full_atlas_path, must_exist=True, must_be_file=True, param_name="Analysis Atlas Path ('full_atlas_path')")
 
     def _build(self, common_paths: Paths):
         analysis_dir = common_paths.results_dir
