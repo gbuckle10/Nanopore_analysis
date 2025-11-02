@@ -9,7 +9,6 @@ from pathlib import Path
 from src.config.models import load_and_validate_configs, AppSettings, print_config
 from src.config.paths import build_config_paths
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
-from src.pipeline.full_pipeline import run_full_pipeline
 from src.utils import resource_downloader
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
@@ -109,7 +108,6 @@ def main():
         print("No command was given, so we'll default to run.")
         sys.argv.insert(1, 'run')
 
-    print(f"argv - {sys.argv}")
     # Parse and dispatch
     args = main_parser.parse_args()
 

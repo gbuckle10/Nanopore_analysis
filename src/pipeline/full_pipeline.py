@@ -1,7 +1,26 @@
+from functools import reduce
+
 from src.config.models import AppSettings
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 import logging
 from src.utils.logger import Logger
+import copy
+
+def get_nested_attr(obj, attr_string: str):
+    """
+    Gets a nested attribute from an object using a dot-separated string.
+    For example, get_nested_attr(config, 'globals.threads') is the same as config.globals.threads. We can't just use dot
+    notation if the attribute we're trying to get is stored in a string variable.
+    :param obj:
+    :param attr_string:
+    :return:
+    """
+
+    # Split the string into a list of attribute names - 'a.b.c' becomes ['a', 'b', 'c']
+    attributes = attr_string.split('.')
+
+    # Use 'reduce' to apply getattr cumulatively.
+    return reduce(getattr, attributes, obj)
 
 def full_pipeline_handler(args, config: AppSettings):
     logging.info("--- Running full pipeline from config ---")
@@ -13,22 +32,23 @@ def full_pipeline_handler(args, config: AppSettings):
         'deconvolution': deconvolution.deconvolution_handler
     }
 
+    # Make an I/O map giving the default input and output of each step.
     io_map = {
         'basecalling': {
-            'input_file': 'config.pipeline_steps.setup.paths.full_pod5_path',
-            'output_file': 'config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir'
+            'input_file': 'pipeline_steps.setup.paths.full_pod5_path',
+            'output_dir': 'pipeline_steps.basecalling.paths.full_demultiplexed_output_dir'
         },
-        'alignment': {
-            'input_file': 'config.pipeline_steps.basecalling.paths.full_unaligned_bam_path',
-            'output_file': 'config.pipeline_steps.alignment.paths.full_aligned_bam_path'
+        'align': {
+            'input_file': 'pipeline_steps.basecalling.paths.full_unaligned_bam_path',
+            'output_dir': 'pipeline_steps.alignment.paths.full_aligned_bam_path'
         },
         'methylation': {
-            'input_file': 'config.pipeline_steps.alignment.paths.full_aligned_bam_path',
-            'output_file': 'config.pipeline_steps.methylation.paths.final_bed_file'
+            'input_file': 'pipeline_steps.alignment.paths.full_aligned_bam_path',
+            'output_dir': 'pipeline_steps.methylation.paths.final_bed_file'
         },
         'deconvolution': {
-            'input_file': 'config.pipeline_steps.analysis.paths.full_deconv_input_path',
-            'output_file': 'config.pipeline_steps.analysis.paths.full_deconv_results_path'
+            'input_file': 'pipeline_steps.analysis.paths.full_deconv_input_path',
+            'output_dir': 'pipeline_steps.analysis.paths.full_deconv_results_path'
         }
     }
 
@@ -50,10 +70,22 @@ def full_pipeline_handler(args, config: AppSettings):
             logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
             continue
 
-        # Create a deep copy of the main 'args' object
+        # Create a deep copy of the main 'args' object to avoid messing up the variables for later steps.
+        step_args = copy.deepcopy(args)
+        step_io_args = io_map.get(step_name, {})
+        print(f"Step args - {step_args}")
+        print(f"Step io args - {step_io_args}")
+        # Add the io args from the io args map.
+        for key, config_path_str in step_io_args.items():
+            print(f"Setting attribute {key} using {config_path_str}")
+            setattr(
+                step_args,
+                key,
+                get_nested_attr(config, config_path_str)
+            )
+        print(f"After adding the io args, step args is:\n{step_args}")
 
-
-        step_func(args, config)
+        step_func(step_args, config)
 def setup_parsers(subparsers, parent_parser, config):
 
     run_parser=subparsers.add_parser(
