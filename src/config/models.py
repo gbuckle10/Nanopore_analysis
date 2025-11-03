@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import pprint
+from dataclasses import Field
 
 import yaml
 from pathlib import Path
@@ -288,7 +289,6 @@ class AnalysisPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        #self._validate()
 
 
 class AnalysisStep(BaseModel):
@@ -308,6 +308,18 @@ class PipelineSteps(BaseModel):
 class Tools(BaseModel):
     dorado: str
 
+class RunMetadata(BaseModel):
+    pipeline_version: Optional[str] = None
+    run_timestamp: Optional[str] = None
+    launch_command: Optional[str] = None
+    python_version: Optional[str] = None
+    hostname: Optional[str] = None
+
+    git_hash: Optional[str] = None
+    working_directory: Optional[str] = None
+    dorado_version: Optional[str] = None
+    samtools_version: Optional[str] = None
+    minimap2_version: Optional[str] = None
 
 class AppSettings(BaseModel):
     globals: Globals
@@ -315,6 +327,7 @@ class AppSettings(BaseModel):
     pipeline_steps: PipelineSteps
     tools: Tools
     paths: Paths = Paths()  # Default to an empty instance
+    metadata: Optional[RunMetadata] = None
 
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:

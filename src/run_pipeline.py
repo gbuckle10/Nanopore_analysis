@@ -13,6 +13,7 @@ from src.utils import resource_downloader
 from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
+from src.utils.metadata_utils import build_metadata
 
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 DEFAULT_RUNTIME_CONFIG_PATH = PROJECT_ROOT / "runtime_config.yaml"
@@ -81,6 +82,7 @@ def main():
         )
         build_config_paths(config)
         validate_active_steps(config)
+        build_metadata(config)
         full_config_path = config.paths.root / "full_config.yaml"
         save_final_config(config, full_config_path)
     except (FileNotFoundError, ValueError) as e:
