@@ -7,13 +7,12 @@ from datetime import datetime
 from pathlib import Path
 
 from src.config.models import load_and_validate_configs, AppSettings, print_config
-from src.config.paths import build_config_paths, validate_active_steps
+from src.config.paths import build_config_paths, run_initial_validation
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils import resource_downloader
 from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
-from src.utils.metadata_utils import build_metadata
 
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 DEFAULT_RUNTIME_CONFIG_PATH = PROJECT_ROOT / "runtime_config.yaml"
@@ -81,7 +80,7 @@ def main():
             conf_args.user_config, conf_args.runtime_config
         )
         build_config_paths(config)
-        validate_active_steps(config)
+        #validate_active_steps(config)
         #build_metadata(config)
         full_config_path = config.paths.root / "full_config.yaml"
         save_final_config(config, full_config_path)
@@ -128,6 +127,7 @@ def main():
 
 
     if hasattr(args, 'func'):
+        run_initial_validation(args.command, config)
         args.func(args, config)
     else:
         print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)

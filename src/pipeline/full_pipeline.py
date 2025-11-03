@@ -1,6 +1,7 @@
 from functools import reduce
 
 from src.config.models import AppSettings
+from src.config.paths import validate_active_steps
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 import logging
 import copy
@@ -63,6 +64,11 @@ def full_pipeline_handler(args, config: AppSettings):
     for i, step_name in enumerate(active_steps, 1):
         logging.info(f"    Step {i}: {step_name}")
     logging.info("----------------------------------")
+
+    try:
+        validate_active_steps(config)
+    except (ValueError, FileNotFoundError) as e:
+        raise
 
     for step_name in active_steps:
         logging.info(f">>> EXECUTING STEP: {step_name}")

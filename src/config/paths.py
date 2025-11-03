@@ -26,14 +26,33 @@ def build_config_paths(config: AppSettings) -> None:
     config.pipeline_steps.methylation.paths.build_and_validate(common_paths)
     config.pipeline_steps.analysis.paths.build_and_validate(common_paths)
 
+def run_initial_validation(command, config: AppSettings):
+    """
+    Validates the variables needed for the given command.
+    """
 
+    print(f"Validating variables for {command}")
+
+    VALIDATION_MAP = {
+        'basecalling': [config.pipeline_steps.basecalling.paths._validate],
+        'align': [config.pipeline_steps.align.paths._validate],
+        'methylation': [config.pipeline_steps.methylation.paths._validate],
+        'analysis': [config.pipeline_steps.analysis.paths._validate],
+        'run': validate_active_steps
+    }
+
+    if command in VALIDATION_MAP:
+        print(f"Running validation method for {command}")
+        validation_method = VALIDATION_MAP.get(command, [])
+        validation_method(config)
+    else:
+        print(f"No validation method fount for {command}")
 def validate_active_steps(config: AppSettings):
     """
     Validates that if a step is active, all of its required inputs are present.
     :return:
     """
     steps = config.pipeline_steps
-
     for step_name, should_run in config.pipeline_control.run_steps:
 
         if not should_run:
