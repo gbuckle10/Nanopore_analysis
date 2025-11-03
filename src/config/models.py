@@ -27,7 +27,7 @@ class Paths(BaseModel):
 
 class RunSteps(BaseModel):
     basecalling: bool = False
-    alignment: bool = False
+    align: bool = False
     methylation_summary: bool = False
     deconvolution: bool = False
 
@@ -57,7 +57,7 @@ class SetupPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        self._validate()
+        #self._validate()
 
 class SetupStep(BaseModel):
     params: dict
@@ -122,7 +122,7 @@ class BasecallingPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        self._validate()
+        #self._validate()
 
 class BasecallingStep(BaseModel):
     params: BasecallingParams
@@ -147,6 +147,7 @@ class AlignmentPaths(BaseModel):
     qc_output_dir: Optional[Path] = None
 
     def _find_reference_fasta(self, common_paths: Paths):
+        print("Trying to find reference fasta.")
         # Reference fasta depends on what the user defined in the config.yaml file.
         if self.custom_fasta_reference:
             # If the user did specify a custom fasta reference, just use that one.
@@ -157,9 +158,11 @@ class AlignmentPaths(BaseModel):
         elif self.genome_id:
             # If they just provided a genome id (e.g. hg38), look in the expected places.
 
+            print(f"Looking for genome {self.genome_id}")
             # Base reference dir is the reference_genomes directory.
             base_ref_dir = resolve_path(common_paths.root, self.reference_genome_dir_name)
 
+            print(f"Base ref dir - {base_ref_dir}")
             # Define the possible places the genome will be found in.
             search_paths = [
                 # Inside a dedicated folder (e.g. reference_genomes/hg38/hg38.fa)
@@ -179,6 +182,9 @@ class AlignmentPaths(BaseModel):
 
 
     def _validate(self, config):
+
+        print(f"Validating alignment variables")
+        print(self.full_ref_fasta_path)
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError("Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
         if self.genome_id and self.custom_fasta_reference:
@@ -192,6 +198,7 @@ class AlignmentPaths(BaseModel):
         )
 
     def _build(self, common_paths: Paths):
+        print(f"Building alignment paths")
         self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
         self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
         self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
@@ -201,7 +208,7 @@ class AlignmentPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        self._validate()
+        #self._validate()
 
 class AlignmentStep(BaseModel):
     paths: AlignmentPaths
@@ -224,7 +231,7 @@ class MethylationPaths(BaseModel):
         self.final_meth_log_file = resolve_path(self.methylation_output_dir, self.methylation_log_name)
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        self._validate()
+        #self._validate()
 
 class MethylationStep(BaseModel):
     paths: MethylationPaths
@@ -287,7 +294,7 @@ class AnalysisPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        self._validate()
+        #self._validate()
 
 
 class AnalysisStep(BaseModel):
@@ -315,32 +322,6 @@ class AppSettings(BaseModel):
     tools: Tools
     paths: Paths = Paths()  # Default to an empty instance
 
-    @model_validator(mode='after')
-    def validate_active_steps(self) -> 'AppSettings':
-        """
-        Validates that if a step is active, all of its required inputs are present.
-        :return:
-        """
-        print(f"--- Running conditional validation for active pipeline steps ---")
-        steps = self.pipeline_steps
-
-        for step_name, should_run in self.pipeline_control.run_steps:
-            if not should_run:
-                continue # Skip validation for inactive steps
-
-            print(f"    Validating active step: '{step_name}'")
-            print(f"Finding step in {steps}")
-            step_model = getattr(steps, step_name, None)
-
-            print(f"Step model - {step_model}")
-            if step_model and hasattr(step_model.paths, '_validate'):
-                print(f"{step_model} is being validated.")
-                try:
-                    print(f"Running validation for {step_model.paths}")
-                    step_model.paths._validate(self)
-                except (ValueError, FileNotFoundError) as e:
-                    raise ValueError(f"Validation failed for step '{step_name}': {e}") from e
-        return self
 
 def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
     """

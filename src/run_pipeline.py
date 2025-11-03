@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.config.models import load_and_validate_configs, AppSettings, print_config
-from src.config.paths import build_config_paths
+from src.config.paths import build_config_paths, validate_active_steps
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils import resource_downloader
 from src.utils.logger import Logger
@@ -78,7 +78,7 @@ def main():
             conf_args.user_config, conf_args.runtime_config
         )
         build_config_paths(config)
-        #print_config(config)
+        validate_active_steps(config)
     except (FileNotFoundError, ValueError) as e:
         print(f"Error loading configuration: {e}", file=sys.stderr)
         sys.exit(1)

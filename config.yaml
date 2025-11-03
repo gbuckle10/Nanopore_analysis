@@ -22,7 +22,7 @@ globals:
 pipeline_control:
   run_steps:
     basecalling: false
-    alignment: true
+    align: true
     methylation_summary: false
     deconvolution: false
 
@@ -71,7 +71,7 @@ pipeline_steps:
   # -------------------------
   alignment:
     paths:
-      genome_id: "hg38"
+      genome_id: "hg19"
       # If the genome isn't simply in the reference_genome/ folder, write where it is below.
       custom_fasta_reference: null
       aligned_bam_name: "taken_alignment.sorted.bam"

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 
+
 def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = False, must_be_dir: bool = False, param_name: str = "Path"):
     """
     Validates a given path and raises specific errors on failure.
