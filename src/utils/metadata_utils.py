@@ -47,11 +47,8 @@ def get_tool_version(executable_path: str) -> str:
     if not executable_path:
         return "Not configured"
 
-
     try:
-
         tool_name = Path(executable_path).name
-        print(f"Tool name for exe path {executable_path} is {tool_name}")
 
         cmd = [executable_path, '--version']
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -93,14 +90,15 @@ def build_metadata(config: AppSettings) -> None:
     Populates the metadata section of the object in-place
 
     """
-    print("--- Gathering and building run metadata ---")
 
     meta = RunMetadata()
 
+    '''
     try:
         meta.pipeline_version = importlib.metadata.version("nanopore_analysis")
     except importlib.metadata.PackageNotFoundError:
         meta.pipeline_version = "unknown"
+    '''
 
     meta.run_timestamp = datetime.now().isoformat()
     meta.launch_command = ' '.join(sys.argv)

@@ -53,7 +53,7 @@ pipeline_steps:
       complex_settings:
         model_speed: "fast"
         basecalling_modifications: "5mCG_5hmCG"
-        kit_name: "SQK-NBD114-24"
+        kit_name: null
       # Method B: Explicit Model Names
       explicit_settings:
         base_model_name: "dna_r9.4.1_e8_sup@v3.3"
@@ -63,7 +63,7 @@ pipeline_steps:
       batch_size: "64"
     paths:
       # pod5_input_path can be either a file or a directory.
-      pod5_input_path: "data/pod5_output/"
+      pod5_input_path: "data/pod5_output/all_pods.pod5"
       basecalled_bam_name: "newcalls2.bam"
 
   # -------------------------

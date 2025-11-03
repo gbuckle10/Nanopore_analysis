@@ -3,7 +3,6 @@ from functools import reduce
 from src.config.models import AppSettings
 from src.pipeline import basecalling, alignment, deconvolution, methylation
 import logging
-from src.utils.logger import Logger
 import copy
 
 
@@ -95,7 +94,6 @@ def setup_parsers(subparsers, parent_parser, config):
         parents=[parent_parser]
     )
 
-    print("Setting up run parser")
 
     # Register commands from modules.
     # Add the arguments from each individual step to the run_parser

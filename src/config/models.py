@@ -309,7 +309,7 @@ class Tools(BaseModel):
     dorado: str
 
 class RunMetadata(BaseModel):
-    pipeline_version: Optional[str] = None
+    #pipeline_version: Optional[str] = None
     run_timestamp: Optional[str] = None
     launch_command: Optional[str] = None
     python_version: Optional[str] = None

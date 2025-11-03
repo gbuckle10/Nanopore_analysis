@@ -75,12 +75,12 @@ def ensure_dir_exists(dir_path: Union[str, Path], interactive: bool = False) -> 
 
     dir_path = Path(dir_path)
 
-    logger.info(f"We are going to check whether the directory {dir_path} exists. Interactive mode? {interactive}")
+    #logger.info(f"We are going to check whether the directory {dir_path} exists. Interactive mode? {interactive}")
     if dir_path.is_dir():
-        logger.info(f"Path '{dir_path}' exists and is a directory, so we will continue")
+        #logger.info(f"Path '{dir_path}' exists and is a directory, so we will continue")
         return True
     if dir_path.exists():
-        logger.info(f"Error: Path '{dir_path}' exists, but it's not a directory.")
+        #logger.info(f"Error: Path '{dir_path}' exists, but it's not a directory.")
         return False
 
     if interactive:
@@ -109,7 +109,6 @@ def save_final_config(config: AppSettings, output_path: Path):
     """
 
     try:
-        print(f"--- Saving final resolved configuration to: {output_path} ---")
         output_path.parent.mkdir(parents=True, exist_ok=True)
         config_dict = config.model_dump(mode='json')
         with open(output_path, 'w') as f:

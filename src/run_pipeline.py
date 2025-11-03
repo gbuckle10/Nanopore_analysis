@@ -82,7 +82,7 @@ def main():
         )
         build_config_paths(config)
         validate_active_steps(config)
-        build_metadata(config)
+        #build_metadata(config)
         full_config_path = config.paths.root / "full_config.yaml"
         save_final_config(config, full_config_path)
     except (FileNotFoundError, ValueError) as e:

@@ -53,21 +53,6 @@ def demultiplex_handler(args, config):
     output_dir = args.output_dir
     dorado_exe = config.tools.dorado
 
-    required_params = {
-        "Input file (--input-file)": input_file,
-        "Output directory (--output-dir)": output_dir,
-        "Dorado exe (config only)": dorado_exe
-    }
-
-    errors = []
-    for name, value in required_params.items():
-        if value is None:
-            errors.append(f" - {name}")
-
-    if errors:
-        error_report = "\n".join(errors)
-        raise ValueError(f"Missing required parameters:\n{error_report}")
-
     run_demultiplex(dorado_exe, input_file, output_dir)
 
 
@@ -115,22 +100,21 @@ def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name
     basecalling_cmd = ["basecaller",
                        f"{model_speed},{modifications}",
                        str(pod5_input),
-                       "--kit-name", kit_name,
                        "--no-trim",
                        "--batchsize", str(batchsize)
                        ]
 
-    final_output_arg = []
-    dorado_runner = ToolRunner(dorado_exe)
+    if kit_name:
+        logger.info(f"Kit name '{kit_name}' provided. Adding --kit-name to command")
+        basecalling_cmd.extend(["--kit-name", kit_name])
+    else:
+        logger.info("No kit name provided. The --kit-name argument will be omitted.")
 
+    final_output_arg = []
     if output_path.suffix in ['.bam', '.sam']:
-        # If the given output is a bam or sam file, treat it as a file.
-        logging.info(f"Output path is a file. Redirecting Dorado output to: {output_path}")
         ensure_dir_exists(output_path.parent)
-        # As ToolRunner output_file parameter already handles piping to an output file, don't add anything to the command.
     elif output_path.suffix == '':
         # If the user provided a directory path
-        print(f"Output path is a directory. Using Dorado's -o flag: {output_path}")
         ensure_dir_exists(output_path)
         final_output_arg = ["-o", str(output_path)]
     else:
@@ -138,6 +122,8 @@ def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name
         raise ValueError(
             f"Invalid output path '{output_path}'. It must be a directory or a .bam/.sam file."
         )
+
+    dorado_runner = ToolRunner(dorado_exe)
 
     full_cmd = basecalling_cmd + final_output_arg
 
@@ -164,9 +150,6 @@ def add_all_arguments_to_parser(parser, config):
     """
     Publically available function to add arguments from the basecalling step to a given parser.
     It's used by the main run command and doesn't include the I/O args.
-    :param parser:
-    :param config:
-    :return:
     """
     _add_kit_name_arg(parser, config)
     _add_model_name_arg(parser, config)
