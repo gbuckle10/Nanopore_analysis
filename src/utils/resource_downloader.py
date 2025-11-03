@@ -223,7 +223,7 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     p_genome.add_argument(
         "--output-dir", type=Path,
-        default=config.pipeline_steps.alignment.paths.full_ref_fasta_path,
+        default=config.pipeline_steps.align.paths.full_ref_fasta_path,
         help="Folder to save the reference genome in."
     )
     p_genome.set_defaults(func=reference_genome_handler)

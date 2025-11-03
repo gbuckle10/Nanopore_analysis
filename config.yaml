@@ -24,7 +24,7 @@ pipeline_control:
     basecalling: false
     align: true
     methylation_summary: false
-    deconvolution: false
+    analysis: false
 
 pipeline_steps:
   # ---------------
@@ -69,7 +69,7 @@ pipeline_steps:
   # -------------------------
   # Step 2: Alignment
   # -------------------------
-  alignment:
+  align:
     paths:
       genome_id: "hg19"
       # If the genome isn't simply in the reference_genome/ folder, write where it is below.
@@ -95,7 +95,7 @@ pipeline_steps:
       deconv_algorithm: "uxm"
     tools:
     paths:
-      atlas_file_name: "UXM_atlas_deconvolution.csv"
+      atlas_file_name: "UXM_atlas_deconvolution10201.csv"
       manifest_name: "illumina_manifest.csv"
       deconvolution_results_name: "deconvoluted_output.csv"
 

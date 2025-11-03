@@ -81,7 +81,7 @@ def full_alignment_handler(args, config: AppSettings):
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index_path, sort_memory_limit, threads)
 
-    flagstat_report = config.pipeline_steps.alignment.paths.full_flagstat_path
+    flagstat_report = config.pipeline_steps.align.paths.full_flagstat_path
 
     run_qc_command(aligned_bam_file, flagstat_report)
 
@@ -165,7 +165,7 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
 
         try:
             dorado_runner = ToolRunner(dorado_exe)
-            print(f"Executing pipe: dorado {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
+            logger.info(f"Executing pipe: dorado {' '.join(alignment_cmd)} | {' '.join(sort_cmd)}")
             align_process = dorado_runner.start(
                 alignment_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
@@ -247,7 +247,7 @@ def _make_alignment_parent_parser(config):
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument(
         "--ref",
-        default=config.pipeline_steps.alignment.paths.full_ref_fasta_path,
+        default=config.pipeline_steps.align.paths.full_ref_fasta_path,
         type=Path,
         help="Path to the reference genome"
     )
@@ -310,7 +310,7 @@ Example Usage:
     add_io_arguments(
         p_run, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
-        default_output=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
+        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
         input_file_help="Path to full unaligned BAM file",
         output_dir_help="Path to aligned, sorted and indexed BAM file"
     )
@@ -322,8 +322,8 @@ Example Usage:
     )
     add_io_arguments(
         p_qc_only, config,
-        default_input=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
-        default_output=config.pipeline_steps.alignment.paths.full_flagstat_path,
+        default_input=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        default_output=config.pipeline_steps.align.paths.full_flagstat_path,
         input_file_help="Path to aligned, sorted and indexed BAM file",
         output_dir_help="Filepath of saved output"
     )
@@ -336,7 +336,7 @@ Example Usage:
     add_io_arguments(
         p_align_only, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
-        default_output=config.pipeline_steps.alignment.paths.full_aligned_bam_path,
+        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
         input_file_help="Path to full unaligned BAM file",
         output_dir_help="Path to aligned, sorted and indexed BAM file"
     )

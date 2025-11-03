@@ -6,6 +6,7 @@ import logging
 from src.utils.logger import Logger
 import copy
 
+
 def get_nested_attr(obj, attr_string: str):
     """
     Gets a nested attribute from an object using a dot-separated string.
@@ -22,6 +23,7 @@ def get_nested_attr(obj, attr_string: str):
     # Use 'reduce' to apply getattr cumulatively.
     return reduce(getattr, attributes, obj)
 
+
 def full_pipeline_handler(args, config: AppSettings):
     logging.info("--- Running full pipeline from config ---")
 
@@ -29,7 +31,7 @@ def full_pipeline_handler(args, config: AppSettings):
         'basecalling': basecalling.full_basecalling_handler,
         'align': alignment.full_alignment_handler,
         'methylation': methylation.pileup_handler,
-        'deconvolution': deconvolution.deconvolution_handler
+        'analysis': deconvolution.deconvolution_handler
     }
 
     # Make an I/O map giving the default input and output of each step.
@@ -40,10 +42,10 @@ def full_pipeline_handler(args, config: AppSettings):
         },
         'align': {
             'input_file': 'pipeline_steps.basecalling.paths.full_unaligned_bam_path',
-            'output_dir': 'pipeline_steps.alignment.paths.full_aligned_bam_path'
+            'output_dir': 'pipeline_steps.align.paths.full_aligned_bam_path'
         },
         'methylation': {
-            'input_file': 'pipeline_steps.alignment.paths.full_aligned_bam_path',
+            'input_file': 'pipeline_steps.align.paths.full_aligned_bam_path',
             'output_dir': 'pipeline_steps.methylation.paths.final_bed_file'
         },
         'deconvolution': {
@@ -73,8 +75,6 @@ def full_pipeline_handler(args, config: AppSettings):
         # Create a deep copy of the main 'args' object to avoid messing up the variables for later steps.
         step_args = copy.deepcopy(args)
         step_io_args = io_map.get(step_name, {})
-        print(f"Step args - {step_args}")
-        print(f"Step io args - {step_io_args}")
         # Add the io args from the io args map.
         for key, config_path_str in step_io_args.items():
             print(f"Setting attribute {key} using {config_path_str}")
@@ -86,9 +86,10 @@ def full_pipeline_handler(args, config: AppSettings):
         print(f"After adding the io args, step args is:\n{step_args}")
 
         step_func(step_args, config)
-def setup_parsers(subparsers, parent_parser, config):
 
-    run_parser=subparsers.add_parser(
+
+def setup_parsers(subparsers, parent_parser, config):
+    run_parser = subparsers.add_parser(
         'run',
         help="Run the full pipeline using steps defined in the config file.",
         parents=[parent_parser]

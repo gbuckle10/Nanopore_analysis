@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Optional
 
 
-
-def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = False, must_be_dir: bool = False, param_name: str = "Path"):
+def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = False, must_be_dir: bool = False,
+                  param_name: str = "Path"):
     """
     Validates a given path and raises specific errors on failure.
     """
@@ -21,6 +21,7 @@ def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = Fals
         if must_be_dir and not path.is_dir():
             raise ValueError(f"Path for {param_name} must be a directory, but a file was provided: {path}")
 
+
 def validate_pod5(path_to_check: Optional[Path], param_name: str):
     """
     Checks a pod5 input path added to config.yaml:
@@ -31,7 +32,8 @@ def validate_pod5(path_to_check: Optional[Path], param_name: str):
     if path_to_check is None:
         raise ValueError(f"Configuration Error for {param_name}: Path wasn't provided or couldn't be built.")
     if not path_to_check.exists():
-        raise FileNotFoundError(f"Configuration Error for {param_name}: The specified path doesn't exist: {path_to_check}")
+        raise FileNotFoundError(
+            f"Configuration Error for {param_name}: The specified path doesn't exist: {path_to_check}")
     if path_to_check.is_dir():
         # Check for .pod5 files in the given directory.
         contains_pod5 = any(path_to_check.rglob('*.pod5'))

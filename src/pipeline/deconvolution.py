@@ -123,7 +123,7 @@ def setup_parsers(subparsers, parent_parser, config):
         help="Deconvolute sequenced and aligned data using methylation information",
         description="This command group contains tools for deconvolution of sequenced and aligned data.",
         formatter_class=argparse.RawTextHelpFormatter,
-        aliases=['deconv'],
+        aliases=['deconv', 'analysis'],
         parents=[parent_parser]
     )
     _add_atlas_arg(deconv_parser, config)

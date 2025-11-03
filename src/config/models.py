@@ -177,7 +177,7 @@ class AlignmentPaths(BaseModel):
         return None
 
 
-    def _validate(self, config):
+    def _validate(self):
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError("Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
         if self.genome_id and self.custom_fasta_reference:
@@ -249,8 +249,11 @@ class AnalysisTools(BaseModel):
         pass
     def _build(self, common_paths: Paths):
         self.uxm_dir = resolve_path(common_paths.externals_dir, self.uxm_dir_name)
+        print(f"UXM dir: {self.uxm_dir}")
         self.wgbstools_dir = resolve_path(common_paths.externals_dir, self.wgbstools_dir_name)
+        print(f"wgbstools dir: {self.wgbstools_dir}")
         self.meth_atlas_dir = resolve_path(common_paths.externals_dir, self.methatlas_dir_name)
+        print(f"Meth atlas dir: {self.meth_atlas_dir}")
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -336,7 +339,6 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
     Loads two YAML config files (runtime_config.yaml and config.yaml), deep-merges them, and validates them with
     Pydantic. The config in the second position will override values from the config in the first position.
     """
-    print(f"Loading the config")
     # Load the YAML files into dictionaries
     try:
         with open(config_path, 'r') as f:
@@ -344,6 +346,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
     except FileNotFoundError:
         raise FileNotFoundError(f"Base config file not found: {config_path}")
 
+    #print_config(user_config_data, "User Configuration Data")
     try:
         with open(runtime_config_path, 'r') as f:
             runtime_config_data = yaml.safe_load(f) or {}
@@ -352,8 +355,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
 
     # Do the deep merge (on a copy of the config data so we don't change in-place)
     config_data = deep_merge(runtime_config_data, user_config_data.copy())
-    print(f"Config data merged:")
-    print_config(config_data)
+    #print_config(config_data, "Merged Config Data")
     # Validate the final merged dictionary with Pydantic
     try:
         return AppSettings(**config_data)
