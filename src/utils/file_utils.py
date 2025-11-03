@@ -7,6 +7,10 @@ import gzip
 import shutil
 from typing import Union
 
+import yaml
+
+from src.config.models import AppSettings
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,3 +102,17 @@ def ensure_dir_exists(dir_path: Union[str, Path], interactive: bool = False) -> 
     except OSError as e:
         logger.error(f"Error: Couldn't create directory {dir_path}. Error - {e}")
         return False
+
+def save_final_config(config: AppSettings, output_path: Path):
+    """
+    Saves the final Pydantic config object, after building the paths, to a YAML file.
+    """
+
+    try:
+        print(f"--- Saving final resolved configuration to: {output_path} ---")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        config_dict = config.model_dump(mode='json')
+        with open(output_path, 'w') as f:
+            yaml.dump(config_dict, f, sort_keys=False, indent=2)
+    except Exception as e:
+        logger.info(f"Warning: Failed to save final configuration file. Error: {e}")

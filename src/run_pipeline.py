@@ -10,6 +10,7 @@ from src.config.models import load_and_validate_configs, AppSettings, print_conf
 from src.config.paths import build_config_paths, validate_active_steps
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils import resource_downloader
+from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
 
@@ -26,6 +27,7 @@ COMMAND_MAP = {
     'deconvolution_prep': 'pipeline',
     'deconvolution': 'pipeline',
     'deconv': 'pipeline',
+    'analysis': 'pipeline',
     'all': 'pipeline',
 
     'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
@@ -79,6 +81,8 @@ def main():
         )
         build_config_paths(config)
         validate_active_steps(config)
+        full_config_path = config.paths.root / "full_config.yaml"
+        save_final_config(config, full_config_path)
     except (FileNotFoundError, ValueError) as e:
         print(f"Error loading configuration: {e}", file=sys.stderr)
         sys.exit(1)
