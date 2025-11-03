@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import pprint
 
 import yaml
 from pathlib import Path
@@ -29,7 +30,7 @@ class RunSteps(BaseModel):
     basecalling: bool = False
     align: bool = False
     methylation_summary: bool = False
-    deconvolution: bool = False
+    analysis: bool = False
 
 
 class PipelineControl(BaseModel):
@@ -57,7 +58,6 @@ class SetupPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        #self._validate()
 
 class SetupStep(BaseModel):
     params: dict
@@ -122,7 +122,6 @@ class BasecallingPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        #self._validate()
 
 class BasecallingStep(BaseModel):
     params: BasecallingParams
@@ -147,7 +146,6 @@ class AlignmentPaths(BaseModel):
     qc_output_dir: Optional[Path] = None
 
     def _find_reference_fasta(self, common_paths: Paths):
-        print("Trying to find reference fasta.")
         # Reference fasta depends on what the user defined in the config.yaml file.
         if self.custom_fasta_reference:
             # If the user did specify a custom fasta reference, just use that one.
@@ -158,11 +156,9 @@ class AlignmentPaths(BaseModel):
         elif self.genome_id:
             # If they just provided a genome id (e.g. hg38), look in the expected places.
 
-            print(f"Looking for genome {self.genome_id}")
             # Base reference dir is the reference_genomes directory.
             base_ref_dir = resolve_path(common_paths.root, self.reference_genome_dir_name)
 
-            print(f"Base ref dir - {base_ref_dir}")
             # Define the possible places the genome will be found in.
             search_paths = [
                 # Inside a dedicated folder (e.g. reference_genomes/hg38/hg38.fa)
@@ -182,9 +178,6 @@ class AlignmentPaths(BaseModel):
 
 
     def _validate(self, config):
-
-        print(f"Validating alignment variables")
-        print(self.full_ref_fasta_path)
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError("Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
         if self.genome_id and self.custom_fasta_reference:
@@ -198,7 +191,6 @@ class AlignmentPaths(BaseModel):
         )
 
     def _build(self, common_paths: Paths):
-        print(f"Building alignment paths")
         self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
         self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
         self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
@@ -208,7 +200,6 @@ class AlignmentPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        #self._validate()
 
 class AlignmentStep(BaseModel):
     paths: AlignmentPaths
@@ -306,7 +297,7 @@ class AnalysisStep(BaseModel):
 class PipelineSteps(BaseModel):
     setup: SetupStep
     basecalling: BasecallingStep
-    alignment: AlignmentStep
+    align: AlignmentStep
     methylation: MethylationStep
     analysis: AnalysisStep
 
@@ -345,7 +336,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
     Loads two YAML config files (runtime_config.yaml and config.yaml), deep-merges them, and validates them with
     Pydantic. The config in the second position will override values from the config in the first position.
     """
-
+    print(f"Loading the config")
     # Load the YAML files into dictionaries
     try:
         with open(config_path, 'r') as f:
@@ -361,7 +352,8 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
 
     # Do the deep merge (on a copy of the config data so we don't change in-place)
     config_data = deep_merge(runtime_config_data, user_config_data.copy())
-
+    print(f"Config data merged:")
+    print_config(config_data)
     # Validate the final merged dictionary with Pydantic
     try:
         return AppSettings(**config_data)
@@ -369,8 +361,27 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
         raise ValueError(f"Configuration error after merging configs:\n{e}")
 
 
-def print_config(part_to_print: AppSettings):
-    config_dict = part_to_print.model_dump(mode='json')
-    yaml_str = yaml.dump(config_dict, sort_keys=False, indent=2)
-    print(f"\n--- Config {part_to_print} Configuration ---")
+def print_config(config_data, title: str = "Configuration Data"):
+    """
+    Prints the config object (dict or Pydantic BaseModel) to the console in a clean, readable format.
+    """
+
+    print(f"\n--- {title} ---") # Make the printed config easier to discern from whatever else has been printed.
+    data_to_print = None
+    if isinstance(config_data, dict):
+        print("Object type: dict")
+        data_to_print = config_data
+    elif isinstance(config_data, AppSettings):
+        print(f"(Object type: {type(config_data).__name__})")
+        # If it's a Pydantic model, convert to a dictionary using model_dump before printing.
+        data_to_print = config_data.model_dump(mode='json')
+    else:
+        print(f"(Object type: {type(config_data).__name__}) - Using standard print:")
+        pprint.pprint(config_data) # Pretty print is more useful for debugging, which is the only reason we'd use this.
+        print("-" * (len(title) + 6))
+        return
+
+    # Use pyyaml to dump the dictionary into a clean format. sort_keys=False maintains the order of the config file.
+    yaml_str = yaml.dump(data_to_print, sort_keys=False, indent=2)
     print(yaml_str)
+    print("-" * (len(title) + 6) + "\n")
