@@ -46,6 +46,7 @@ def basecall_handler(config):
 
     run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, output)
 
+    return config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
 
 def demultiplex_handler(config):
     input_file = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path

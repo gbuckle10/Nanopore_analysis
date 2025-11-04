@@ -25,7 +25,7 @@ def build_config_paths(config: AppSettings) -> None:
     # Run build_paths method for each specific step
     config.pipeline_steps.setup.paths.build_and_validate(common_paths)
     config.pipeline_steps.basecalling.paths.build_and_validate(common_paths)
-    config.pipeline_steps.align.paths.build_and_validate(common_paths)
+    config.pipeline_steps.align.paths.build_and_validate(common_paths, config.pipeline_steps.basecalling.paths.full_unaligned_bam_path)
     config.pipeline_steps.methylation.paths.build_and_validate(common_paths)
     config.pipeline_steps.analysis.paths.build_and_validate(common_paths)
 

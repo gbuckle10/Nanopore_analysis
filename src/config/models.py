@@ -173,7 +173,10 @@ class AlignmentPaths(BaseModel):
     aligned_bam_name: str
     alignment_flagstat_name: str
     alignment_stats_name: str
+    user_alignment_input: Optional[str] = None
+    user_alignment_output: Optional[str] = None
 
+    full_unaligned_input_path: Optional[Path] = None
     full_ref_fasta_path: Optional[Path] = None
     full_aligned_bam_path: Optional[Path] = None
     full_flagstat_path: Optional[Path] = None
@@ -226,21 +229,36 @@ class AlignmentPaths(BaseModel):
             param_name="Reference Genome FASTA"
         )
 
-    def _build(self, common_paths: Paths):
+    def _build(self, common_paths: Paths, conv_unaligned_input: Optional[Path] = None):
+        root_dir = common_paths.root
+
+        if self.user_alignment_input:
+            self.full_unaligned_input_path = resolve_path(root_dir, self.user_alignment_input)
+        else:
+            self.full_unaligned_input_path = conv_unaligned_input
+
+        if self.user_alignment_output:
+            print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
+            self.full_aligned_bam_path = resolve_path(root_dir, self.user_alignment_output)
+        else:
+            self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
+            self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
+
+        print(f"The full aligned bam path is {self.full_aligned_bam_path}")
         if self.custom_fasta_reference:
             if self.genome_id:
                 logging.info(f"User provided custom reference '--ref {self.custom_fasta_reference}'. "
                              f"This will override the genome_id: '{self.genome_id}' from the config file.")
                 self.genome_id = None
-        self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
+
+
         self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
-        self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
         self.full_flagstat_path = resolve_path(self.qc_output_dir, self.alignment_flagstat_name)
         self.full_stats_path = resolve_path(self.qc_output_dir, self.alignment_stats_name)
         self.full_ref_fasta_path = self._find_reference_fasta(common_paths)
 
-    def build_and_validate(self, common_paths: Paths):
-        self._build(common_paths)
+    def build_and_validate(self, common_paths: Paths, conv_unaligned_input):
+        self._build(common_paths, conv_unaligned_input)
 
 
 class AlignmentStep(BaseModel):

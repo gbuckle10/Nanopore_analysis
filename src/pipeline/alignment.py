@@ -81,7 +81,7 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
 
 
 def full_alignment_handler(config: AppSettings):
-    unaligned_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
+    unaligned_bam = config.pipeline_steps.align.paths.full_unaligned_input_path
     aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
     threads = config.globals.threads
     reference_fasta_path = config.pipeline_steps.align.paths.full_ref_fasta_path
@@ -106,7 +106,7 @@ def full_alignment_handler(config: AppSettings):
 
 
 def alignment_handler(config):
-    unaligned_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
+    unaligned_bam = config.pipeline_steps.align.paths.full_unaligned_input_path
     aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
     threads = config.globals.threads
     reference_fasta_path = config.pipeline_steps.align.paths.full_ref_fasta_path
@@ -143,7 +143,6 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
         raise FileNotFoundError(f"Input for alignment doesn't exist: {input_path}")
 
     input_files_to_align = []
-
     if input_path.is_file():
         input_files_to_align.append(input_path)
     elif input_path.is_dir():
@@ -347,10 +346,10 @@ Example Usage:
         p_run, config,
         default_input=None,
         input_file_help="Path to full unaligned BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
+        input_dest="pipeline_steps.align.paths.user_alignment_input",
         default_output=None,
         output_dir_help="Path to aligned, sorted and indexed BAM file",
-        output_dest="pipeline_steps.align.paths.aligned_bam_name"
+        output_dest="pipeline_steps.align.paths.user_alignment_output"
     )
     p_run.set_defaults(func=full_alignment_handler)
 
@@ -377,10 +376,10 @@ Example Usage:
         p_align_only, config,
         default_input=None,
         input_file_help="Path to full unaligned BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
+        input_dest="pipeline_steps.align.paths.user_alignment_input",
         default_output=None,
         output_dir_help="Path to aligned, sorted and indexed BAM file",
-        output_dest="pipeline_steps.align.paths.aligned_bam_name"
+        output_dest="pipeline_steps.align.paths.user_alignment_output"
     )
 
     p_align_only.set_defaults(
