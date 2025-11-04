@@ -3,6 +3,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import List
 
 from src.config.models import AppSettings
 from src.utils.cli_utils import add_io_arguments
@@ -79,6 +80,56 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     logging.info(f"Successfully built index: {index_path}")
     return index_path
 
+def _resolve_alignment_inputs(input_path: Path) -> List[Path]:
+    """
+    Finds all BAM files to be aligned from a given input path
+    """
+
+    print(f"Resolving alignment input {input_path}")
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input for alignment doesn't exist: {input_path}")
+
+    if input_path.is_file():
+        if input_path.suffix != '.bam':
+            logging.warning(f"Input file {input_path} doesn't have a .bam extension")
+        return [input_path]
+    if input_path.is_dir():
+        found_files = list(input_path.rglob('*.bam'))
+        if not found_files:
+            raise FileNotFoundError(f"No BAM files found in directory {input_path}")
+        return found_files
+    raise ValueError(f"Input path is neither a file nor a directory: {input_path}")
+
+def _prepare_alignment_io(input_files: List[Path], output_path: Path):
+    output_dir: Path
+    print(f"Preparing alignment input/output list")
+
+    if len(input_files) > 1:
+        if output_path.suffix:
+            logging.warning(f"Input is a directory, so the output path '{output_path}' will be treated as a directory. "
+                            f"Using its parent: '{output_path.parent}")
+            output_dir = output_path.parent
+        else:
+            output_dir = output_path
+    else:
+        if output_path.suffix:
+            output_dir = output_path.parent
+        else:
+            output_dir = output_path
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    logging.info(f"All outputs will be saved in: {output_dir}")
+
+    io_pairs = []
+    if len(input_files) == 1 and output_path.suffix:
+        # A single input file is mapped to a single output file
+        io_pairs.append((input_files[0], output_path))
+    else:
+        # Map each input file to a new file in the output_dir
+        for input_file in input_files:
+            output_bam = output_dir / f"{input_file.stem}.aligned.bam"
+            io_pairs.append((input_file, output_bam))
+    return output_dir, io_pairs
 
 def full_alignment_handler(config: AppSettings):
     unaligned_bam = config.pipeline_steps.align.paths.full_unaligned_input_path
@@ -139,45 +190,17 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
     # If the user wants to a directory, you need to specify an --output-dir
     # Sorting and indexing is automatic if a directory is given instead of a specific file.
 
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input for alignment doesn't exist: {input_path}")
+    print("Running alignment command")
+    try:
+        input_files_to_align = _resolve_alignment_inputs(input_path)
+        # Validate output path
+        output_dirs, io_pairs = _prepare_alignment_io(input_files_to_align, output_path)
 
-    input_files_to_align = []
-    if input_path.is_file():
-        input_files_to_align.append(input_path)
-    elif input_path.is_dir():
-        found_files = list(input_path.rglob('*.bam'))
-        if not found_files:
-            raise FileNotFoundError(f"No BAM files found in directory {input_path}")
-        input_files_to_align = found_files
-    else:
-        raise ValueError(f"Input path is neither a file nor a directory: {input_path}")
+    except (FileNotFoundError, ValueError) as e:
+        logging.error(f"Error preparing for alignment: {e}")
 
-    # Validate output path
-    output_dir = None
-    if len(input_files_to_align) > 1:
-        if output_path.suffix != '':
-            raise ValueError(
-                f"Input is a directory, so output must also be a directory. The provided output path, {output_path}, looks like a file.")
-        output_dir = output_path
-    elif len(input_files_to_align) == 1:
-        if output_path.suffix == '':
-            output_dir = output_path
-        else:
-            output_dir = output_path.parent
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    logging.info(f"All outputs will be saved in: {output_dir}")
-
-    for input_file in input_files_to_align:
-        logging.info(f"Processing input file: {input_file.name}")
-
-        # Construct the corresponding output filename
-        if len(input_files_to_align) > 1 or output_path.suffix == '':
-            output_bam_file = output_dir / f"{input_file.stem}.aligned.sorted.bam"
-        else:
-            output_bam_file = output_path
-        logging.info(f"Output will be {output_bam_file}")
+    for input_file, output_bam_file in io_pairs:
+        logging.info(f"Processing input file: {input_file.name} -> {output_bam_file.name}")
 
         alignment_cmd = [
             'aligner',

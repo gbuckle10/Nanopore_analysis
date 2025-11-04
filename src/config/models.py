@@ -214,6 +214,7 @@ class AlignmentPaths(BaseModel):
 
         return None
 
+
     def _validate(self):
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError(
