@@ -43,16 +43,16 @@ def _download_file_with_progress(url: str, destination: Path):
         return None
 
 
-def reference_genome_handler(args, config):
-    url = args.url
-    use_wgbs = args.wgbstools
+def reference_genome_handler(config):
+    url = config.pipeline_steps.setup.downloads.reference_genome_url
+    use_wgbs = config.pipeline_steps.setup.params.download_ref_with_wgbstools
 
     if use_wgbs:
         logger.info("We are going to initialise the genome using wgbstools")
     else:
         logger.info("We are going to initialise the genome and index with minimap2")
 
-    ref_path = args.output_dir
+    ref_path = config.pipeline_steps.align.paths.full_ref_fasta_path
 
     user_path = Path(ref_path)
 
@@ -64,7 +64,7 @@ def reference_genome_handler(args, config):
         logger.info(f"Reference path '{user_path}' is a directory. Appending default filename.")
 
         try:
-            default_filename = config.pipeline_steps.setup.paths.reference_genome_name
+            default_filename = config.pipeline_steps.align.paths.full_ref_fasta_path
         except KeyError:
             logger.error(f"Error: '{user_path}' is a directory, but 'indexed_ref_gen_fasta_name' is not set in config.")
             sys.exit(1)
@@ -79,7 +79,7 @@ def reference_genome_handler(args, config):
     if not os.path.exists(final_ref_path):
         logger.info(f"Reference file {final_ref_path} doesn't exist. Downloading from {url}")
         run_command([
-            "aws", "s3", "cp", url, str(final_ref_path), "--no-sign-request"
+            "aws", "s3", "cp", str(url), str(final_ref_path), "--no-sign-request"
         ])
     else:
         logger.info("Reference genome already exists.")
@@ -96,14 +96,38 @@ def reference_genome_handler(args, config):
         logger.info(f"Reference genome index already exists.")
 
 
-def atlas_handler(args, config):
-    url = args.url
+def atlas_handler(config):
+    url = config.pipeline_steps.setup.downloads.uxm_atlas_url
 
-    destination = args.output_dir
+    destination = config.pipeline_steps.analysis.paths.full_atlas_path
     if not destination:
         sys.exit("Error: No output path specified and config doesn't contain the path.")
 
+
+
+    # The interactive tag needs to be fixed - probs will need to add the args back into this.
+    '''
     # Has the user provided an output directory? If so, we're in interactive mode.
+    # is_interactive = args.output_dir is not None
+    if is_interactive:
+        logger.info("The user provided an output dir, so we are running in interactive mode.")
+    else:
+        logger.info(
+            "The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
+    '''
+    final_destination_and_download(url, Path(destination), is_interactive=False)
+
+
+def manifest_handler(config):
+    url = config.pipeline_steps.setup.downloads.manifest_url
+
+    destination = config.pipeline_steps.analysis.paths.full_manifest_path
+
+    if not destination:
+        sys.exit("Error: No output path specified and config doesn't contain the path.")
+    # Has the user provided an output directory? If so, we're in interactive mode.
+
+    '''
     is_interactive = args.output_dir is not None
 
     if is_interactive:
@@ -111,28 +135,8 @@ def atlas_handler(args, config):
     else:
         logger.info(
             "The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
-
-    final_destination_and_download(url, Path(destination), is_interactive)
-
-
-def manifest_handler(args, config):
-    url = args.url
-
-    destination = args.output_dir
-
-    if not destination:
-        sys.exit("Error: No output path specified and config doesn't contain the path.")
-    # Has the user provided an output directory? If so, we're in interactive mode.
-
-    is_interactive = args.output_dir is not None
-
-    if is_interactive:
-        logger.info("The user provided an output dir, so we are running in interactive mode.")
-    else:
-        logger.info(
-            "The user didn't provide an output dir, so the output is taken from config and is assumed to be fine.")
-
-    final_destination_and_download(url, Path(destination), is_interactive)
+    '''
+    final_destination_and_download(url, Path(destination), is_interactive=False)
 
 
 def final_destination_and_download(url: str, destination: Path, is_interactive: bool = False):
@@ -197,7 +201,8 @@ def setup_parsers(subparsers, parent_parser, config):
         "download",
         help="Download files necessary for deconvolution",
         description="This command group contains tools for downloading and preparing files necessary for deconvolution.",
-        formatter_class=argparse.RawTextHelpFormatter
+        formatter_class=argparse.RawTextHelpFormatter,
+        parents=[parent_parser]
     )
     download_subparsers = download_parser.add_subparsers(
         title="Available Commands",
@@ -214,16 +219,19 @@ def setup_parsers(subparsers, parent_parser, config):
     p_genome.add_argument(
         '--wgbstools',
         action="store_true",
+        dest="pipeline_steps.setup.params.download_ref_with_wgbstools",
         help="Downloads and initialises the genome using wgbs_tools' init_genome function"
     )
     p_genome.add_argument(
         "--url", type=str,
         default=config.pipeline_steps.setup.downloads.reference_genome_url,
+        dest="pipeline_steps.setup.downloads.reference_genome_url",
         help="URL to download the reference genome from"
     )
     p_genome.add_argument(
         "--output-dir", type=Path,
-        default=config.pipeline_steps.align.paths.full_ref_fasta_path,
+        default=None,
+        dest="pipeline_steps.align.paths.custom_fasta_reference",
         help="Folder to save the reference genome in."
     )
     p_genome.set_defaults(func=reference_genome_handler)
@@ -236,11 +244,13 @@ def setup_parsers(subparsers, parent_parser, config):
     p_atlas.add_argument(
         "--url", type=str,
         default=config.pipeline_steps.setup.downloads.uxm_atlas_url,
+        dest="config.pipeline_steps.setup.downloads.uxm_atlas_url",
         help="URL to download the reference atlas genome from"
     )
     p_atlas.add_argument(
         "--output-dir", type=Path,
         default=config.pipeline_steps.analysis.paths.full_atlas_path,
+        dest="pipeline_steps.analysis.paths.atlas_file_name",
         help="Path to saved atlas file."
     )
     p_atlas.set_defaults(func=atlas_handler)
@@ -253,11 +263,13 @@ def setup_parsers(subparsers, parent_parser, config):
     p_manifest.add_argument(
         "--url", type=str,
         default=config.pipeline_steps.setup.downloads.manifest_url,
+        dest="pipeline_steps.setup.downloads.manifest_url",
         help="URL to download the reference atlas genome from"
     )
     p_manifest.add_argument(
         "--output-dir", type=Path,
         default=config.pipeline_steps.analysis.paths.full_manifest_path,
+        dest="pipeline_steps.analysis.paths.manifest_name",
         help="Path to saved atlas file."
     )
     p_manifest.set_defaults(func=manifest_handler)

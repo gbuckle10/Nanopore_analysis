@@ -4,9 +4,9 @@ from src.utils.cli_utils import add_io_arguments
 from src.utils.process_utils import run_command
 
 
-def pileup_handler(args, config):
-    aligned_file = args.input_file
-    output_bed = args.output_dir
+def pileup_handler(config):
+    aligned_file = config.pipeline_steps.align.paths.full_aligned_bam_path
+    output_bed = config.pipeline_steps.methylation.paths.final_bed_file
 
     run_methylation_pileup(aligned_file, output_bed)
 
@@ -20,6 +20,7 @@ def run_methylation_pileup(aligned_sorted_file, output_bed):
 
     run_command(pileup_cmd)
 
+
 def setup_parsers(subparsers, parent_parser, config):
     methylation_parser = subparsers.add_parser(
         "methylation-summary",
@@ -30,7 +31,7 @@ def setup_parsers(subparsers, parent_parser, config):
         parents=[parent_parser]
     )
 
-    def show_methylation_help(args, config):
+    def show_methylation_help(config):
         """Default function to show help for the basecalling command group"""
         methylation_parser.print_help()
 
@@ -50,9 +51,10 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_pileup, config,
         default_input=config.pipeline_steps.align.paths.full_aligned_bam_path,
-        default_output=config.pipeline_steps.methylation.paths.final_bed_file,
         input_file_help="Path to the aligned BAM path",
-        output_dir_help="Path to the BED file"
+        input_dest="pipeline_steps.align.paths.aligned_bam_name",
+        default_output=config.pipeline_steps.methylation.paths.final_bed_file,
+        output_dir_help="Path to the BED file",
+        output_dest="pipeline_steps.methylation.paths.methylation_bed_name"
     )
     p_pileup.set_defaults(func=pileup_handler)
-

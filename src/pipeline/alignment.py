@@ -11,6 +11,7 @@ from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
+
 def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     """
     Given a path to a FASTA file, ensures the corresponding .mmi index exists, and creates it if necessary. It can
@@ -57,15 +58,12 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     logging.info(f"Successfully built index: {index_path}")
     return index_path
 
-def full_alignment_handler(args, config: AppSettings):
-    unaligned_bam = args.input_file
 
-    if unaligned_bam is None:
-        raise ValueError("Could not determine the path for the unaligned BAM file.")
-
-    aligned_bam_file = args.output_dir
-    threads = args.threads
-    reference_fasta_path = args.ref
+def full_alignment_handler(config: AppSettings):
+    unaligned_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
+    aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
+    threads = config.globals.threads
+    reference_fasta_path = config.pipeline_steps.align.paths.full_ref_fasta_path
     sort_memory_limit = config.globals.sort_memory_limit
     dorado_exe = config.tools.dorado
 
@@ -86,20 +84,31 @@ def full_alignment_handler(args, config: AppSettings):
     run_qc_command(aligned_bam_file, flagstat_report)
 
 
-def alignment_handler(args, config):
-    unaligned_bam = args.input_file
-    aligned_bam_file = args.output_dir
-    threads = args.threads
-    reference_index = args.ref
+def alignment_handler(config):
+    unaligned_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
+    aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
+    threads = config.globals.threads
+    reference_fasta_path = config.pipeline_steps.align.paths.full_ref_fasta_path
+
     sort_memory_limit = config.globals.sort_memory_limit
     dorado_exe = config.tools.dorado
 
-    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index, sort_memory_limit, threads)
+    if reference_fasta_path is None:
+        raise ValueError("Missing required argument: --ref")
+
+    try:
+        logging.info(f"Checking whether reference index exists at {reference_fasta_path}")
+        reference_index_path = _ensure_mmi_exists(reference_fasta_path, threads)
+    except (FileNotFoundError, RuntimeError) as e:
+        logging.info(f"Error preparing reference genome: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index_path, sort_memory_limit, threads)
 
 
-def qc_handler(args, config):
-    aligned_bam_file = args.input_file
-    flagstat_report = args.output_file
+def qc_handler(config):
+    aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
+    flagstat_report = config.pipeline_steps.align.paths.full_flagstat_path
 
     run_qc_command(aligned_bam_file, flagstat_report)
 
@@ -128,7 +137,8 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
     output_dir = None
     if len(input_files_to_align) > 1:
         if output_path.suffix != '':
-            raise ValueError(f"Input is a directory, so output must also be a directory. The provided output path, {output_path}, looks like a file.")
+            raise ValueError(
+                f"Input is a directory, so output must also be a directory. The provided output path, {output_path}, looks like a file.")
         output_dir = output_path
     elif len(input_files_to_align) == 1:
         if output_path.suffix == '':
@@ -238,6 +248,7 @@ def run_qc_command(aligned_sorted_file, flagstat_report):
         print(f"CRITICAL: samtools flagstat failed with exit code {e.returncode}", file=sys.stderr)
         sys.exit(1)
 
+
 def _make_alignment_parent_parser(config):
     """
     Creates a parent parser with the shared alignment arguments.
@@ -247,16 +258,19 @@ def _make_alignment_parent_parser(config):
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument(
         "--ref",
-        default=config.pipeline_steps.align.paths.full_ref_fasta_path,
+        default=None,
+        dest="pipeline_steps.align.paths.custom_fasta_reference",
         type=Path,
         help="Path to the reference genome"
     )
     parent.add_argument(
         "--threads",
         default=config.globals.threads,
+        dest="globals.threads",
         help="Number of threads for alignment and samtools."
     )
     return parent
+
 
 def add_all_arguments_to_parser(parser, config):
     """
@@ -270,6 +284,7 @@ def add_all_arguments_to_parser(parser, config):
         parser._add_action(action)
 
     # If there are any individual arguments, add those underneath.
+
 
 def setup_parsers(subparsers, parent_parser, config):
     # Make new parents
@@ -291,7 +306,7 @@ Example Usage:
 """
     )
 
-    def show_align_help(args, config):
+    def show_align_help(config):
         """Default function to show help for the align command group"""
         alignment_parser.print_help()
 
@@ -310,9 +325,11 @@ Example Usage:
     add_io_arguments(
         p_run, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
-        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
         input_file_help="Path to full unaligned BAM file",
-        output_dir_help="Path to aligned, sorted and indexed BAM file"
+        input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
+        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        output_dir_help="Path to aligned, sorted and indexed BAM file",
+        output_dest="pipeline_steps.align.paths.aligned_bam_name"
     )
     p_run.set_defaults(func=full_alignment_handler)
 
@@ -323,9 +340,11 @@ Example Usage:
     add_io_arguments(
         p_qc_only, config,
         default_input=config.pipeline_steps.align.paths.full_aligned_bam_path,
-        default_output=config.pipeline_steps.align.paths.full_flagstat_path,
         input_file_help="Path to aligned, sorted and indexed BAM file",
-        output_dir_help="Filepath of saved output"
+        input_dest="pipeline_steps.align.paths.aligned_bam_name",
+        default_output=config.pipeline_steps.align.paths.full_flagstat_path,
+        output_dir_help="Filepath of saved output",
+        output_dest="pipeline_steps.align.paths.alignment_flagstat_name"
     )
     p_qc_only.set_defaults(func=qc_handler)
 
@@ -336,9 +355,11 @@ Example Usage:
     add_io_arguments(
         p_align_only, config,
         default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
-        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
         input_file_help="Path to full unaligned BAM file",
-        output_dir_help="Path to aligned, sorted and indexed BAM file"
+        input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
+        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        output_dir_help="Path to aligned, sorted and indexed BAM file",
+        output_dest="pipeline_steps.align.paths.aligned_bam_name"
     )
 
     p_align_only.set_defaults(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import logging
 import pprint
 from dataclasses import Field
 
@@ -60,8 +61,12 @@ class SetupPaths(BaseModel):
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
 
+class SetupParams(BaseModel):
+    download_ref_with_wgbstools: bool = False
+
+
 class SetupStep(BaseModel):
-    params: dict
+    params: SetupParams
     downloads: SetupDownloads
     paths: SetupPaths
 
@@ -109,7 +114,6 @@ class BasecallingPaths(BaseModel):
 
         validate_pod5(self.full_pod5_path, pod5_param_name)
 
-
     def _build(self, common_paths: Paths):
         root_dir = common_paths.root
         basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
@@ -123,6 +127,7 @@ class BasecallingPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
+
 
 class BasecallingStep(BaseModel):
     params: BasecallingParams
@@ -177,12 +182,13 @@ class AlignmentPaths(BaseModel):
 
         return None
 
-
     def _validate(self):
         if not (self.genome_id or self.custom_fasta_reference):
-            raise ValueError("Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
+            raise ValueError(
+                "Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
         if self.genome_id and self.custom_fasta_reference:
-            raise ValueError("Configuration Error in alignment: Don't provide both a 'genome_id' and 'custom_fasta_reference'")
+            raise ValueError(
+                "Configuration Error in alignment: Don't provide both a 'genome_id' and 'custom_fasta_reference'")
 
         validate_path(
             self.full_ref_fasta_path,
@@ -192,6 +198,11 @@ class AlignmentPaths(BaseModel):
         )
 
     def _build(self, common_paths: Paths):
+        if self.custom_fasta_reference:
+            if self.genome_id:
+                logging.info(f"User provided custom reference '--ref {self.custom_fasta_reference}'. "
+                             f"This will override the genome_id: '{self.genome_id}' from the config file.")
+                self.genome_id = None
         self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
         self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
         self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
@@ -201,6 +212,7 @@ class AlignmentPaths(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
+
 
 class AlignmentStep(BaseModel):
     paths: AlignmentPaths
@@ -217,13 +229,16 @@ class MethylationPaths(BaseModel):
 
     def _validate(self):
         pass
+
     def _build(self, common_paths: Paths):
         self.methylation_output_dir = resolve_path(common_paths.data_dir, self.methylation_output_dir_name)
         self.final_bed_file = resolve_path(self.methylation_output_dir, self.methylation_bed_name)
         self.final_meth_log_file = resolve_path(self.methylation_output_dir, self.methylation_log_name)
+
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        #self._validate()
+        # self._validate()
+
 
 class MethylationStep(BaseModel):
     paths: MethylationPaths
@@ -248,6 +263,7 @@ class AnalysisTools(BaseModel):
 
     def _validate(self):
         pass
+
     def _build(self, common_paths: Paths):
         self.uxm_dir = resolve_path(common_paths.externals_dir, self.uxm_dir_name)
         print(f"UXM dir: {self.uxm_dir}")
@@ -258,7 +274,7 @@ class AnalysisTools(BaseModel):
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
-        #self._validate()
+        # self._validate()
 
 
 class AnalysisPaths(BaseModel):
@@ -275,7 +291,8 @@ class AnalysisPaths(BaseModel):
     full_deconv_input_path: Optional[Path] = None
 
     def _validate(self):
-        validate_path(self.full_atlas_path, must_exist=True, must_be_file=True, param_name="Analysis Atlas Path ('full_atlas_path')")
+        validate_path(self.full_atlas_path, must_exist=True, must_be_file=True,
+                      param_name="Analysis Atlas Path ('full_atlas_path')")
 
     def _build(self, common_paths: Paths):
         analysis_dir = common_paths.results_dir
@@ -308,8 +325,9 @@ class PipelineSteps(BaseModel):
 class Tools(BaseModel):
     dorado: str
 
+
 class RunMetadata(BaseModel):
-    #pipeline_version: Optional[str] = None
+    # pipeline_version: Optional[str] = None
     run_timestamp: Optional[str] = None
     launch_command: Optional[str] = None
     python_version: Optional[str] = None
@@ -320,6 +338,7 @@ class RunMetadata(BaseModel):
     dorado_version: Optional[str] = None
     samtools_version: Optional[str] = None
     minimap2_version: Optional[str] = None
+
 
 class AppSettings(BaseModel):
     globals: Globals
@@ -359,7 +378,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
     except FileNotFoundError:
         raise FileNotFoundError(f"Base config file not found: {config_path}")
 
-    #print_config(user_config_data, "User Configuration Data")
+    # print_config(user_config_data, "User Configuration Data")
     try:
         with open(runtime_config_path, 'r') as f:
             runtime_config_data = yaml.safe_load(f) or {}
@@ -368,7 +387,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
 
     # Do the deep merge (on a copy of the config data so we don't change in-place)
     config_data = deep_merge(runtime_config_data, user_config_data.copy())
-    #print_config(config_data, "Merged Config Data")
+    # print_config(config_data, "Merged Config Data")
     # Validate the final merged dictionary with Pydantic
     try:
         return AppSettings(**config_data)
@@ -381,7 +400,7 @@ def print_config(config_data, title: str = "Configuration Data"):
     Prints the config object (dict or Pydantic BaseModel) to the console in a clean, readable format.
     """
 
-    print(f"\n--- {title} ---") # Make the printed config easier to discern from whatever else has been printed.
+    print(f"\n--- {title} ---")  # Make the printed config easier to discern from whatever else has been printed.
     data_to_print = None
     if isinstance(config_data, dict):
         print("Object type: dict")
@@ -392,7 +411,7 @@ def print_config(config_data, title: str = "Configuration Data"):
         data_to_print = config_data.model_dump(mode='json')
     else:
         print(f"(Object type: {type(config_data).__name__}) - Using standard print:")
-        pprint.pprint(config_data) # Pretty print is more useful for debugging, which is the only reason we'd use this.
+        pprint.pprint(config_data)  # Pretty print is more useful for debugging, which is the only reason we'd use this.
         print("-" * (len(title) + 6))
         return
 

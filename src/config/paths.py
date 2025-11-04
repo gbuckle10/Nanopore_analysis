@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 from src import PROJECT_ROOT
 from .models import AppSettings
 
@@ -26,6 +29,30 @@ def build_config_paths(config: AppSettings) -> None:
     config.pipeline_steps.methylation.paths.build_and_validate(common_paths)
     config.pipeline_steps.analysis.paths.build_and_validate(common_paths)
 
+def update_config_from_args(config: AppSettings, args: argparse.Namespace, parser: argparse.ArgumentParser):
+    """
+    Updates the Pydantic config object in-place with values from argparse
+    """
+    print("Updating config")
+
+    args_dict = vars(args)
+
+    for dest, value in args_dict.items():
+        default_value = parser.get_default(dest)
+        if '.' in dest and value is not None and value != default_value:
+            _set_config_attribute(config, dest, value)
+
+def _set_config_attribute(obj, path, value):
+
+    keys = path.split('.')
+    current_obj = obj
+    for key in keys[:-1]:
+        current_obj = getattr(current_obj, key)
+
+    final_key = keys[-1]
+    model_field = current_obj.__fields__[final_key]
+
+    setattr(current_obj, final_key, value)
 def run_initial_validation(command, config: AppSettings):
     """
     Validates the variables needed for the given command.
@@ -34,19 +61,19 @@ def run_initial_validation(command, config: AppSettings):
     print(f"Validating variables for {command}")
 
     VALIDATION_MAP = {
-        'basecalling': [config.pipeline_steps.basecalling.paths._validate],
-        'align': [config.pipeline_steps.align.paths._validate],
-        'methylation': [config.pipeline_steps.methylation.paths._validate],
-        'analysis': [config.pipeline_steps.analysis.paths._validate],
-        'run': validate_active_steps
+        'basecalling': lambda: config.pipeline_steps.basecalling.paths._validate(),
+        'align': lambda: config.pipeline_steps.align.paths._validate(),
+        'methylation': lambda: config.pipeline_steps.methylation.paths._validate(),
+        'analysis': lambda: config.pipeline_steps.analysis.paths._validate(),
+        'run': lambda: validate_active_steps(config)
     }
 
     if command in VALIDATION_MAP:
-        print(f"Running validation method for {command}")
-        validation_method = VALIDATION_MAP.get(command, [])
-        validation_method(config)
+        validation_method = VALIDATION_MAP.get(command)
+        validation_method()
     else:
         print(f"No validation method fount for {command}")
+
 def validate_active_steps(config: AppSettings):
     """
     Validates that if a step is active, all of its required inputs are present.

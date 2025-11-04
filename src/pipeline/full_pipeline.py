@@ -24,7 +24,7 @@ def get_nested_attr(obj, attr_string: str):
     return reduce(getattr, attributes, obj)
 
 
-def full_pipeline_handler(args, config: AppSettings):
+def full_pipeline_handler(config: AppSettings):
     logging.info("--- Running full pipeline from config ---")
 
     function_map = {
@@ -77,20 +77,7 @@ def full_pipeline_handler(args, config: AppSettings):
             logging.warning(f"WARNING: No function found for step '{step_name}'. Skipping")
             continue
 
-        # Create a deep copy of the main 'args' object to avoid messing up the variables for later steps.
-        step_args = copy.deepcopy(args)
-        step_io_args = io_map.get(step_name, {})
-        # Add the io args from the io args map.
-        for key, config_path_str in step_io_args.items():
-            print(f"Setting attribute {key} using {config_path_str}")
-            setattr(
-                step_args,
-                key,
-                get_nested_attr(config, config_path_str)
-            )
-        print(f"After adding the io args, step args is:\n{step_args}")
-
-        step_func(step_args, config)
+        step_func(config)
 
 
 def setup_parsers(subparsers, parent_parser, config):

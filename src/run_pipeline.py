@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.config.models import load_and_validate_configs, AppSettings, print_config
-from src.config.paths import build_config_paths, run_initial_validation
+from src.config.paths import build_config_paths, run_initial_validation, update_config_from_args
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils import resource_downloader
 from src.utils.file_utils import save_final_config
@@ -73,20 +73,11 @@ def main():
 
     # Use parse_known_args() to only read the arguments that the main_parser knows about - config and user config.
     conf_args, _ = global_parent_parser.parse_known_args()
+    config = load_and_validate_configs(
+        conf_args.user_config, conf_args.runtime_config
+    )
+    build_config_paths(config)
 
-    # Load config
-    try:
-        config = load_and_validate_configs(
-            conf_args.user_config, conf_args.runtime_config
-        )
-        build_config_paths(config)
-        #validate_active_steps(config)
-        #build_metadata(config)
-        full_config_path = config.paths.root / "full_config.yaml"
-        save_final_config(config, full_config_path)
-    except (FileNotFoundError, ValueError) as e:
-        print(f"Error loading configuration: {e}", file=sys.stderr)
-        sys.exit(1)
 
     # Set up the main parser
     main_parser = argparse.ArgumentParser(
@@ -94,7 +85,6 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         parents=[global_parent_parser]
     )
-
     subparsers = main_parser.add_subparsers(dest='command', help='Available command groups')
 
     full_pipeline.setup_parsers(subparsers, global_parent_parser, config)
@@ -116,22 +106,36 @@ def main():
     # Parse and dispatch
     args = main_parser.parse_args()
 
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    # log_level = logging.DEBUG if args.verbose else logging.INFO
-    run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file_path = f"logs/{run_timestamp}_pipeline_run.log" if not args.no_log else None
-    Logger.setup_logger(log_level=log_level, log_file=log_file_path)
+    user_provided_dests = {
+        dest for dest, value in vars(args).items() if value != main_parser.get_default(dest)
+    }
+    print(f"user-provided args = {user_provided_dests}")
+    update_config_from_args(config, args, main_parser)
 
-    sys.excepthook = handle_exception
-    # Call the function that is attached by set_defaults
+    # Load config
+    try:
+        build_config_paths(config)
+        full_config_path = Path("full_config.yaml")
+        save_final_config(config, full_config_path)
+        log_level = logging.DEBUG if args.debug else logging.INFO
+        # log_level = logging.DEBUG if args.verbose else logging.INFO
+        run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        log_file_path = f"logs/{run_timestamp}_pipeline_run.log" if not args.no_log else None
+        Logger.setup_logger(log_level=log_level, log_file=log_file_path)
 
+        sys.excepthook = handle_exception
+        # Call the function that is attached by set_defaults
 
-    if hasattr(args, 'func'):
-        run_initial_validation(args.command, config)
-        args.func(args, config)
-    else:
-        print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
+        if hasattr(args, 'func'):
+            run_initial_validation(args.command, config)
+            args.func(config)
+        else:
+            print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
+            sys.exit(1)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading configuration: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 
 if __name__ == '__main__':
