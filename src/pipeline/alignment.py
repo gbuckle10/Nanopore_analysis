@@ -286,7 +286,7 @@ def _make_alignment_parent_parser(config):
     )
     parent.add_argument(
         "--threads",
-        default=config.globals.threads,
+        default=None,
         dest="globals.threads",
         help="Number of threads for alignment and samtools."
     )

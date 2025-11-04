@@ -97,7 +97,7 @@ def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
 def _add_atlas_arg(parser, config):
     parser.add_argument(
         '--atlas', type=Path,
-        default=config.pipeline_steps.analysis.paths.full_atlas_path,
+        default=None,
         dest="pipeline_steps.analysis.paths.atlas_dir_name",
         help="Path to the atlas used for deconvolution"
     )
@@ -106,7 +106,7 @@ def _add_atlas_arg(parser, config):
 def _add_algorithm_arg(parser, config):
     parser.add_argument(
         '-a', '--algorithm', type=str,
-        default=config.pipeline_steps.analysis.params.deconv_algorithm,
+        default=None,
         dest="pipeline_steps.analysis.params.deconv_algorithm",
         choices=['uxm', 'nnls'],
         help="Algorithm to use for deconvolution."

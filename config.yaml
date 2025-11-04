@@ -21,10 +21,10 @@ globals:
 
 pipeline_control:
   run_steps:
-    basecalling: false
+    basecalling: true
     align: true
     methylation_summary: false
-    analysis: false
+    analysis: true
 
 pipeline_steps:
   # ---------------
@@ -53,7 +53,7 @@ pipeline_steps:
       complex_settings:
         model_speed: "fast"
         basecalling_modifications: "5mCG_5hmCG"
-        kit_name: null
+        kit_name: "SQK-NBD114-24"
       # Method B: Explicit Model Names
       explicit_settings:
         base_model_name: "dna_r9.4.1_e8_sup@v3.3"
@@ -95,7 +95,7 @@ pipeline_steps:
       deconv_algorithm: "uxm"
     tools:
     paths:
-      atlas_file_name: "UXM_atlas_deconvolution10201.csv"
+      atlas_file_name: "UXM_atlas_deconvolution.csv"
       manifest_name: "illumina_manifest.csv"
       deconvolution_results_name: "deconvoluted_output.csv"
 
