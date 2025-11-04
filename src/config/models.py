@@ -103,6 +103,11 @@ class BasecallingPaths(BaseModel):
     demultiplexed_dir_name: str = "demultiplexed"
     dorado_model_dir_name: str = "models"
 
+    user_pod5_input: Optional[str] = None
+    user_basecalled_output: Optional[str] = None
+    user_demux_input: Optional[str] = None
+    user_demux_output: Optional[str] = None
+
     full_pod5_path: Optional[Path] = None
     full_unaligned_bam_path: Optional[Path] = None
     full_demultiplexed_output_dir: Optional[Path] = None
@@ -116,14 +121,39 @@ class BasecallingPaths(BaseModel):
 
     def _build(self, common_paths: Paths):
         root_dir = common_paths.root
-        basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
-        demux_dir = resolve_path(common_paths.data_dir, self.demultiplexed_dir_name)
-        model_dir = resolve_path(root_dir, self.dorado_model_dir_name)
+        data_dir = common_paths.data_dir
 
-        self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
-        self.full_unaligned_bam_path = resolve_path(basecalled_dir, self.basecalled_bam_name)
-        self.full_demultiplexed_output_dir = resolve_path(root_dir, demux_dir)
-        self.full_dorado_model_dir = resolve_path(root_dir, model_dir)
+        if self.user_pod5_input:
+            self.full_pod5_path = resolve_path(root_dir, self.user_pod5_input)
+        else:
+            self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
+        
+        conv_basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
+        conv_bam_path = resolve_path(conv_basecalled_dir, self.basecalled_bam_name)
+
+        if self.user_basecalled_output:
+            resolved_user_path = resolve_path(root_dir, self.user_basecalled_output)
+            if resolved_user_path.suffix:
+                self.full_unaligned_bam_path = resolved_user_path
+            else:
+                # The input that the user gave is a folder, so we'll use the bam name specified in config.
+                self.full_unaligned_bam_path = resolved_user_path / self.basecalled_bam_name
+        else:
+            self.full_unaligned_bam_path = conv_bam_path
+
+        conv_demux_dir = resolve_path(data_dir, self.demultiplexed_dir_name)
+
+        if self.user_demux_input:
+            # Demux uses unaligned bam path, so if the user ran demux with an input change it to their input
+            self.full_unaligned_bam_path = resolve_path(root_dir, self.user_demux_input)
+
+        if self.user_demux_output:
+            print(f"User gave a demux output - {self.user_demux_output}")
+            self.full_demultiplexed_output_dir = resolve_path(root_dir, self.user_demux_output)
+        else:
+            self.full_demultiplexed_output_dir = self.full_unaligned_bam_path.parent / self.demultiplexed_dir_name
+
+        self.full_dorado_model_dir = resolve_path(root_dir, self.dorado_model_dir_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
