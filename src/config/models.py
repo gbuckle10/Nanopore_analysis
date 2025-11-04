@@ -88,6 +88,7 @@ class BasecallingParams(BaseModel):
 
     # In the end, this will be where the dorado command building happens. That's for the future though.
     method: Literal["complex", "explicit"]
+    demultiplex: bool = False
     complex_settings: BasecallingMethodComplex
     explicit_settings: BasecallingMethodExplicit
 

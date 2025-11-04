@@ -49,6 +49,7 @@ pipeline_steps:
   basecalling:
     params:
       method: "complex"
+      demultiplex: false
       # Method A: Complex Model Names
       complex_settings:
         model_speed: "fast"
