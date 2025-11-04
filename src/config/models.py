@@ -298,7 +298,6 @@ class AnalysisPaths(BaseModel):
         atlas_dir = resolve_path(common_paths.data_dir, self.atlas_dir_name)
         deconvolution_dir = resolve_path(analysis_dir, self.deconvolution_dir_name)
         self.full_atlas_path = resolve_path(atlas_dir, self.atlas_file_name)
-        print(f"Full atlas path - {self.full_atlas_path}")
         self.full_manifest_path = resolve_path(atlas_dir, self.manifest_name)
         self.full_deconv_results_path = resolve_path(deconvolution_dir, self.deconvolution_results_name)
         self.full_deconv_input_path = resolve_path(deconvolution_dir, self.deconvolution_input_name)
