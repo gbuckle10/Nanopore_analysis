@@ -69,7 +69,7 @@ def run_model_download(dorado_exe, model_name):
 
     download_cmd = [
         "dorado", "download",
-        "--model", model_name,
+        "--model", str(model_name),
         "--models-directory", "models/"
     ]
     dorado_runner = ToolRunner(dorado_exe)
@@ -104,7 +104,7 @@ def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name
 
     if kit_name:
         logger.info(f"Kit name '{kit_name}' provided. Adding --kit-name to command")
-        basecalling_cmd.extend(["--kit-name", kit_name])
+        basecalling_cmd.extend(["--kit-name", str(kit_name)])
     else:
         logger.info("No kit name provided. The --kit-name argument will be omitted.")
 
@@ -190,10 +190,10 @@ def setup_parsers(subparsers, parent_parser, config):
         p_run, config,
         default_input=None,
         input_file_help="Path to POD5 files",
-        input_dest="pipeline_steps.basecalling.paths.pod5_input_path",
+        input_dest="pipeline_steps.basecalling.paths.pod5_input",
         default_output=None,
         output_dir_help="Path to demultiplexed data directory.",
-        output_dest="pipeline_steps.basecalling.paths.demultiplexed_dir_name"
+        output_dest="pipeline_steps.basecalling.paths.demultiplexed_output"
     )
     p_run.set_defaults(func=full_basecalling_handler)
 
@@ -206,10 +206,10 @@ def setup_parsers(subparsers, parent_parser, config):
         p_basecall, config,
         default_input=None,
         input_file_help="Path to POD5 files",
-        input_dest="pipeline_steps.basecalling.paths.pod5_input_path",
+        input_dest="pipeline_steps.basecalling.paths.pod5_input",
         default_output=None,
         output_dir_help="Path to basecalled BAM file",
-        output_dest="pipeline_steps.basecalling.paths.basecalled_dir"
+        output_dest="pipeline_steps.basecalling.paths.basecalled_output"
     )
     p_basecall.set_defaults(func=basecall_handler)
 
@@ -222,10 +222,10 @@ def setup_parsers(subparsers, parent_parser, config):
         p_demux, config,
         default_input=None,
         input_file_help="Path to basecalled BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
+        input_dest="pipeline_steps.basecalling.paths.basecalled_output",
         default_output=None,
         output_dir_help="Path to demultiplexed data directory.",
-        output_dest="pipeline_steps.basecalling.paths.demultiplexed_dir_name"
+        output_dest="pipeline_steps.basecalling.paths.demultiplexed_output"
     )
     p_demux.set_defaults(func=demultiplex_handler)
 
