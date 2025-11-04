@@ -1,5 +1,17 @@
 # ========================================================
-# Execution Environment
+# Nanopore Analysis Pipeline Configuration
+#
+# HOW TO USE THIS FILE:
+#   All paths in this file (filenames and directories) are relative to the root directory. Don't use absolute
+#   paths, whatever you do!!
+#
+#   - PATHS
+#     - For OUTPUTS (such as 'aligned_bam_name'): provide a simple filename. It'll be created inside
+#       a standard directory within the root
+#     - For INPUTS (such as pod5_input_path):
+#       - If the data is inside your experiment folder, provide a relative path (e.g. source_data/pod5/)
+#       - If the data is somewhere else, provide the full absolute path (e.g. /mnt/c/data/run123)
+#
 # ========================================================
 conda_env_name: "nanopore_analysis"
 
@@ -9,10 +21,10 @@ globals:
 
 pipeline_control:
   run_steps:
-    basecalling: false
+    basecalling: true
     align: true
     methylation_summary: false
-    deconvolution: true
+    analysis: true
 
 pipeline_steps:
   # ---------------
@@ -29,8 +41,7 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      reference_genome_subfolder: "hg19"
-      reference_genome_name: "hg19.fa"
+      fast5_input_dir_name: "fast5_input"
 
   # --------------------
   # Step 1: Basecalling
@@ -51,20 +62,21 @@ pipeline_steps:
       # Other basecalling settings
       batch_size: "64"
     paths:
-      pod5_dir_name: "data/pod5/"
-      pod5_name: "all_pods.pod5"
-      unaligned_bam_name: "newcalls2.bam"
+      # pod5_input_path can be either a file or a directory.
+      pod5_input_path: "data/pod5"
+      basecalled_bam_name: "newcalls2.bam"
 
   # -------------------------
   # Step 2: Alignment
   # -------------------------
-  alignment:
+  align:
     paths:
-      indexed_ref_fasta_name: "hg19.mmi"
+      genome_id: "hg19"
+      # If the genome isn't simply in the reference_genome/ folder, write where it is below.
+      custom_fasta_reference: null
       aligned_bam_name: "taken_alignment.sorted.bam"
       alignment_flagstat_name: "alignment.flagstat.txt"
       alignment_stats_name: "alignment.stats.txt"
-      ref_genome_subdir: "hg19"
 
   # -------------------------------
   # Step 3: Methylation Summary

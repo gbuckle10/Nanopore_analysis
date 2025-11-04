@@ -10,12 +10,11 @@ from src.utils.tools_runner import ToolRunner
 logger = logging.getLogger(__name__)
 
 
-def deconvolution_handler(args, config):
-    input_data_path = args.input_file
-    atlas_path = args.atlas
-    output_dir = args.output_dir
-    algorithm = args.algorithm
-
+def deconvolution_handler(config):
+    input_data_path = config.pipeline_steps.analysis.paths.full_deconv_input_path
+    atlas_path = config.pipeline_steps.analysis.paths.full_atlas_path
+    output_dir = config.pipeline_steps.analysis.paths.full_deconv_results_path
+    algorithm = config.pipeline_steps.analysis.params.deconv_algorithm
 
     if algorithm == "uxm":
         wgbstools_exe = config.pipeline_steps.analysis.tools.wgbstools_exe
@@ -95,30 +94,55 @@ def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
     ]
 
 
-def setup_parsers(subparsers, parent_parser, config):
+def _add_atlas_arg(parser, config):
+    parser.add_argument(
+        '--atlas', type=Path,
+        default=None,
+        dest="pipeline_steps.analysis.paths.atlas_dir_name",
+        help="Path to the atlas used for deconvolution"
+    )
 
+
+def _add_algorithm_arg(parser, config):
+    parser.add_argument(
+        '-a', '--algorithm', type=str,
+        default=None,
+        dest="pipeline_steps.analysis.params.deconv_algorithm",
+        choices=['uxm', 'nnls'],
+        help="Algorithm to use for deconvolution."
+    )
+
+
+def add_all_arguments_to_parser(parser, config):
+    """
+    Publically available function to add deconvolution arguments to a given parser
+    :param parser:
+    :param config:
+    :return:
+    """
+    _add_algorithm_arg(parser, config)
+    _add_atlas_arg(parser, config)
+
+
+def setup_parsers(subparsers, parent_parser, config):
     deconv_parser = subparsers.add_parser(
         'deconvolution',
         help="Deconvolute sequenced and aligned data using methylation information",
         description="This command group contains tools for deconvolution of sequenced and aligned data.",
         formatter_class=argparse.RawTextHelpFormatter,
-        aliases=['deconv'],
+        aliases=['deconv', 'analysis'],
         parents=[parent_parser]
     )
-    deconv_parser.add_argument(
-        '--atlas', type=Path,
-        default=config.pipeline_steps.analysis.paths.full_path_atlas_file,
-        help="Path to the atlas used for deconvolution"
-    )
-    deconv_parser.add_argument(
-        '-a', '--algorithm', type=str,
-        default=config.pipeline_steps.analysis.params.deconv_algorithm, choices=['uxm', 'nnls']
-    )
+    _add_atlas_arg(deconv_parser, config)
+    _add_algorithm_arg(deconv_parser, config)
+
     add_io_arguments(
         deconv_parser, config,
-        default_input=config.pipeline_steps.analysis.paths.file_to_deconvolute,
-        default_output=config.pipeline_steps.analysis.paths.full_path_deconvolution_results,
+        default_input=config.pipeline_steps.analysis.paths.full_deconv_input_path,
         input_file_help="Path to file for deconvolution.",
-        output_dir_help="File to save the deconvolution results in."
+        input_dest="pipeline_steps.analysis.paths.deconvolution_input_name",
+        default_output=config.pipeline_steps.analysis.paths.full_deconv_results_path,
+        output_dir_help="File to save the deconvolution results in.",
+        output_dest="pipeline_steps.analysis.paths.deconvolution_results_name"
     )
     deconv_parser.set_defaults(func=deconvolution_handler)
