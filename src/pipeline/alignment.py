@@ -345,10 +345,10 @@ Example Usage:
 
     add_io_arguments(
         p_run, config,
-        default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
+        default_input=None,
         input_file_help="Path to full unaligned BAM file",
         input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
-        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        default_output=None,
         output_dir_help="Path to aligned, sorted and indexed BAM file",
         output_dest="pipeline_steps.align.paths.aligned_bam_name"
     )
@@ -360,10 +360,10 @@ Example Usage:
     )
     add_io_arguments(
         p_qc_only, config,
-        default_input=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        default_input=None,
         input_file_help="Path to aligned, sorted and indexed BAM file",
         input_dest="pipeline_steps.align.paths.aligned_bam_name",
-        default_output=config.pipeline_steps.align.paths.full_flagstat_path,
+        default_output=None,
         output_dir_help="Filepath of saved output",
         output_dest="pipeline_steps.align.paths.alignment_flagstat_name"
     )
@@ -375,10 +375,10 @@ Example Usage:
     )
     add_io_arguments(
         p_align_only, config,
-        default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
+        default_input=None,
         input_file_help="Path to full unaligned BAM file",
         input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
-        default_output=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        default_output=None,
         output_dir_help="Path to aligned, sorted and indexed BAM file",
         output_dest="pipeline_steps.align.paths.aligned_bam_name"
     )

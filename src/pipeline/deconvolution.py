@@ -138,10 +138,10 @@ def setup_parsers(subparsers, parent_parser, config):
 
     add_io_arguments(
         deconv_parser, config,
-        default_input=config.pipeline_steps.analysis.paths.full_deconv_input_path,
+        default_input=None,
         input_file_help="Path to file for deconvolution.",
         input_dest="pipeline_steps.analysis.paths.deconvolution_input_name",
-        default_output=config.pipeline_steps.analysis.paths.full_deconv_results_path,
+        default_output=None,
         output_dir_help="File to save the deconvolution results in.",
         output_dest="pipeline_steps.analysis.paths.deconvolution_results_name"
     )

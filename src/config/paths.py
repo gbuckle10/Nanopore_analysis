@@ -38,6 +38,7 @@ def update_config_from_args(config: AppSettings, args: argparse.Namespace, parse
     for dest, value in args_dict.items():
         default_value = parser.get_default(dest)
         if '.' in dest and value is not None and value != default_value:
+            print(f"Setting {dest} to {value}, because it's different to {default_value}")
             _set_config_attribute(config, dest, value)
 
 def _set_config_attribute(obj, path, value):
@@ -48,7 +49,6 @@ def _set_config_attribute(obj, path, value):
         current_obj = getattr(current_obj, key)
 
     final_key = keys[-1]
-    model_field = current_obj.__fields__[final_key]
 
     setattr(current_obj, final_key, value)
 def run_initial_validation(command, config: AppSettings):

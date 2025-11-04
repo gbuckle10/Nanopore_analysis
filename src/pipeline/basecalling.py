@@ -88,7 +88,7 @@ def run_demultiplex(dorado_exe, input_file, output_dir: Path):
     demux_cmd = [
         "demux",
         "--kit-name", "SQK-NBD114-24",
-        input_file
+        str(input_file)
     ]
 
     dorado_runner.run(demux_cmd, str(output_dir))
@@ -188,10 +188,10 @@ def setup_parsers(subparsers, parent_parser, config):
     _add_kit_name_arg(p_run, config)
     add_io_arguments(
         p_run, config,
-        default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
+        default_input=None,
         input_file_help="Path to POD5 files",
         input_dest="pipeline_steps.basecalling.paths.pod5_input_path",
-        default_output=config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir,
+        default_output=None,
         output_dir_help="Path to demultiplexed data directory.",
         output_dest="pipeline_steps.basecalling.paths.demultiplexed_dir_name"
     )
@@ -204,10 +204,10 @@ def setup_parsers(subparsers, parent_parser, config):
     _add_kit_name_arg(p_basecall, config)
     add_io_arguments(
         p_basecall, config,
-        default_input=config.pipeline_steps.basecalling.paths.full_pod5_path,
+        default_input=None,
         input_file_help="Path to POD5 files",
         input_dest="pipeline_steps.basecalling.paths.pod5_input_path",
-        default_output=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
+        default_output=None,
         output_dir_help="Path to basecalled BAM file",
         output_dest="pipeline_steps.basecalling.paths.basecalled_dir"
     )
@@ -220,10 +220,10 @@ def setup_parsers(subparsers, parent_parser, config):
     _add_kit_name_arg(p_demux, config)
     add_io_arguments(
         p_demux, config,
-        default_input=config.pipeline_steps.basecalling.paths.full_unaligned_bam_path,
+        default_input=None,
         input_file_help="Path to basecalled BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_dir",
-        default_output=config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir,
+        input_dest="pipeline_steps.basecalling.paths.basecalled_bam_name",
+        default_output=None,
         output_dir_help="Path to demultiplexed data directory.",
         output_dest="pipeline_steps.basecalling.paths.demultiplexed_dir_name"
     )
@@ -237,7 +237,7 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_download, config,
         add_input=False,
-        default_output=config.pipeline_steps.basecalling.paths.full_dorado_model_dir,
+        default_output=None,
         output_dir_help="Directory to save demultiplexed BAM files to.",
         output_dest="pipeline_steps.basecalling.paths.dorado_model_dir_name"
     )

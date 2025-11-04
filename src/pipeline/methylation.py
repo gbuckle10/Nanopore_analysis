@@ -50,10 +50,10 @@ def setup_parsers(subparsers, parent_parser, config):
     )
     add_io_arguments(
         p_pileup, config,
-        default_input=config.pipeline_steps.align.paths.full_aligned_bam_path,
+        default_input=None,
         input_file_help="Path to the aligned BAM path",
         input_dest="pipeline_steps.align.paths.aligned_bam_name",
-        default_output=config.pipeline_steps.methylation.paths.final_bed_file,
+        default_output=None,
         output_dir_help="Path to the BED file",
         output_dest="pipeline_steps.methylation.paths.methylation_bed_name"
     )
