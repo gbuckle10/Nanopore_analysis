@@ -155,7 +155,6 @@ class AlignmentPaths(BaseModel):
         # Reference fasta depends on what the user defined in the config.yaml file.
         if self.custom_fasta_reference:
             # If the user did specify a custom fasta reference, just use that one.
-            print(f"Using custom reference FASTA path: {self.custom_fasta_reference}")
             user_path = self.custom_fasta_reference
             return resolve_path(common_paths.root, user_path)
 

@@ -12,13 +12,34 @@ from src.utils.tools_runner import ToolRunner
 logger = logging.getLogger(__name__)
 
 
+def _get_file_basename(reference_path: Path):
+    """
+    Get the basename of a genome file, handling one and two extensions. e.g. genome.fa and genome.fa.gz
+    """
+    fasta_suffixes = ['.fasta', '.fa', '.fna']
+    compression_suffixes = ['.gz', '.bz2', '.xz']
+
+    name = reference_path.name
+
+    for suffix in compression_suffixes:
+        if name.endswith(suffix):
+            name = name.removesuffix(suffix) # Might slice for compatibility with python <3.9
+            break
+    for suffix in fasta_suffixes:
+        if name.endswith(suffix):
+            name = name.removesuffix(suffix)
+            break
+
+    return name
+
 def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     """
     Given a path to a FASTA file, ensures the corresponding .mmi index exists, and creates it if necessary. It can
     handle .fa and .fa.gz files.
 
     """
-    index_path = ref_fasta_path.with_suffix('.mmi')
+    basename = _get_file_basename(ref_fasta_path)
+    index_path = ref_fasta_path.parent / f"{basename}.mmi"
 
     if index_path.is_file():
         logging.info(f"Found existing minimap2 index: {index_path}")

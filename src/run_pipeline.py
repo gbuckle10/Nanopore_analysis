@@ -106,10 +106,11 @@ def main():
     # Parse and dispatch
     args = main_parser.parse_args()
 
+    '''
     user_provided_dests = {
         dest for dest, value in vars(args).items() if value != main_parser.get_default(dest)
     }
-    print(f"user-provided args = {user_provided_dests}")
+    '''
     update_config_from_args(config, args, main_parser)
 
     # Load config

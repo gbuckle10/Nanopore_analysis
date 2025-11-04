@@ -33,8 +33,6 @@ def update_config_from_args(config: AppSettings, args: argparse.Namespace, parse
     """
     Updates the Pydantic config object in-place with values from argparse
     """
-    print("Updating config")
-
     args_dict = vars(args)
 
     for dest, value in args_dict.items():
