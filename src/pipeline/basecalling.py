@@ -18,7 +18,6 @@ def full_basecalling_handler(config):
         raise ValueError("Could not determine the path for the POD5 data to basecall")
     # The output should depend on whether you want to demultiplex or not. Add a tag for that in future.
     basecalled_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
-    print(f"The output is {basecalled_bam}")
     demultiplexed_output_dir = config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir
     kit_name = config.pipeline_steps.basecalling.params.complex_settings.kit_name
     model_speed = config.pipeline_steps.basecalling.params.complex_settings.model_speed
@@ -26,8 +25,6 @@ def full_basecalling_handler(config):
     batchsize = config.pipeline_steps.basecalling.params.batch_size
     should_demultiplex = config.pipeline_steps.basecalling.params.demultiplex
     dorado_exe = config.tools.dorado
-
-    print(f"I will demultiplex - {should_demultiplex}")
 
     run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, should_demultiplex, basecalled_bam)
 

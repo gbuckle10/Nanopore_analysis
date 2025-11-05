@@ -49,7 +49,7 @@ pipeline_steps:
   basecalling:
     params:
       method: "complex"
-      demultiplex: true
+      demultiplex: false
       # Method A: Complex Model Names
       complex_settings:
         model_speed: "hac"
