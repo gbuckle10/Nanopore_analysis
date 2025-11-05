@@ -8,7 +8,7 @@
 #   - PATHS
 #     - For OUTPUTS (such as 'aligned_bam_name'): provide a simple filename. It'll be created inside
 #       a standard directory within the root
-#     - For INPUTS (such as pod5_input_path):
+#     - For INPUTS (such as pod5_input):
 #       - If the data is inside your experiment folder, provide a relative path (e.g. source_data/pod5/)
 #       - If the data is somewhere else, provide the full absolute path (e.g. /mnt/c/data/run123)
 #
@@ -63,7 +63,7 @@ pipeline_steps:
       # Other basecalling settings
       batch_size: "64"
     paths:
-      # pod5_input_path can be either a file or a directory.
+      # pod5_input can be either a file or a directory.
       pod5_input_path: "data/pod5"
       basecalled_bam_name: "newcalls2.bam"
 

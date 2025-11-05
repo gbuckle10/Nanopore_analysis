@@ -225,7 +225,7 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
         sort_cmd = [
             "samtools", "sort",
             "-@", str(threads),
-            "-m", sort_memory_limit,
+            "-m", str(sort_memory_limit),
             "-o", str(output_bam_file)
         ]
 
@@ -279,7 +279,7 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
 def run_qc_command(aligned_sorted_file, flagstat_report):
     flagstat_cmd = [
         "samtools", "flagstat",
-        aligned_sorted_file
+        str(aligned_sorted_file)
     ]
 
     print(f"Running command: {' '.join(flagstat_cmd)}")

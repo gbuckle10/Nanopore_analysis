@@ -75,7 +75,7 @@ def run_model_download(dorado_exe, model_name):
 
     download_cmd = [
         "dorado", "download",
-        "--model", model_name,
+        "--model", str(model_name),
         "--models-directory", "models/"
     ]
     dorado_runner = ToolRunner(dorado_exe)
