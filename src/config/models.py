@@ -200,12 +200,12 @@ class AlignmentPaths(BaseModel):
 
             # Define the possible places the genome will be found in.
             search_paths = [
-                # Inside a dedicated folder (e.g. reference_genomes/hg38/hg38.fa)
-                base_ref_dir / self.genome_id / f"{self.genome_id}.fa",
-                base_ref_dir / self.genome_id / f"{self.genome_id}.fa.gz",
                 # Directly inside the reference genome folder (e.g. reference_genomes/hg38.fa)
                 base_ref_dir / f"{self.genome_id}.fa",
                 base_ref_dir / f"{self.genome_id}.fa.gz",
+                # Inside a dedicated folder (e.g. reference_genomes/hg38/hg38.fa)
+                base_ref_dir / self.genome_id / f"{self.genome_id}.fa",
+                base_ref_dir / self.genome_id / f"{self.genome_id}.fa.gz",
                 # Inside a dedicated folder in iGenomes style (e.g. reference_genomes/hg38/genome.fa)
                 base_ref_dir / self.genome_id / "genome.fa",
                 base_ref_dir / self.genome_id / "genome.fa.gz"

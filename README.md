@@ -13,6 +13,10 @@ Basic troubleshooting:
     - If it still won't run, there is a deeper issue. Contact George if you have access to him, otherwise the only thing to try is Google.
 
 To run uxm_deconv: 
+- Make pat files:
+- - bam2pat can take a whole directory of bam files. 
+- - wgbstools bam2pat path/to/files/ -output_dir path/to/output
+- - If you are doing an entire directory, the input should be path/to/files/*.bam
 - Get your pat.gz file and your atlas.tsv file. 
 - Filter out the rows which aren't in the atlas using wgbstools view path/to/pat.gz -L path/to/atlas -o path/to/output.pat 
 - index the output - Make sure you have used the correct atlas (hg38/hg19) - it should be the same genome assembly used for the basecalling.
