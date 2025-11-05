@@ -49,7 +49,7 @@ pipeline_steps:
   basecalling:
     params:
       method: "complex"
-      demultiplex: false
+      demultiplex: true
       # Method A: Complex Model Names
       complex_settings:
         model_speed: "hac"
@@ -64,7 +64,7 @@ pipeline_steps:
       batch_size: "64"
     paths:
       # pod5_input_path can be either a file or a directory.
-      pod5_input_path: "data/pod5_output"
+      pod5_input_path: "data/pod5"
       basecalled_bam_name: "newcalls2.bam"
 
   # -------------------------
