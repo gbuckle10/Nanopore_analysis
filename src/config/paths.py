@@ -43,7 +43,7 @@ def update_config_from_args(config: AppSettings, args: argparse.Namespace, parse
     for dest, value in args_dict.items():
         default_value = parser.get_default(dest)
         if '.' in dest and value is not None and value != default_value:
-            print(f"Setting {dest} to {value}, because it's different to {default_value}")
+            #print(f"Setting {dest} to {value}, because it's different to {default_value}")
             _set_config_attribute(config, dest, value)
 
 def _set_config_attribute(obj, path, value):
@@ -61,7 +61,6 @@ def run_initial_validation(command, config: AppSettings):
     Validates the variables needed for the given command.
     """
 
-    print(f"Validating variables for {command}")
 
     VALIDATION_MAP = {
         'basecalling': lambda: config.pipeline_steps.basecalling.paths._validate(),
@@ -75,7 +74,7 @@ def run_initial_validation(command, config: AppSettings):
         validation_method = VALIDATION_MAP.get(command)
         validation_method()
     else:
-        print(f"No validation method fount for {command}")
+        print(f"No validation method found for {command}")
 
 def validate_active_steps(config: AppSettings):
     """

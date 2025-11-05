@@ -240,13 +240,13 @@ class AlignmentPaths(BaseModel):
             self.full_unaligned_input_path = conv_unaligned_input
 
         if self.user_alignment_output:
-            print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
+            #print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
             self.full_aligned_bam_path = resolve_path(root_dir, self.user_alignment_output)
         else:
             self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
             self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
 
-        print(f"The full aligned bam path is {self.full_aligned_bam_path}")
+        #print(f"The full aligned bam path is {self.full_aligned_bam_path}")
         if self.custom_fasta_reference:
             if self.genome_id:
                 logging.info(f"User provided custom reference '--ref {self.custom_fasta_reference}'. "
