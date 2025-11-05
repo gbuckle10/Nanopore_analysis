@@ -23,15 +23,19 @@ def full_basecalling_handler(config):
     model_speed = config.pipeline_steps.basecalling.params.complex_settings.model_speed
     modifications = config.pipeline_steps.basecalling.params.complex_settings.basecalling_modifications
     batchsize = config.pipeline_steps.basecalling.params.batch_size
+    should_demultiplex = config.pipeline_steps.basecalling.params.demultiplex
     dorado_exe = config.tools.dorado
 
-    run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, basecalled_bam)
+    run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, should_demultiplex, basecalled_bam)
 
-    if is_bam_multiplexed(basecalled_bam):
-        logging.info(f"The basecalled BAM {basecalled_bam} is multiplexed, so we'll demultiplex it.")
-        run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
+    if should_demultiplex:
+        if is_bam_multiplexed(basecalled_bam):
+            logging.info(f"The basecalled BAM {basecalled_bam} is multiplexed and you've told me to demultiplex, so we'll demultiplex it.")
+            run_demultiplex(dorado_exe, basecalled_bam, demultiplexed_output_dir)
+        else:
+            logging.info(f"The basecalled BAM {basecalled_bam} isn't multiplexed, so I won't demultiplex")
     else:
-        logging.info(f"The basecalled BAM {basecalled_bam} is not multiplexed, so we won't demultiplex it.")
+        logging.info("The user specified not to demultiplex.")
 
 
 def basecall_handler(config):
@@ -41,10 +45,12 @@ def basecall_handler(config):
     model_speed = config.pipeline_steps.basecalling.params.complex_settings.model_speed
     modifications = config.pipeline_steps.basecalling.params.complex_settings.basecalling_modifications
     batchsize = config.pipeline_steps.basecalling.params.batch_size
+    should_demultiplex = config.pipeline_steps.basecalling.params.demultiplex
     dorado_exe = config.tools.dorado
 
-    run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, output)
+    run_basecalling(dorado_exe, input_file, model_speed, modifications, kit_name, batchsize, should_demultiplex, output)
 
+    return config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
 
 def demultiplex_handler(config):
     input_file = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
@@ -81,8 +87,8 @@ def run_model_download(dorado_exe, model_name):
 
 
 def run_demultiplex(dorado_exe, input_file, output_dir: Path):
-    dorado_runner = ToolRunner(dorado_exe, '--output-dir')
 
+    dorado_runner = ToolRunner(dorado_exe, '--output-dir')
     ensure_dir_exists(output_dir)
 
     demux_cmd = [
@@ -94,19 +100,23 @@ def run_demultiplex(dorado_exe, input_file, output_dir: Path):
     dorado_runner.run(demux_cmd, str(output_dir))
 
 
-def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name, batchsize, output_path: Path = None):
+def run_basecalling(dorado_exe, pod5_input, model_speed, modifications, kit_name, batchsize, should_demultiplex, output_path: Path = None):
     basecalling_cmd = ["basecaller",
                        f"{model_speed},{modifications}",
                        str(pod5_input),
-                       "--no-trim",
                        "--batchsize", str(batchsize)
                        ]
 
-    if kit_name:
-        logger.info(f"Kit name '{kit_name}' provided. Adding --kit-name to command")
-        basecalling_cmd.extend(["--kit-name", str(kit_name)])
-    else:
-        logger.info("No kit name provided. The --kit-name argument will be omitted.")
+    if should_demultiplex:
+        logger.info("We're going to demultiplex, so we'll add the --no-trim tag to keep the barcodes")
+        basecalling_cmd.extend(["--no-trim"])
+
+        # We will only use the kit name if we're going to demultiplex. In future do a conditional check for kit_name and demultiplex.
+        if kit_name:
+            logger.info(f"Kit name '{kit_name}' provided. Adding --kit-name to command")
+            basecalling_cmd.extend(["--kit-name", kit_name])
+        else:
+            logger.info("No kit name provided. The --kit-name argument will be omitted.")
 
     final_output_arg = []
     if output_path.suffix in ['.bam', '.sam']:
@@ -148,6 +158,14 @@ def _add_model_name_arg(parser, config):
         help="Name of the model to download."
     )
 
+def _add_demultiplex_arg(parser, config):
+    parser.add_argument(
+        '--demultiplex',
+        action='store_true',
+        default=config.pipeline_steps.basecalling.params.demultiplex,
+        help='Demultiplex the basecalled bam file, if necessary.',
+        dest='pipeline_steps.basecalling.params.demultiplex'
+    )
 
 def add_all_arguments_to_parser(parser, config):
     """
@@ -156,6 +174,7 @@ def add_all_arguments_to_parser(parser, config):
     """
     _add_kit_name_arg(parser, config)
     _add_model_name_arg(parser, config)
+    _add_demultiplex_arg(parser, config)
 
 
 def setup_parsers(subparsers, parent_parser, config):
@@ -186,14 +205,15 @@ def setup_parsers(subparsers, parent_parser, config):
         parents=[parent_parser]
     )
     _add_kit_name_arg(p_run, config)
+    _add_demultiplex_arg(p_run, config)
     add_io_arguments(
         p_run, config,
         default_input=None,
         input_file_help="Path to POD5 files",
-        input_dest="pipeline_steps.basecalling.paths.pod5_input",
+        input_dest="pipeline_steps.basecalling.paths.user_pod5_input",
         default_output=None,
-        output_dir_help="Path to demultiplexed data directory.",
-        output_dest="pipeline_steps.basecalling.paths.demultiplexed_output"
+        output_dir_help="Path to basecalled data.",
+        output_dest="pipeline_steps.basecalling.paths.user_basecalled_output"
     )
     p_run.set_defaults(func=full_basecalling_handler)
 
@@ -202,14 +222,15 @@ def setup_parsers(subparsers, parent_parser, config):
         parents=[parent_parser]
     )
     _add_kit_name_arg(p_basecall, config)
+    _add_demultiplex_arg(p_basecall, config)
     add_io_arguments(
         p_basecall, config,
         default_input=None,
         input_file_help="Path to POD5 files",
-        input_dest="pipeline_steps.basecalling.paths.pod5_input",
+        input_dest="pipeline_steps.basecalling.paths.user_pod5_input",
         default_output=None,
         output_dir_help="Path to basecalled BAM file",
-        output_dest="pipeline_steps.basecalling.paths.basecalled_output"
+        output_dest="pipeline_steps.basecalling.paths.user_basecalled_output"
     )
     p_basecall.set_defaults(func=basecall_handler)
 
@@ -222,10 +243,10 @@ def setup_parsers(subparsers, parent_parser, config):
         p_demux, config,
         default_input=None,
         input_file_help="Path to basecalled BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_output",
+        input_dest="pipeline_steps.basecalling.paths.user_basecalled_output",
         default_output=None,
         output_dir_help="Path to demultiplexed data directory.",
-        output_dest="pipeline_steps.basecalling.paths.demultiplexed_output"
+        output_dest="pipeline_steps.basecalling.paths.user_demux_output"
     )
     p_demux.set_defaults(func=demultiplex_handler)
 

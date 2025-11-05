@@ -3,6 +3,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import List
 
 from src.config.models import AppSettings
 from src.utils.cli_utils import add_io_arguments
@@ -79,9 +80,69 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     logging.info(f"Successfully built index: {index_path}")
     return index_path
 
+def _resolve_alignment_inputs(input_path: Path) -> List[Path]:
+    """
+    Finds all BAM files to be aligned from a given input path
+    """
+
+    logging.info(f"Resolving alignment input {input_path}")
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input for alignment doesn't exist: {input_path}")
+
+    if input_path.is_file():
+        logging.info(f"The input {input_path} is a file, and will be aligned.")
+        if input_path.suffix != '.bam':
+            logging.warning(f"Input file {input_path} doesn't have a .bam extension")
+        return [input_path]
+    if input_path.is_dir():
+        logging.info(f"The input {input_path} is a directory, so we'll look for .bam files inside it.")
+        found_files = list(input_path.rglob('*.bam'))
+        if not found_files:
+            raise FileNotFoundError(f"No BAM files found in directory {input_path}")
+        return found_files
+    raise ValueError(f"Input path is neither a file nor a directory: {input_path}")
+
+def _prepare_alignment_io(input_files: List[Path], output_path: Path):
+
+    is_single_file_mapping = (len(input_files) == 1 and output_path.suffix)
+
+    if is_single_file_mapping:
+        # A single input and output file was specified
+        input_file = input_files[0]
+        output_file = output_path
+        output_dir = output_file.parent
+        logging.info(f"Single alignment: Aligning '{input_file.name}' directly to '{output_file}'.")
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        return output_dir, [(input_file, output_file)]
+
+    output_dir: Path
+    if output_path.suffix:
+        # The specified output is a file, but the input contained multiple files
+        output_dir = output_path.parent
+        logging.warning(f"Input is a directory, so the output path '{output_path}' will be treated as a directory. "
+                        f"Using its parent: '{output_dir}")
+    else:
+        # The specified output is a directory, so we'll just save the file into the directory
+        output_dir = output_path
+        logging.info(f"The alignment output will be saved in {output_dir}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    logging.info(f"We'll be aligning a batch of files: All alignments will be saved in: {output_dir}.")
+
+    io_pairs = []
+    for input_file in input_files:
+        # Get the input file stem - can't just use stem in case there are more than one extension
+        stem = input_file.name.replace(".bam", "").replace(".unaligned", "")
+        output_bam = output_dir / f"{stem}.aligned.bam"
+        io_pairs.append((input_file, output_bam))
+
+    return output_dir, io_pairs
 
 def full_alignment_handler(config: AppSettings):
-    unaligned_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
+    unaligned_bam = config.pipeline_steps.align.paths.full_unaligned_input_path
     aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
     threads = config.globals.threads
     reference_fasta_path = config.pipeline_steps.align.paths.full_ref_fasta_path
@@ -92,7 +153,7 @@ def full_alignment_handler(config: AppSettings):
         raise ValueError("Missing required argument: --ref")
 
     try:
-        logging.info(f"Checking whether reference index exists at {reference_fasta_path}")
+        logging.info(f"Checking whether reference index exists at {reference_fasta_path.parent}")
         reference_index_path = _ensure_mmi_exists(reference_fasta_path, threads)
     except (FileNotFoundError, RuntimeError) as e:
         logging.info(f"Error preparing reference genome: {e}", file=sys.stderr)
@@ -106,7 +167,7 @@ def full_alignment_handler(config: AppSettings):
 
 
 def alignment_handler(config):
-    unaligned_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
+    unaligned_bam = config.pipeline_steps.align.paths.full_unaligned_input_path
     aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
     threads = config.globals.threads
     reference_fasta_path = config.pipeline_steps.align.paths.full_ref_fasta_path
@@ -118,7 +179,7 @@ def alignment_handler(config):
         raise ValueError("Missing required argument: --ref")
 
     try:
-        logging.info(f"Checking whether reference index exists at {reference_fasta_path}")
+        logging.info(f"Checking whether reference index exists at {reference_fasta_path.parent}")
         reference_index_path = _ensure_mmi_exists(reference_fasta_path, threads)
     except (FileNotFoundError, RuntimeError) as e:
         logging.info(f"Error preparing reference genome: {e}", file=sys.stderr)
@@ -139,46 +200,20 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
     # If the user wants to a directory, you need to specify an --output-dir
     # Sorting and indexing is automatic if a directory is given instead of a specific file.
 
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input for alignment doesn't exist: {input_path}")
+    try:
+        input_files_to_align = _resolve_alignment_inputs(input_path)
 
-    input_files_to_align = []
+        # Validate output path
+        output_dir, io_pairs = _prepare_alignment_io(input_files_to_align, output_path)
 
-    if input_path.is_file():
-        input_files_to_align.append(input_path)
-    elif input_path.is_dir():
-        found_files = list(input_path.rglob('*.bam'))
-        if not found_files:
-            raise FileNotFoundError(f"No BAM files found in directory {input_path}")
-        input_files_to_align = found_files
-    else:
-        raise ValueError(f"Input path is neither a file nor a directory: {input_path}")
+        logging.info(f"The output dir is {output_dir}")
+        for pair in io_pairs:
+            logging.info(f"    {pair[0]} -> {pair[1]}")
+    except (FileNotFoundError, ValueError) as e:
+        logging.error(f"Error preparing for alignment: {e}")
 
-    # Validate output path
-    output_dir = None
-    if len(input_files_to_align) > 1:
-        if output_path.suffix != '':
-            raise ValueError(
-                f"Input is a directory, so output must also be a directory. The provided output path, {output_path}, looks like a file.")
-        output_dir = output_path
-    elif len(input_files_to_align) == 1:
-        if output_path.suffix == '':
-            output_dir = output_path
-        else:
-            output_dir = output_path.parent
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    logging.info(f"All outputs will be saved in: {output_dir}")
-
-    for input_file in input_files_to_align:
-        logging.info(f"Processing input file: {input_file.name}")
-
-        # Construct the corresponding output filename
-        if len(input_files_to_align) > 1 or output_path.suffix == '':
-            output_bam_file = output_dir / f"{input_file.stem}.aligned.sorted.bam"
-        else:
-            output_bam_file = output_path
-        logging.info(f"Output will be {output_bam_file}")
+    for input_file, output_bam_file in io_pairs:
+        logging.info(f"Processing input file: {input_file.name} -> {output_bam_file.name}")
 
         alignment_cmd = [
             'aligner',
@@ -347,10 +382,10 @@ Example Usage:
         p_run, config,
         default_input=None,
         input_file_help="Path to full unaligned BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_output",
+        input_dest="pipeline_steps.align.paths.user_alignment_input",
         default_output=None,
         output_dir_help="Path to aligned, sorted and indexed BAM file",
-        output_dest="pipeline_steps.align.paths.aligned_bam_name"
+        output_dest="pipeline_steps.align.paths.user_alignment_output"
     )
     p_run.set_defaults(func=full_alignment_handler)
 
@@ -377,10 +412,10 @@ Example Usage:
         p_align_only, config,
         default_input=None,
         input_file_help="Path to full unaligned BAM file",
-        input_dest="pipeline_steps.basecalling.paths.basecalled_output",
+        input_dest="pipeline_steps.align.paths.user_alignment_input",
         default_output=None,
         output_dir_help="Path to aligned, sorted and indexed BAM file",
-        output_dest="pipeline_steps.align.paths.aligned_bam_name"
+        output_dest="pipeline_steps.align.paths.user_alignment_output"
     )
 
     p_align_only.set_defaults(

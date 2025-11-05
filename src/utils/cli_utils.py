@@ -11,6 +11,7 @@ def add_input_file_argument(parser, default, input_dest, help_text):
         type=Path,
         default=default,
         dest=input_dest,
+        metavar="<path>",
         help=f"{help_text} (Defaults to value in config file)"
     )
 
@@ -21,6 +22,7 @@ def add_output_dir_argument(parser, default, output_dest, help_text):
         type=Path,
         default=default,
         dest=output_dest,
+        metavar="<path>",
         help=f"{help_text} (Defaults to value in config file)"
     )
 

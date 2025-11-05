@@ -88,6 +88,7 @@ class BasecallingParams(BaseModel):
 
     # In the end, this will be where the dorado command building happens. That's for the future though.
     method: Literal["complex", "explicit"]
+    demultiplex: bool = False
     complex_settings: BasecallingMethodComplex
     explicit_settings: BasecallingMethodExplicit
 
@@ -103,6 +104,11 @@ class BasecallingPaths(BaseModel):
     demultiplexed_dir_name: str = "demultiplexed"
     dorado_model_dir_name: str = "models"
 
+    user_pod5_input: Optional[str] = None
+    user_basecalled_output: Optional[str] = None
+    user_demux_input: Optional[str] = None
+    user_demux_output: Optional[str] = None
+
     full_pod5_path: Optional[Path] = None
     full_unaligned_bam_path: Optional[Path] = None
     full_demultiplexed_output_dir: Optional[Path] = None
@@ -116,14 +122,39 @@ class BasecallingPaths(BaseModel):
 
     def _build(self, common_paths: Paths):
         root_dir = common_paths.root
-        basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
-        demux_dir = resolve_path(common_paths.data_dir, self.demultiplexed_dir_name)
-        model_dir = resolve_path(root_dir, self.dorado_model_dir_name)
+        data_dir = common_paths.data_dir
 
-        self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
-        self.full_unaligned_bam_path = resolve_path(basecalled_dir, self.basecalled_bam_name)
-        self.full_demultiplexed_output_dir = resolve_path(root_dir, demux_dir)
-        self.full_dorado_model_dir = resolve_path(root_dir, model_dir)
+        if self.user_pod5_input:
+            self.full_pod5_path = resolve_path(root_dir, self.user_pod5_input)
+        else:
+            self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
+        
+        conv_basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
+        conv_bam_path = resolve_path(conv_basecalled_dir, self.basecalled_bam_name)
+
+        if self.user_basecalled_output:
+            resolved_user_path = resolve_path(root_dir, self.user_basecalled_output)
+            if resolved_user_path.suffix:
+                self.full_unaligned_bam_path = resolved_user_path
+            else:
+                # The input that the user gave is a folder, so we'll use the bam name specified in config.
+                self.full_unaligned_bam_path = resolved_user_path / self.basecalled_bam_name
+        else:
+            self.full_unaligned_bam_path = conv_bam_path
+
+        conv_demux_dir = resolve_path(data_dir, self.demultiplexed_dir_name)
+
+        if self.user_demux_input:
+            # Demux uses unaligned bam path, so if the user ran demux with an input change it to their input
+            self.full_unaligned_bam_path = resolve_path(root_dir, self.user_demux_input)
+
+        if self.user_demux_output:
+            print(f"User gave a demux output - {self.user_demux_output}")
+            self.full_demultiplexed_output_dir = resolve_path(root_dir, self.user_demux_output)
+        else:
+            self.full_demultiplexed_output_dir = self.full_unaligned_bam_path.parent / self.demultiplexed_dir_name
+
+        self.full_dorado_model_dir = resolve_path(root_dir, self.dorado_model_dir_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
@@ -143,7 +174,10 @@ class AlignmentPaths(BaseModel):
     aligned_bam_name: str
     alignment_flagstat_name: str
     alignment_stats_name: str
+    user_alignment_input: Optional[str] = None
+    user_alignment_output: Optional[str] = None
 
+    full_unaligned_input_path: Optional[Path] = None
     full_ref_fasta_path: Optional[Path] = None
     full_aligned_bam_path: Optional[Path] = None
     full_flagstat_path: Optional[Path] = None
@@ -169,17 +203,18 @@ class AlignmentPaths(BaseModel):
                 # Inside a dedicated folder (e.g. reference_genomes/hg38/hg38.fa)
                 base_ref_dir / self.genome_id / f"{self.genome_id}.fa",
                 base_ref_dir / self.genome_id / f"{self.genome_id}.fa.gz",
-                # Inside a dedicated folder in iGenomes style (e.g. reference_genomes/hg38/genome.fa)
-                base_ref_dir / self.genome_id / "genome.fa",
-                base_ref_dir / self.genome_id / "genome.fa.gz",
                 # Directly inside the reference genome folder (e.g. reference_genomes/hg38.fa)
                 base_ref_dir / f"{self.genome_id}.fa",
-                base_ref_dir / f"{self.genome_id}.fa.gz"
+                base_ref_dir / f"{self.genome_id}.fa.gz",
+                # Inside a dedicated folder in iGenomes style (e.g. reference_genomes/hg38/genome.fa)
+                base_ref_dir / self.genome_id / "genome.fa",
+                base_ref_dir / self.genome_id / "genome.fa.gz"
             ]
 
             return next((path for path in search_paths if path.is_file()), None)
 
         return None
+
 
     def _validate(self):
         if not (self.genome_id or self.custom_fasta_reference):
@@ -196,21 +231,36 @@ class AlignmentPaths(BaseModel):
             param_name="Reference Genome FASTA"
         )
 
-    def _build(self, common_paths: Paths):
+    def _build(self, common_paths: Paths, conv_unaligned_input: Optional[Path] = None):
+        root_dir = common_paths.root
+
+        if self.user_alignment_input:
+            self.full_unaligned_input_path = resolve_path(root_dir, self.user_alignment_input)
+        else:
+            self.full_unaligned_input_path = conv_unaligned_input
+
+        if self.user_alignment_output:
+            #print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
+            self.full_aligned_bam_path = resolve_path(root_dir, self.user_alignment_output)
+        else:
+            self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
+            self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
+
+        #print(f"The full aligned bam path is {self.full_aligned_bam_path}")
         if self.custom_fasta_reference:
             if self.genome_id:
                 logging.info(f"User provided custom reference '--ref {self.custom_fasta_reference}'. "
                              f"This will override the genome_id: '{self.genome_id}' from the config file.")
                 self.genome_id = None
-        self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
+
+
         self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
-        self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
         self.full_flagstat_path = resolve_path(self.qc_output_dir, self.alignment_flagstat_name)
         self.full_stats_path = resolve_path(self.qc_output_dir, self.alignment_stats_name)
         self.full_ref_fasta_path = self._find_reference_fasta(common_paths)
 
-    def build_and_validate(self, common_paths: Paths):
-        self._build(common_paths)
+    def build_and_validate(self, common_paths: Paths, conv_unaligned_input):
+        self._build(common_paths, conv_unaligned_input)
 
 
 class AlignmentStep(BaseModel):

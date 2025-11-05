@@ -49,9 +49,10 @@ pipeline_steps:
   basecalling:
     params:
       method: "complex"
+      demultiplex: false
       # Method A: Complex Model Names
       complex_settings:
-        model_speed: "fast"
+        model_speed: "hac"
         basecalling_modifications: "5mCG_5hmCG"
         kit_name: "SQK-NBD114-24"
       # Method B: Explicit Model Names
@@ -95,7 +96,7 @@ pipeline_steps:
       deconv_algorithm: "uxm"
     tools:
     paths:
-      atlas_file_name: "UXM_atlas_deconvolution.csv"
+      atlas_file_name: "UXM_atlas.csv"
       manifest_name: "illumina_manifest.csv"
       deconvolution_results_name: "deconvoluted_output.csv"
 
