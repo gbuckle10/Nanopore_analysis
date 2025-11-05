@@ -21,6 +21,11 @@ def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = Fals
         if must_be_dir and not path.is_dir():
             raise ValueError(f"Path for {param_name} must be a directory, but a file was provided: {path}")
 
+def is_valid_pod5_file(file_path: Path):
+
+    # Check that it's a file or not
+    if not file_path.is_file() or file_path.stat().st_size == 0:
+        return False
 
 def validate_pod5(path_to_check: Optional[Path], param_name: str):
     """

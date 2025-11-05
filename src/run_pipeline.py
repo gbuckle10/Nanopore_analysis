@@ -65,6 +65,9 @@ def main():
         help=f"Path to the runtime config file. Default = {DEFAULT_RUNTIME_CONFIG_PATH}"
     )
     global_parent_parser.add_argument(
+        '--experiment-root', type=Path, default=None
+    )
+    global_parent_parser.add_argument(
         '--debug', action='store_true', help="Enable debug mode. Show full tracebacks on the console."
     )
     global_parent_parser.add_argument(
@@ -76,7 +79,18 @@ def main():
     config = load_and_validate_configs(
         conf_args.user_config, conf_args.runtime_config
     )
+
+    print(config)
+
+    print(conf_args)
+    if conf_args.experiment_root:
+        print(f"A non-default experiment root has been specified - {conf_args.experiment_root}")
+        print(f"Config root is {config.paths.root}")
+        config.paths.root = conf_args.experiment_root
+
     build_config_paths(config)
+
+    print_config(config)
 
 
     # Set up the main parser
@@ -122,6 +136,8 @@ def main():
                     f"Forcing 'demultiplex' flag to False for path resolution."
                 )
                 config.pipeline_steps.basecalling.params.demultiplex = False
+
+        # Do a second build config paths based on the cli arguments.
         build_config_paths(config)
         full_config_path = Path("full_config.yaml")
         save_final_config(config, full_config_path)
