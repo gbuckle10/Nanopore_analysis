@@ -12,6 +12,13 @@ Basic troubleshooting:
         - export PYTHONPATH=$PYTHONPATH:$PWD/src
     - If it still won't run, there is a deeper issue. Contact George if you have access to him, otherwise the only thing to try is Google.
 
+To run uxm_deconv: 
+- Get your pat.gz file and your atlas.tsv file. 
+- Filter out the rows which aren't in the atlas using wgbstools view path/to/pat.gz -L path/to/atlas -o path/to/output.pat 
+- index the output - Make sure you have used the correct atlas (hg38/hg19) - it should be the same genome assembly used for the basecalling.
+- The atlas you used for the view function should be the same as the one you use for the deconv. 
+- uxm deconv path/*pat.gz --atlas /path/to/atlas -o output.csv
+
 The UXM and wgbs_tools files in the parent directory for the respective submodules should be symlinks, but sometimes they
 end up as text files containing the path to the py file. To fix this:
     - rm path/to/file
