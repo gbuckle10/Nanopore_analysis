@@ -115,6 +115,13 @@ def main():
 
     # Load config
     try:
+        if args.command == 'align':
+            if config.pipeline_steps.basecalling.params.demultiplex:
+                logging.debug(
+                    f"Running a standalone '{args.command}' command."
+                    f"Forcing 'demultiplex' flag to False for path resolution."
+                )
+                config.pipeline_steps.basecalling.params.demultiplex = False
         build_config_paths(config)
         full_config_path = Path("full_config.yaml")
         save_final_config(config, full_config_path)
