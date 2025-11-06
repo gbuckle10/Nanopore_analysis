@@ -16,11 +16,13 @@ def pileup_handler(config):
     run_methylation_pileup(methylation_input_file, methylation_output_file)
 
 
-def run_methylation_pileup(aligned_sorted_file, output_bed):
+def run_methylation_pileup(aligned_sorted_file, output_bed, reference_fasta_path):
     logger.debug(f"Ensuring output directory exists: {output_bed.parent}.")
     ensure_dir_exists(output_bed.parent)
     pileup_cmd = [
         'modkit', 'pileup',
+        '--cpg',
+        '-r', str(reference_fasta_path),
         str(aligned_sorted_file),
         str(output_bed)
     ]
