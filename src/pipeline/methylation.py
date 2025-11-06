@@ -1,21 +1,28 @@
 import argparse
+import logging
+
+from src.utils import logger
 from src.utils.cli_utils import add_io_arguments
+from src.utils.file_utils import ensure_dir_exists
 
 from src.utils.process_utils import run_command
 
+logger = logging.getLogger(__name__)
 
 def pileup_handler(config):
-    aligned_file = config.pipeline_steps.align.paths.full_aligned_bam_path
-    output_bed = config.pipeline_steps.methylation.paths.final_bed_file
+    methylation_input_file = config.pipeline_steps.methylation.paths.full_aligned_input_path
+    methylation_output_file = config.pipeline_steps.methylation.paths.full_bed_file_path
 
-    run_methylation_pileup(aligned_file, output_bed)
+    run_methylation_pileup(methylation_input_file, methylation_output_file)
 
 
 def run_methylation_pileup(aligned_sorted_file, output_bed):
+    logger.debug(f"Ensuring output directory exists: {output_bed.parent}.")
+    ensure_dir_exists(output_bed.parent)
     pileup_cmd = [
         'modkit', 'pileup',
-        aligned_sorted_file,
-        output_bed
+        str(aligned_sorted_file),
+        str(output_bed)
     ]
 
     run_command(pileup_cmd)
@@ -51,10 +58,10 @@ def setup_parsers(subparsers, parent_parser, config):
     add_io_arguments(
         p_pileup, config,
         default_input=None,
-        input_file_help="Path to the aligned BAM path",
-        input_dest="pipeline_steps.align.paths.aligned_bam_name",
+        input_file_help="Path to the aligned and sorted BAM file.",
+        input_dest="pipeline_steps.methylation.paths.user_methylation_input",
         default_output=None,
         output_dir_help="Path to the BED file",
-        output_dest="pipeline_steps.methylation.paths.methylation_bed_name"
+        output_dest="pipeline_steps.methylation.paths.user_methylation_ouput"
     )
     p_pileup.set_defaults(func=pileup_handler)

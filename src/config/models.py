@@ -268,21 +268,35 @@ class AlignmentStep(BaseModel):
 
 
 class MethylationPaths(BaseModel):
-    methylation_output_dir_name: str = "methylation"
     methylation_bed_name: str
     methylation_log_name: str
+    methylation_output_dir_name: str = "methylation"
 
-    methylation_output_dir: Optional[Path] = None
-    final_bed_file: Optional[Path] = None
-    final_meth_log_file: Optional[Path] = None
+    user_methylation_input: Optional[str] = None
+    user_methylation_ouput: Optional[str] = None
+
+    full_aligned_input_path: Optional[Path] = None
+    full_bed_file_path: Optional[Path] = None
+    full_meth_log_path: Optional[Path] = None
 
     def _validate(self):
         pass
 
-    def _build(self, common_paths: Paths):
-        self.methylation_output_dir = resolve_path(common_paths.data_dir, self.methylation_output_dir_name)
-        self.final_bed_file = resolve_path(self.methylation_output_dir, self.methylation_bed_name)
-        self.final_meth_log_file = resolve_path(self.methylation_output_dir, self.methylation_log_name)
+    def _build(self, common_paths: Paths, conv_aligned_input: Optional[Path] = None):
+        root_dir = common_paths.root
+        methylation_output_dir = resolve_path(common_paths.data_dir, self.methylation_output_dir_name)
+
+        if self.user_methylation_input:
+            self.full_aligned_input_path = resolve_path(root_dir, self.user_methylation_input)
+        else:
+            self.full_aligned_input_path = conv_aligned_input
+
+        if self.user_methylation_ouput:
+            self.full_bed_file_path = resolve_path(root_dir, self.user_methylation_ouput)
+        else:
+            self.full_bed_file_path = resolve_path(methylation_output_dir, self.methylation_bed_name)
+
+        self.full_meth_log_path = resolve_path(methylation_output_dir, self.methylation_log_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)

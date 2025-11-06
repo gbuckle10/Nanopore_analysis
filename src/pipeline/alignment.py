@@ -397,7 +397,7 @@ Example Usage:
         p_qc_only, config,
         default_input=None,
         input_file_help="Path to aligned, sorted and indexed BAM file",
-        input_dest="pipeline_steps.align.paths.aligned_bam_name",
+        input_dest="pipeline_steps.align.paths.user.alignment_output",
         default_output=None,
         output_dir_help="Filepath of saved output",
         output_dest="pipeline_steps.align.paths.alignment_flagstat_name"
