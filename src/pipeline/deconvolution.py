@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def deconvolution_handler(config):
     input_data_path = config.pipeline_steps.analysis.paths.full_deconv_input_path
     atlas_path = config.pipeline_steps.analysis.paths.full_atlas_path
-    output_dir = config.pipeline_steps.analysis.paths.full_deconv_results_path
+    output_dir = config.pipeline_steps.analysis.paths.full_deconv_output_path
     algorithm = config.pipeline_steps.analysis.params.deconv_algorithm
 
     if algorithm == "uxm":

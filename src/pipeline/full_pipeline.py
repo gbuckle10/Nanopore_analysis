@@ -50,7 +50,7 @@ def full_pipeline_handler(config: AppSettings):
         },
         'deconvolution': {
             'input_file': 'pipeline_steps.analysis.paths.full_deconv_input_path',
-            'output_dir': 'pipeline_steps.analysis.paths.full_deconv_results_path'
+            'output_dir': 'pipeline_steps.analysis.paths.full_deconv_output_path'
         }
     }
 

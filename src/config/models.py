@@ -174,16 +174,17 @@ class AlignmentPaths(BaseModel):
     aligned_bam_name: str
     alignment_flagstat_name: str
     alignment_stats_name: str
+
     user_alignment_input: Optional[str] = None
     user_alignment_output: Optional[str] = None
 
+    alignment_output_dir: Optional[Path] = None
+    qc_output_dir: Optional[Path] = None
     full_unaligned_input_path: Optional[Path] = None
     full_ref_fasta_path: Optional[Path] = None
     full_aligned_bam_path: Optional[Path] = None
     full_flagstat_path: Optional[Path] = None
     full_stats_path: Optional[Path] = None
-    alignment_output_dir: Optional[Path] = None
-    qc_output_dir: Optional[Path] = None
 
     def _find_reference_fasta(self, common_paths: Paths):
         # Reference fasta depends on what the user defined in the config.yaml file.
@@ -348,23 +349,46 @@ class AnalysisPaths(BaseModel):
     deconvolution_dir_name: str = "deconvolution"
     deconvolution_input_name: str = "to_deconvolute.csv"
 
+    user_atlas_input: Optional[str] = None
+    user_manifest_input: Optional[str] = None
+    user_deconv_input: Optional[str] = None
+    user_deconv_output: Optional[str] = None
+
+    atlas_dir: Optional[Path] = None
     full_atlas_path: Optional[Path] = None
     full_manifest_path: Optional[Path] = None
-    full_deconv_results_path: Optional[Path] = None
     full_deconv_input_path: Optional[Path] = None
+    full_deconv_output_path: Optional[Path] = None
 
     def _validate(self):
         validate_path(self.full_atlas_path, must_exist=True, must_be_file=True,
                       param_name="Analysis Atlas Path ('full_atlas_path')")
 
-    def _build(self, common_paths: Paths):
+    def _build(self, common_paths: Paths, conv_deconvolution_input: Optional[Path] = None):
+        root_dir = common_paths.root
+        data_dir = common_paths.data_dir
         analysis_dir = common_paths.results_dir
-        atlas_dir = resolve_path(common_paths.data_dir, self.atlas_dir_name)
-        deconvolution_dir = resolve_path(analysis_dir, self.deconvolution_dir_name)
-        self.full_atlas_path = resolve_path(atlas_dir, self.atlas_file_name)
-        self.full_manifest_path = resolve_path(atlas_dir, self.manifest_name)
-        self.full_deconv_results_path = resolve_path(deconvolution_dir, self.deconvolution_results_name)
-        self.full_deconv_input_path = resolve_path(deconvolution_dir, self.deconvolution_input_name)
+
+        if self.user_atlas_input:
+            self.full_atlas_path = resolve_path(root_dir, self.user_atlas_input)
+        else:
+            self.atlas_dir = resolve_path(data_dir, self.atlas_dir_name)
+            self.full_atlas_path = resolve_path(self.atlas_dir, self.atlas_file_name)
+
+        if self.user_manifest_input:
+            self.full_manifest_path = resolve_path(root_dir, self.user_manifest_input)
+        else:
+            self.full_manifest_path = resolve_path(self.atlas_dir, self.manifest_name)
+
+        if self.user_deconv_input:
+            self.full_deconv_input_path = resolve_path(root_dir, self.user_deconv_input)
+        else:
+            self.full_deconv_input_path = conv_deconvolution_input
+
+        if self.user_deconv_output:
+            self.full_deconv_output_path = resolve_path(root_dir, self.user_deconv_output)
+        else:
+            self.deconvolution_dir = resolve_path(analysis_dir, self.deconvolution_dir_name)
 
 
     def build_and_validate(self, common_paths: Paths):
