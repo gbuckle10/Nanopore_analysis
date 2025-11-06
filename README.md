@@ -15,7 +15,7 @@ Basic troubleshooting:
 To run uxm_deconv: 
 - Make pat files:
 - - bam2pat can take a whole directory of bam files. 
-- - wgbstools bam2pat path/to/files/ -output_dir path/to/output
+- - wgbstools bam2pat path/to/files/ --out_dir path/to/output
 - - If you are doing an entire directory, the input should be path/to/files/*.bam
 - Get your pat.gz file and your atlas.tsv file. 
 - Filter out the rows which aren't in the atlas using wgbstools view path/to/pat.gz -L path/to/atlas -o path/to/output.pat 
