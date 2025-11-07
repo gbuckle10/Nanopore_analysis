@@ -18,6 +18,7 @@ conda_env_name: "nanopore_analysis"
 globals:
   threads: "4"
   sort_memory_limit: "2G"
+  dataset_name: "cyclomics_cfDNA"
 
 pipeline_control:
   run_steps:

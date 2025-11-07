@@ -120,7 +120,7 @@ class BasecallingPaths(BaseModel):
 
         validate_pod5(self.full_pod5_path, pod5_param_name)
 
-    def _build(self, common_paths: Paths):
+    def _build(self, common_paths: Paths, dataset_name: str):
         root_dir = common_paths.root
         data_dir = common_paths.data_dir
 
@@ -128,8 +128,8 @@ class BasecallingPaths(BaseModel):
             self.full_pod5_path = resolve_path(root_dir, self.user_pod5_input)
         else:
             self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
-        
-        conv_basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
+
+        conv_basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name) / dataset_name
         conv_bam_path = resolve_path(conv_basecalled_dir, self.basecalled_bam_name)
 
         if self.user_basecalled_output:
@@ -142,7 +142,7 @@ class BasecallingPaths(BaseModel):
         else:
             self.full_unaligned_bam_path = conv_bam_path
 
-        conv_demux_dir = resolve_path(data_dir, self.demultiplexed_dir_name)
+        conv_demux_dir = resolve_path(conv_bam_path, self.demultiplexed_dir_name)
 
         if self.user_demux_input:
             # Demux uses unaligned bam path, so if the user ran demux with an input change it to their input
@@ -156,8 +156,8 @@ class BasecallingPaths(BaseModel):
 
         self.full_dorado_model_dir = resolve_path(root_dir, self.dorado_model_dir_name)
 
-    def build_and_validate(self, common_paths: Paths):
-        self._build(common_paths)
+    def build_and_validate(self, common_paths: Paths, dataset_name: str):
+        self._build(common_paths, dataset_name)
 
 
 class BasecallingStep(BaseModel):
@@ -231,7 +231,7 @@ class AlignmentPaths(BaseModel):
             param_name="Reference Genome FASTA"
         )
 
-    def _build(self, common_paths: Paths, conv_unaligned_input: Optional[Path] = None):
+    def _build(self, common_paths: Paths, dataset_name, conv_unaligned_input: Optional[Path] = None):
         root_dir = common_paths.root
 
         if self.user_alignment_input:
@@ -243,7 +243,7 @@ class AlignmentPaths(BaseModel):
             #print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
             self.full_aligned_bam_path = resolve_path(root_dir, self.user_alignment_output)
         else:
-            self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
+            self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name) / dataset_name
             self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
 
         #print(f"The full aligned bam path is {self.full_aligned_bam_path}")
@@ -253,14 +253,12 @@ class AlignmentPaths(BaseModel):
                              f"This will override the genome_id: '{self.genome_id}' from the config file.")
                 self.genome_id = None
 
-
-        self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
-        self.full_flagstat_path = resolve_path(self.qc_output_dir, self.alignment_flagstat_name)
-        self.full_stats_path = resolve_path(self.qc_output_dir, self.alignment_stats_name)
+        self.full_flagstat_path = resolve_path(self.alignment_output_dir, self.alignment_flagstat_name)
+        self.full_stats_path = resolve_path(self.alignment_output_dir, self.alignment_stats_name)
         self.full_ref_fasta_path = self._find_reference_fasta(common_paths)
 
-    def build_and_validate(self, common_paths: Paths, conv_unaligned_input):
-        self._build(common_paths, conv_unaligned_input)
+    def build_and_validate(self, common_paths: Paths, dataset_name: str, conv_unaligned_input):
+        self._build(common_paths, conv_unaligned_input, dataset_name)
 
 
 class AlignmentStep(BaseModel):

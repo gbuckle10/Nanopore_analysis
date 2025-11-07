@@ -21,16 +21,19 @@ def build_config_paths(config: AppSettings) -> None:
     common_paths.reference_genome_dir = root / "reference_genomes"
     common_paths.externals_dir = root / "externals"
 
+    dataset_name = config.globals.dataset_name
+    print(f"The name of the dataset is {dataset_name}")
 
     # Run build_paths method for each specific step
     config.pipeline_steps.setup.paths.build_and_validate(common_paths)
-    config.pipeline_steps.basecalling.paths.build_and_validate(common_paths)
+    config.pipeline_steps.basecalling.paths.build_and_validate(common_paths, dataset_name)
 
     if config.pipeline_steps.basecalling.params.demultiplex:
         unaligned_bam_source = config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir
     else:
         unaligned_bam_source = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
-    config.pipeline_steps.align.paths.build_and_validate(common_paths, unaligned_bam_source)
+
+    config.pipeline_steps.align.paths.build_and_validate(common_paths, unaligned_bam_source, dataset_name)
     config.pipeline_steps.methylation.paths.build_and_validate(common_paths)
     config.pipeline_steps.analysis.paths.build_and_validate(common_paths)
 

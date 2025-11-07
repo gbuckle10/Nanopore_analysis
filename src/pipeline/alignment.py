@@ -24,7 +24,7 @@ def _get_file_basename(reference_path: Path):
 
     for suffix in compression_suffixes:
         if name.endswith(suffix):
-            name = name.removesuffix(suffix) # Might slice for compatibility with python <3.9
+            name = name.removesuffix(suffix)  # Might slice for compatibility with python <3.9
             break
     for suffix in fasta_suffixes:
         if name.endswith(suffix):
@@ -32,6 +32,7 @@ def _get_file_basename(reference_path: Path):
             break
 
     return name
+
 
 def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     """
@@ -80,6 +81,7 @@ def _ensure_mmi_exists(ref_fasta_path: Path, threads: int) -> Path:
     logging.info(f"Successfully built index: {index_path}")
     return index_path
 
+
 def _resolve_alignment_inputs(input_path: Path) -> List[Path]:
     """
     Finds all BAM files to be aligned from a given input path
@@ -102,8 +104,8 @@ def _resolve_alignment_inputs(input_path: Path) -> List[Path]:
         return found_files
     raise ValueError(f"Input path is neither a file nor a directory: {input_path}")
 
-def _prepare_alignment_io(input_files: List[Path], output_path: Path):
 
+def _prepare_alignment_io(input_files: List[Path], output_path: Path):
     is_single_file_mapping = (len(input_files) == 1 and output_path.suffix)
 
     if is_single_file_mapping:
@@ -140,6 +142,7 @@ def _prepare_alignment_io(input_files: List[Path], output_path: Path):
         io_pairs.append((input_file, output_bam))
 
     return output_dir, io_pairs
+
 
 def full_alignment_handler(config: AppSettings):
     unaligned_bam = config.pipeline_steps.align.paths.full_unaligned_input_path
@@ -190,9 +193,8 @@ def alignment_handler(config):
 
 def qc_handler(config):
     aligned_bam_file = config.pipeline_steps.align.paths.full_aligned_bam_path
-    flagstat_report = config.pipeline_steps.align.paths.full_flagstat_path
 
-    run_qc_command(aligned_bam_file, flagstat_report)
+    run_qc_command(aligned_bam_file)
 
 
 def run_alignment_command(dorado_exe, input_path, output_path, reference_index, sort_memory_limit, threads):
@@ -273,18 +275,30 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
 
         run_command(index_cmd)
 
+        flagstat_report = run_qc_command(aligned_sorted_file)
+
     print("Indexing complete")
 
 
-def run_qc_command(aligned_sorted_file, flagstat_report):
+def run_qc_command(aligned_sorted_file):
+    filename = aligned_sorted_file.name
+    base_name = filename.split('.')[0]
+    flagstat_report_name = f"{base_name}.flagstat.txt"
+    flagstat_report = aligned_sorted_file.parent / flagstat_report_name
+    stats_report_name = f"{base_name}.stats.txt"
+    stats_report = aligned_sorted_file.parent / stats_report_name
     flagstat_cmd = [
         "samtools", "flagstat",
         str(aligned_sorted_file)
     ]
 
-    print(f"Running command: {' '.join(flagstat_cmd)}")
+    stats_cmd = [
+        "samtools", "stats",
+        str(aligned_sorted_file)
+    ]
 
     try:
+        print(f"Running command: {' '.join(flagstat_cmd)}")
         result = subprocess.run(
             flagstat_cmd,
             check=True,
@@ -292,13 +306,29 @@ def run_qc_command(aligned_sorted_file, flagstat_report):
             text=True  # Decodes output as strings
         )
 
+        print(f"Saving result to {flagstat_report}")
+
         with open(flagstat_report, 'w') as f:
             f.write(result.stdout)
 
         print(f"Flagstat report saved to {flagstat_report}")
 
+        print(f"Running command: {' '.join(stats_cmd)}")
+        result = subprocess.run(
+            stats_cmd,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print(f"Saving stats to {stats_report}")
+
+        with open(stats_report, 'w') as f:
+            f.write(result.stdout)
+
+        print(f"Stats report saved to {stats_report}")
+
     except FileNotFoundError:
-        print(f"CRITICAL: 'samtools' not found.", file=sys.stderr)
+        print(f"CRITICAL: file not found.", file=sys.stderr)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"CRITICAL: samtools flagstat failed with exit code {e.returncode}", file=sys.stderr)
@@ -397,7 +427,7 @@ Example Usage:
         p_qc_only, config,
         default_input=None,
         input_file_help="Path to aligned, sorted and indexed BAM file",
-        input_dest="pipeline_steps.align.paths.aligned_bam_name",
+        input_dest="pipeline_steps.align.paths.user.alignment_output",
         default_output=None,
         output_dir_help="Filepath of saved output",
         output_dest="pipeline_steps.align.paths.alignment_flagstat_name"
