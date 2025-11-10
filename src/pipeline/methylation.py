@@ -1,5 +1,6 @@
 import argparse
 import logging
+from pathlib import Path
 
 from src.utils import logger
 from src.utils.cli_utils import add_io_arguments
@@ -9,12 +10,43 @@ from src.utils.process_utils import run_command
 
 logger = logging.getLogger(__name__)
 
+
+def _merge_and_index(methylation_input: Path, merged_bam_output: Path):
+    """
+    Given a directory containing .bam files, merge and index them to the specified output.
+    """
+
+    search_pattern = f"{methylation_input}/*.bam"
+    merge_cmd = [
+        'samtools', 'merge',
+        search_pattern,
+        '-o', str(merged_bam_output)
+    ]
+
+    logging.info(f"Merging the bam files in {methylation_input} using the command {' '.join(merge_cmd)}")
+    run_command(merge_cmd)
+
+    index_cmd = [
+        'samtools', 'index',
+        str(merged_bam_output)
+    ]
+
+    logging.info(f"Indexing the merged bam file at {merged_bam_output}")
+    run_command(index_cmd)
+
 def pileup_handler(config):
-    methylation_input_file = config.pipeline_steps.methylation.paths.full_aligned_input_path
+    methylation_input = config.pipeline_steps.methylation.paths.full_aligned_input_path
     methylation_output_file = config.pipeline_steps.methylation.paths.full_bed_file_path
     ref_fasta = config.pipeline_steps.align.paths.full_ref_fasta_path
 
-    run_methylation_pileup(methylation_input_file, methylation_output_file, ref_fasta)
+    if not methylation_input.suffix:
+        # The specified output is a file.
+        logging.info(f"The modkit input is a directory, not a file. We will merge the bam files"
+                     f" in this folder before running modkit.")
+        indexed_output = config.pipeline_steps.align.paths.full_aligned_bam_path
+        _merge_and_index(methylation_input, indexed_output)
+
+    run_methylation_pileup(methylation_input, methylation_output_file, ref_fasta)
 
 
 def run_methylation_pileup(aligned_sorted_file, output_bed, ref_fasta):
