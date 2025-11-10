@@ -6,33 +6,36 @@ import logging
 from pathlib import Path
 import csv
 from collections import Counter
-from src.utils.logger import setup_logger
 
 
-def summarise_lengths(input_file, output_dir=None, must_be_aligned=False, min_length=0, max_length=float('inf')):
+def summarise_lengths(input_file, output_file, must_be_aligned=False, min_length=0, max_length=float('inf')):
     '''
     Outputs a csv file with the number of reads of each length.
-
-    Default behaviour is to count all reads, whether they're aligned or not.
-    :param input_file:
-    :param output_dir:
-    :return:
     '''
 
     read_lengths = Counter()
     logger = logging.getLogger('pipeline')
     logger.info(f"Summarising sequence lengths in file: {input_file}")
     prefix = Path(input_file).stem
-    output_file = output_dir / f"{prefix}_read_length_distribution.csv"
 
     try:
         with pysam.AlignmentFile(input_file, "rb", check_sq=False) as infile:
             # check_sq=False tells pysam not to crash if there's no header, so it'll be more robust for unaligned bams.
-            for read in infile:
+            for i, read in enumerate(infile):
+                if (i+1) % 1_000_000 == 0:
+                    logger.info(f"Processed {i+1:,} reads...")
+
                 if read.is_secondary or read.is_supplementary:
+                    continue
+                if must_be_aligned and read.is_unmapped:
+                    # Skip unaligned reads.
+                    continue
+                if not (min_length <= (read.query_length or 0) <= max_length):
                     continue
                 read_lengths[read.query_length] += 1
         logger.info(f"Process complete.")
+
+        output_file.parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -41,7 +44,7 @@ def summarise_lengths(input_file, output_dir=None, must_be_aligned=False, min_le
             for length, count in sorted(read_lengths.items()):
                 writer.writerow([length, count])
 
-        print(f"Distribution saved to {output_file}")
+        logger.info(f"Read length distribution saved to {output_file}")
 
     except FileNotFoundError:
         print(f"Error: Input file not found at '{input_file}'", file=sys.stderr)
@@ -50,8 +53,7 @@ def summarise_lengths(input_file, output_dir=None, must_be_aligned=False, min_le
         print(f"Error processing BAM file: {e}", file=sys.stderr)
         sys.exit(1)
 
-if __name__ == '__main__':
-    setup_logger()
+def setup_parsers(subparsers, parent_parser, config):
 
     parser = argparse.ArgumentParser(
         description="Summarise the read length distribution in a bam file."
