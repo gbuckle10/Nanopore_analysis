@@ -12,20 +12,23 @@ logger = logging.getLogger(__name__)
 def pileup_handler(config):
     methylation_input_file = config.pipeline_steps.methylation.paths.full_aligned_input_path
     methylation_output_file = config.pipeline_steps.methylation.paths.full_bed_file_path
+    ref_fasta = config.pipeline_steps.align.paths.full_ref_fasta_path
 
-    run_methylation_pileup(methylation_input_file, methylation_output_file)
+    run_methylation_pileup(methylation_input_file, methylation_output_file, ref_fasta)
 
 
-def run_methylation_pileup(aligned_sorted_file, output_bed, reference_fasta_path):
+def run_methylation_pileup(aligned_sorted_file, output_bed, ref_fasta):
     logger.debug(f"Ensuring output directory exists: {output_bed.parent}.")
     ensure_dir_exists(output_bed.parent)
     pileup_cmd = [
         'modkit', 'pileup',
         '--cpg',
-        '-r', str(reference_fasta_path),
+        '-r', str(ref_fasta),
         str(aligned_sorted_file),
         str(output_bed)
     ]
+
+    print(f"command - {pileup_cmd}")
 
     run_command(pileup_cmd)
 
