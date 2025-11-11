@@ -1,8 +1,26 @@
 import argparse
 from pathlib import Path
 from typing import Optional
-
+import inspect
 from src.config.models import AppSettings
+
+def call_handler_with_correct_args(handler_func, args: argparse.Namespace, config: AppSettings):
+    """
+    Inspects a handlers function's signature and calls it with the relevant arguments. We use this method because
+    we want to call pipeline steps with config, but want to pass args to some other non-pipeline steps.
+    """
+    # Get the names of the parameters we need to pass in
+    needed_params = inspect.signature(handler_func).parameters
+
+    # Put the arguments in a dictionary
+    kwargs_to_pass = {}
+    if 'config' in needed_params:
+        kwargs_to_pass['config'] = config
+    if 'args' in needed_params:
+        kwargs_to_pass['args'] = args
+
+    return handler_func(**kwargs_to_pass)
+
 
 
 def add_input_file_argument(parser, default, input_dest, help_text):

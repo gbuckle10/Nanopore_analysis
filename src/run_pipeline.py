@@ -11,6 +11,7 @@ from src.config.models import load_and_validate_configs, AppSettings, print_conf
 from src.config.paths import build_config_paths, run_initial_validation, update_config_from_args
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils import resource_downloader
+from src.utils.cli_utils import call_handler_with_correct_args
 from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
@@ -25,10 +26,8 @@ COMMAND_MAP = {
     'align': 'pipeline',
     'alignment': 'pipeline',
     'methylation_summary': 'pipeline',
-    'deconvolution_prep': 'pipeline',
     'deconvolution': 'pipeline',
     'deconv': 'pipeline',
-    'analysis': 'pipeline',
     'all': 'pipeline',
 
     'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
@@ -72,7 +71,7 @@ def main():
         '--no-log', action='store_true', help='Disable logging for this run'
     )
 
-    # Use parse_known_args() to only read the arguments that the main_parser knows about - config and user config.
+    # Use parse_known_args() to only read the arguments that the main_parser knows about.
     conf_args, _ = global_parent_parser.parse_known_args()
     config = load_and_validate_configs(
         conf_args.user_config, conf_args.runtime_config
@@ -138,7 +137,7 @@ def main():
 
         if hasattr(args, 'func'):
             run_initial_validation(args.command, config)
-            args.func(config)
+            call_handler_with_correct_args(args.func, args, config)
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
             sys.exit(1)
