@@ -1,5 +1,6 @@
 import argparse
 import logging
+from pathlib import Path
 
 from src.utils import logger
 from src.utils.cli_utils import add_io_arguments
@@ -15,7 +16,19 @@ def pileup_handler(config):
 
     run_methylation_pileup(methylation_input_file, methylation_output_file)
 
+def adjust_mods_handler(config):
+    input = config.input
+    output = config.output
+    run_adjust_mods(input, output)
 
+def run_adjust_mods(input_bam: Path, output_bam: Path):
+
+    adjust_cmd = [
+        'modkit', 'adjust-mods',
+        str(input_bam),
+        str(output_bam),
+        '--motif', 'CG', '0'
+    ]
 def run_methylation_pileup(aligned_sorted_file, output_bed):
     logger.debug(f"Ensuring output directory exists: {output_bed.parent}.")
     ensure_dir_exists(output_bed.parent)
