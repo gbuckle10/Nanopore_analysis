@@ -1,6 +1,5 @@
 import argparse
 import logging
-import sys
 
 from src.utils.cli_utils import add_io_arguments
 from pathlib import Path
@@ -147,3 +146,5 @@ def setup_parsers(subparsers, parent_parser, config):
         output_dest="pipeline_steps.analysis.paths.deconvolution_results_name"
     )
     deconv_parser.set_defaults(func=deconvolution_handler)
+
+

@@ -90,11 +90,6 @@ def main():
     # Parse and dispatch
     args = main_parser.parse_args()
 
-    '''
-    user_provided_dests = {
-        dest for dest, value in vars(args).items() if value != main_parser.get_default(dest)
-    }
-    '''
     update_config_from_args(config, args, main_parser)
 
     # Load config
@@ -110,7 +105,6 @@ def main():
         full_config_path = Path("full_config.yaml")
         save_final_config(config, full_config_path)
         log_level = logging.DEBUG if args.debug else logging.INFO
-        # log_level = logging.DEBUG if args.verbose else logging.INFO
         run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         log_file_path = f"logs/{run_timestamp}_pipeline_run.log" if not args.no_log else None
         Logger.setup_logger(log_level=log_level, log_file=log_file_path)
