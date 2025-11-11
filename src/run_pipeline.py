@@ -19,23 +19,6 @@ from src import PROJECT_ROOT
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 DEFAULT_RUNTIME_CONFIG_PATH = PROJECT_ROOT / "runtime_config.yaml"
 
-COMMAND_MAP = {
-    'setup': 'pipeline',
-    'basecalling': 'pipeline',
-    'basecall': 'pipeline',
-    'align': 'pipeline',
-    'alignment': 'pipeline',
-    'methylation_summary': 'pipeline',
-    'deconvolution': 'pipeline',
-    'deconv': 'pipeline',
-    'all': 'pipeline',
-
-    'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
-    'summarise-lengths': 'src/analysis/summarise_lengths.py',
-    'download': 'src/utils/resource_downloader.py'
-}
-
-
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
