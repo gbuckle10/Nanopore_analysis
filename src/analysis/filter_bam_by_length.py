@@ -3,12 +3,11 @@ import pysam
 import logging
 from pathlib import Path
 import sys
-from logger import setup_logger
 import subprocess
 
 
 
-def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selection="both"):
+def filter_bam_by_length(input_file, size_cutoff, output_dir, side_selection):
     '''
     Takes a bam file and filters based on the size cutoff. A new bam file is made based on the filtering,
     with the option to save the reads above the cutoff, below the cutoff, or both.
@@ -20,10 +19,11 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
     :return:
     '''
 
-    print(f"Filtering bam by size: {size_cutoff}")
     logger = logging.getLogger('pipeline')
     logger.info(f"Splitting file: {input_file}")
     logger.info(f"Read size cutoff - {size_cutoff}")
+    logger.info(f"Outputting file(s) to {output_dir}")
+    logger.info(f"Selection mode: {side_selection}")
     prefix = Path(input_file).stem
 
     output_above = None
@@ -86,50 +86,3 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
             output_above.close()
         if output_below:
             output_below.close()
-
-if __name__ == "__main__":
-    setup_logger()
-
-    parser = argparse.ArgumentParser(
-        description="Filter a bam file by a specified length and indexes the output"
-    )
-
-    parser.add_argument(
-        "input_bam",
-        type=Path,
-        help="Path to the input bam file."
-    )
-    parser.add_argument(
-        "-c", "--cutoff",
-        type=int,
-        required=True,
-        help="The read length cutoff value."
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        help="The directory to save the filtered files. If no directory selected, it'll be saved to the same directory as the original BAM file."
-    )
-    parser.add_argument(
-        "--mode",
-        choices=['above', 'below', 'both'],
-        type=str,
-        help="Specify which reads to save:\n"
-             "  above: save reads with length > cutoff\n"
-             "  below: save reads with length <= cutoff\n"
-             "  both: save reads above and below the cutoff in separate files"
-    )
-
-    args = parser.parse_args()
-
-
-    if args.output_dir:
-        output_directory = args.output_dir
-    else:
-        output_directory = args.input_bam.parent
-
-    print(f"Input BAM: {args.input_bam}")
-    print(f"Cutoff: {args.cutoff}")
-    print(f"Mode: {args.mode}")
-    print(f"Output directory: {output_directory}")
-    filter_bam_by_length(args.input_bam, args.cutoff, output_directory, args.mode)

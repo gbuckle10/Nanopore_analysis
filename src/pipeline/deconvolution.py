@@ -98,6 +98,7 @@ def _add_atlas_arg(parser, config):
     parser.add_argument(
         '--atlas', type=Path,
         default=None,
+        metavar="<path>",
         dest="pipeline_steps.analysis.paths.atlas_dir_name",
         help="Path to the atlas used for deconvolution"
     )

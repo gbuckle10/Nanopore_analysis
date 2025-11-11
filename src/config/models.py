@@ -388,7 +388,7 @@ class AnalysisPaths(BaseModel):
         if self.user_deconv_output:
             self.full_deconv_output_path = resolve_path(root_dir, self.user_deconv_output)
         else:
-            self.deconvolution_dir = resolve_path(analysis_dir, self.deconvolution_dir_name)
+            self.full_deconv_output_path = resolve_path(analysis_dir, self.deconvolution_dir_name)
 
 
     def build_and_validate(self, common_paths: Paths):
