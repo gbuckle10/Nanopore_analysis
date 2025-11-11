@@ -1,6 +1,5 @@
 import argparse
 import logging
-import os
 from pathlib import Path
 
 from src.utils.cli_utils import add_io_arguments
@@ -14,9 +13,6 @@ def full_basecalling_handler(config):
     logger.info("Running full basecalling step.")
 
     input_file = config.pipeline_steps.basecalling.paths.full_pod5_path
-    if input_file is None:
-        raise ValueError("Could not determine the path for the POD5 data to basecall")
-    # The output should depend on whether you want to demultiplex or not. Add a tag for that in future.
     basecalled_bam = config.pipeline_steps.basecalling.paths.full_unaligned_bam_path
     demultiplexed_output_dir = config.pipeline_steps.basecalling.paths.full_demultiplexed_output_dir
     kit_name = config.pipeline_steps.basecalling.params.complex_settings.kit_name
@@ -186,6 +182,8 @@ def setup_parsers(subparsers, parent_parser, config):
         aliases=['basecall'],
         parents=[parent_parser]
     )
+    validation_func = lambda: config.pipeline_steps.basecalling.paths._validate()
+    basecalling_parser.set_defaults(validation_func=validation_func)
 
     def show_basecalling_help(config):
         """Default function to show help for the basecalling command group"""

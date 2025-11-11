@@ -86,6 +86,8 @@ def setup_parsers(subparsers, parent_parser, config):
         help="Run the full pipeline using steps defined in the config file.",
         parents=[parent_parser]
     )
+    validation_func = lambda: validate_active_steps(config)
+    run_parser.set_defaults(validation_func=validation_func)
 
 
     # Register commands from modules.

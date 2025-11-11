@@ -361,6 +361,8 @@ Example Usage:
     nanopore_analysis align qc --input-file aligned_reads.bam
 """
     )
+    validation_func = lambda: config.pipeline_steps.align.paths._validate()
+    alignment_parser.set_defaults(validation_func=validation_func)
 
     def show_align_help(config):
         """Default function to show help for the align command group"""

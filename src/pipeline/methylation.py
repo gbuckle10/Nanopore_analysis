@@ -50,6 +50,8 @@ def setup_parsers(subparsers, parent_parser, config):
         aliases=['methylation'],
         parents=[parent_parser]
     )
+    validation_func = lambda: config.pipeline_steps.methylation.paths._validate()
+    methylation_parser.set_defaults(validation_func=validation_func)
 
     def show_methylation_help(config):
         """Default function to show help for the basecalling command group"""

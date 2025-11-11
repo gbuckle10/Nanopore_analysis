@@ -10,19 +10,21 @@ logger = logging.getLogger(__name__)
 
 
 def deconvolution_handler(config):
-    input_data_path = config.pipeline_steps.analysis.paths.full_deconv_input_path
+    logger.info("Running deconvolution step.")
+    input_file = config.pipeline_steps.analysis.paths.full_deconv_input_path
     atlas_path = config.pipeline_steps.analysis.paths.full_atlas_path
     output_dir = config.pipeline_steps.analysis.paths.full_deconv_output_path
     algorithm = config.pipeline_steps.analysis.params.deconv_algorithm
 
+    print(f"Input file - {input_file}")
     if algorithm == "uxm":
         wgbstools_exe = config.pipeline_steps.analysis.tools.wgbstools_exe
         uxm_exe = config.pipeline_steps.analysis.tools.uxm_exe
-        _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, output_dir)
+        _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_file, atlas_path, output_dir)
     elif algorithm == "nnls":
         logger.info("Running deconvolution with NNLS algorithm")
         nnls_exe = config.pipeline_steps.analysis.tools.methatlas_exe
-        _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path)
+        _run_nnls_algorithm(nnls_exe, input_file, output_dir, atlas_path)
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
 
@@ -133,6 +135,9 @@ def setup_parsers(subparsers, parent_parser, config):
         aliases=['deconv', 'analysis'],
         parents=[parent_parser]
     )
+    validation_func = lambda: config.pipeline_steps.analysis.paths._validate()
+    deconv_parser.set_defaults(validation_func=validation_func)
+
     _add_atlas_arg(deconv_parser, config)
     _add_algorithm_arg(deconv_parser, config)
 

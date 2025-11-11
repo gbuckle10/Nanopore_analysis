@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 
 from src import PROJECT_ROOT
@@ -56,25 +57,18 @@ def _set_config_attribute(obj, path, value):
     final_key = keys[-1]
 
     setattr(current_obj, final_key, value)
-def run_initial_validation(command, config: AppSettings):
+def run_initial_validation(args, config: AppSettings):
     """
     Validates the variables needed for the given command.
     """
 
+    validation_method = getattr(args, 'validation_func', None)
 
-    VALIDATION_MAP = {
-        'basecalling': lambda: config.pipeline_steps.basecalling.paths._validate(),
-        'align': lambda: config.pipeline_steps.align.paths._validate(),
-        'methylation': lambda: config.pipeline_steps.methylation.paths._validate(),
-        'analysis': lambda: config.pipeline_steps.analysis.paths._validate(),
-        'run': lambda: validate_active_steps(config)
-    }
-
-    if command in VALIDATION_MAP:
-        validation_method = VALIDATION_MAP.get(command)
+    if validation_method:
+        logging.debug(f"Running validation for command '{args.command}'...")
         validation_method()
     else:
-        print(f"No validation method found for {command}")
+        logging.debug(f"No validation function configured for command '{args.command}'. Skipping validation")
 
 def validate_active_steps(config: AppSettings):
     """

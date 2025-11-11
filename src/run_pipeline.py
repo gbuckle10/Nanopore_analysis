@@ -113,7 +113,7 @@ def main():
         # Call the function that is attached by set_defaults
 
         if hasattr(args, 'func'):
-            run_initial_validation(args.command, config)
+            run_initial_validation(args, config)
             call_handler_with_correct_args(args.func, args, config)
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)
