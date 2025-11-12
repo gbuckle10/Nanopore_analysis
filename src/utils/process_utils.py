@@ -1,18 +1,85 @@
 import logging
 import os
 import pty
+import re
 import shutil
 import signal
 import subprocess
 import sys
-from typing import Callable
-
+from typing import Callable, List
 
 logger = logging.getLogger('pipeline')
 
+class TunableHandler:
+    """
+    A tunable handler which suppresses the main data stream but actively watches for specific, important messages
+    like file skipping warnings and records their occurrences in its own internal state.
+    """
+    def __init__(self, log_prefixes: List[str] = None, skip_signal_regex: str = None, *args, **kwargs):
+        self.buffer = b""
+        self.skip_signal_detected = False
+        if log_prefixes is None:
+            self.log_prefixes = [b'[', b'Error', b'Warning', b'info']
+        else:
+            self.log_prefixes = [p.encode() for p in log_prefixes]
+
+        if skip_signal_regex:
+            self.skip_signal_regex = re.compile(skip_signal_regex.encode(), re.IGNORECASE)
+        else:
+            self.skip_signal_regex = None
+
+    def __call__(self, byte_chunk: bytes):
+        self.buffer += byte_chunk
+        lines = self.buffer.splitlines(keepends=True)
+        if lines and not lines[-1].endswith((b'\n', b'\r')):
+            self.buffer = lines.pop()
+        else:
+            self.buffer = b""
+        for line_bytes in lines:
+            self._process_line(line_bytes)
+
+    def _process_line(self, line_bytes: bytes):
+        stripped_line = line_bytes.strip()
+        if not stripped_line:
+            return
+
+        # Check for skip signal, if configured
+        if self.skip_signal_regex and self.skip_signal_regex.search(stripped_line):
+            self.skip_signal_detected = True
+            line_text = stripped_line.decode(sys.stdout.encoding, 'replace')
+            logging.warning(f"Stateful signal detected: {line_text}")
+            return
+
+        # Check for other generic log messages
+        if any(stripped_line.startswith(p) for p in self.log_prefixes):
+            line_text = stripped_line.decode(sys.stdout.encoding, 'replace')
+            logger.info(line_text)
+            return
+
+        logging.debug("DATA_STREAM (suppressed): %s", stripped_line[:200])
+
+    def flush(self):
+        if self.buffer:
+            self._process_line(self.buffer)
+            self.buffer = b""
+
+class SilentHandler:
+    """
+    A handler class that does nothing with the output from a subprocess. It silences the stderr/stdout scream while
+    still allowing the main execution wrapper to monitor the process for exit codes.
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, byte_chunk: bytes):
+        # Don't do anything with the incoming data
+        pass
+
+    def flush(self):
+        pass
 class LiveDisplayHandler:
     '''
-    A class that processes a stream of bytes from a subprocess. It displays progress bars on the terminal by
+    A handler class that processes a stream of bytes from a subprocess. It displays progress bars on the terminal by
     overwriting the current line, and prints a clean format to the logging file.
     '''
 
@@ -104,7 +171,6 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
     logger.info(f"Executing command: {' '.join(command)}")
     process = None
     pgid = None
-
     handler = output_handler_class()
 
     try:
@@ -134,7 +200,7 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
                     if not chunk:
                         break
 
-                    #print(f"DEBUG CHUNK: {repr(chunk)}")
+                    logging.debug(f"RAW_CHUNK: {repr(chunk)}")
 
                     handler(chunk)
 
