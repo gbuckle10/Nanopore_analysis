@@ -137,23 +137,7 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
                     #print(f"DEBUG CHUNK: {repr(chunk)}")
 
                     handler(chunk)
-                    '''
-            parent_fd = None  # fd is now managed by master_file
-            try:
-                for line in iter(master_file.readline, ''):
-                    handler(line)
-                    #output_handler(line)
-                    
-                    clean_line = line.strip()
-                    if not clean_line:
-                        continue
-                    if '\r' in line:
-                        logger.debug(clean_line)
-                    else:
-                        logger.info(clean_line)
-                    
-                handler.flush()
-                    '''
+
                 except OSError:
                     break
 

@@ -4,16 +4,18 @@ import sys
 from typing import List, Optional, Union
 from pathlib import Path
 from src.utils.logger import logging
-from src.utils.process_utils import run_command, log_info_handler
+from src.utils.process_utils import run_command, log_info_handler, LiveDisplayHandler
 
 logger = logging.getLogger(__name__)
+
 
 class ToolRunner:
     """
     A runner for external command-line tools. Object handles finding the executable and running commands.
     """
 
-    def __init__(self, executable_path: Union[Path, str], output_flag: Optional[str]=None):
+    def __init__(self, executable_path: Union[Path, str], output_flag: Optional[str] = None,
+                 handler_class=LiveDisplayHandler):
         """
         Initialise the runner.
         Args:
@@ -21,6 +23,7 @@ class ToolRunner:
             output_flag: The flag that the tool uses for file output (e.g. '-o', '--output')
         """
 
+        self.handler_class = handler_class
         self.executable_path = Path(executable_path)
         if not self.executable_path.is_file():
             raise FileNotFoundError(f"Tool executable not found at: {self.executable_path}")
@@ -57,13 +60,14 @@ class ToolRunner:
                 # The tool uses a flag like '-o', so I'll add it to the command.
                 full_command.extend([self.output_flag, str(output_path)])
                 logger.info(f"Executing: {' '.join(full_command)}")
-                run_command(full_command)
+                run_command(full_command, output_handler_class=self.handler_class)
             else:
                 # The tool prints to stdout by default. Redirect it.
                 self._run_and_capture_stdout(full_command, output_path)
         else:
             logger.info(f"Executing: {' '.join(full_command)}")
             run_command(full_command, output_handler=log_info_handler)
+
     def start(self, args: List[str], **kwargs) -> Optional[subprocess.Popen]:
         """
         Starts the command using subprocess.Popen and returns the process object.
