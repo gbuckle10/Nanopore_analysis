@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.analysis import analysis_parsers
 from src.config.models import load_and_validate_configs, AppSettings, print_config
-from src.config.paths import build_config_paths, run_initial_validation, update_config_from_args
+from src.config.paths import update_config_from_args, build_config_paths
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils import resource_downloader
 from src.utils.cli_utils import call_handler_with_correct_args
@@ -113,7 +113,15 @@ def main():
         # Call the function that is attached by set_defaults
 
         if hasattr(args, 'func'):
-            run_initial_validation(args, config)
+            validation_to_run = getattr(args, 'validation_func', None)
+
+            if validation_to_run:
+                logging.debug(f"Running initial validation for command '{args.command}'...")
+
+                validation_to_run()
+            else:
+                logging.debug(f"No validation function configured for command '{args.command}'.")
+
             call_handler_with_correct_args(args.func, args, config)
         else:
             print(f"ERROR: You must specify a subcommand for '{args.command}'. Use -h for help.", file=sys.stderr)

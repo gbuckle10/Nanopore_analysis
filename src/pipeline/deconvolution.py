@@ -135,7 +135,7 @@ def setup_parsers(subparsers, parent_parser, config):
         aliases=['deconv', 'analysis'],
         parents=[parent_parser]
     )
-    validation_func = lambda: config.pipeline_steps.analysis.paths._validate()
+    validation_func = lambda: config.pipeline_steps.analysis.paths._validate(True)
     deconv_parser.set_defaults(validation_func=validation_func)
 
     _add_atlas_arg(deconv_parser, config)

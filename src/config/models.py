@@ -217,7 +217,9 @@ class AlignmentPaths(BaseModel):
         return None
 
 
-    def _validate(self):
+    def _validate(self, is_standalone_run: bool):
+        validate_path(self.full_unaligned_input_path, param_name="Alignment Input", must_exist=is_standalone_run)
+
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError(
                 "Configuration Error in alignment: Must provide either 'genome_id' or 'custom_fasta_reference'")
@@ -280,7 +282,7 @@ class MethylationPaths(BaseModel):
     full_bed_file_path: Optional[Path] = None
     full_meth_log_path: Optional[Path] = None
 
-    def _validate(self):
+    def _validate(self, is_standalone_run: bool):
         pass
 
     def _build(self, common_paths: Paths, conv_aligned_input: Optional[Path] = None):
@@ -360,7 +362,8 @@ class AnalysisPaths(BaseModel):
     full_deconv_input_path: Optional[Path] = None
     full_deconv_output_path: Optional[Path] = None
 
-    def _validate(self):
+    def _validate(self, is_standalone_run: bool):
+        validate_path(self.full_deconv_input_path, param_name="Deconvolution Input", must_exist=is_standalone_run)
         validate_path(self.full_atlas_path, must_exist=True, must_be_file=True,
                       param_name="Analysis Atlas Path ('full_atlas_path')")
 

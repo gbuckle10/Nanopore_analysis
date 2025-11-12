@@ -14,12 +14,11 @@ def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = Fals
     if must_exist and not path.exists():
         raise FileNotFoundError(f"Path for {param_name} doesn't exist: {path}")
 
-    if path.exists():
-        if must_be_file and not path.is_file():
-            raise ValueError(f"Path for {param_name} must be a file, but a directory was provided: {path}")
+    if must_be_file and not path.is_file():
+        raise ValueError(f"Path for {param_name} must be a file, but a directory was provided: {path}")
 
-        if must_be_dir and not path.is_dir():
-            raise ValueError(f"Path for {param_name} must be a directory, but a file was provided: {path}")
+    if must_be_dir and not path.is_dir():
+        raise ValueError(f"Path for {param_name} must be a directory, but a file was provided: {path}")
 
 
 def validate_pod5(path_to_check: Optional[Path], param_name: str):

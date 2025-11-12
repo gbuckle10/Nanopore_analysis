@@ -65,11 +65,6 @@ def full_pipeline_handler(config: AppSettings):
         logging.info(f"    Step {i}: {step_name}")
     logging.info("----------------------------------")
 
-    try:
-        validate_active_steps(config)
-    except (ValueError, FileNotFoundError) as e:
-        raise
-
     for step_name in active_steps:
         logging.info(f">>> EXECUTING STEP: {step_name}")
         step_func = function_map.get(step_name)

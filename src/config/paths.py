@@ -1,7 +1,7 @@
 import argparse
 import logging
 from pathlib import Path
-
+import inspect
 from src import PROJECT_ROOT
 from .models import AppSettings
 
@@ -22,7 +22,6 @@ def build_config_paths(config: AppSettings) -> None:
     common_paths.reference_genome_dir = root / "reference_genomes"
     common_paths.externals_dir = root / "externals"
 
-
     # Run build_paths method for each specific step
     config.pipeline_steps.setup.paths.build_and_validate(common_paths)
     config.pipeline_steps.basecalling.paths.build_and_validate(common_paths)
@@ -35,6 +34,7 @@ def build_config_paths(config: AppSettings) -> None:
     config.pipeline_steps.methylation.paths.build_and_validate(common_paths)
     config.pipeline_steps.analysis.paths.build_and_validate(common_paths)
 
+
 def update_config_from_args(config: AppSettings, args: argparse.Namespace, parser: argparse.ArgumentParser):
     """
     Updates the Pydantic config object in-place with values from argparse
@@ -44,11 +44,11 @@ def update_config_from_args(config: AppSettings, args: argparse.Namespace, parse
     for dest, value in args_dict.items():
         default_value = parser.get_default(dest)
         if '.' in dest and value is not None and value != default_value:
-            #print(f"Setting {dest} to {value}, because it's different to {default_value}")
+            # print(f"Setting {dest} to {value}, because it's different to {default_value}")
             _set_config_attribute(config, dest, value)
 
-def _set_config_attribute(obj, path, value):
 
+def _set_config_attribute(obj, path, value):
     keys = path.split('.')
     current_obj = obj
     for key in keys[:-1]:
@@ -57,18 +57,7 @@ def _set_config_attribute(obj, path, value):
     final_key = keys[-1]
 
     setattr(current_obj, final_key, value)
-def run_initial_validation(args, config: AppSettings):
-    """
-    Validates the variables needed for the given command.
-    """
 
-    validation_method = getattr(args, 'validation_func', None)
-
-    if validation_method:
-        logging.debug(f"Running validation for command '{args.command}'...")
-        validation_method()
-    else:
-        logging.debug(f"No validation function configured for command '{args.command}'. Skipping validation")
 
 def validate_active_steps(config: AppSettings):
     """
@@ -76,18 +65,28 @@ def validate_active_steps(config: AppSettings):
     :return:
     """
     steps = config.pipeline_steps
-    for step_name, should_run in config.pipeline_control.run_steps:
 
+    first_active_step = True
+
+    for step_name, should_run in config.pipeline_control.run_steps:
         if not should_run:
             continue  # Skip validation for inactive steps
-        step_model = getattr(steps, step_name, None)
 
-        if not step_model:
+        step_model = getattr(steps, step_name, None)
+        if not step_model or not hasattr(step_model, 'paths'):
+            logging.warning(f"No validation path model found for active step: {step_name}")
             continue
         validate_method = getattr(step_model.paths, '_validate', None)
 
         if callable(validate_method):
             try:
-                validate_method()
+                is_standalone_check = first_active_step
+                sig = inspect.signature(validate_method)
+
+                if 'is_standaline_run' in sig.parameters:
+                    validate_method(is_standalone_check)
+                else:
+                    validate_method()
+                first_active_step = False
             except (ValueError, FileNotFoundError) as e:
                 raise ValueError(f"Validation failed for step '{step_name}': {e}") from e
