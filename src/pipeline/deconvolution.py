@@ -7,7 +7,7 @@ from src.utils.cli_utils import add_io_arguments
 from pathlib import Path
 
 from src.utils.file_utils import ensure_dir_exists
-from src.utils.process_utils import LiveDisplayHandler
+from src.utils.process_utils import LiveDisplayHandler, SilentHandler, TunableHandler
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
     print(f"Filtered pat name - {filtered_pat_name}")
     print(f"Indexed pat name - {indexed_pat_name}")
 
-    wgbstools_runner = ToolRunner(wgbstools_exe, '-o', handler_class=LiveDisplayHandler)
+    wgbstools_runner = ToolRunner(wgbstools_exe, '-o', handler_class=SilentHandler)
 
     # The first step is to convert the bam file to a pat file.
     bam2pat_command = [
@@ -63,8 +63,6 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
     ]
     ensure_dir_exists(pat_dir)
     wgbstools_runner.run(bam2pat_command, pat_dir)
-    sys.exit(0)
-
 
     filtered_pat_dir = input_data_path.with_name(filtered_pat_name)
     indexed_pat_dir = input_data_path.with_name(indexed_pat_name)
@@ -78,8 +76,6 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
         str(input_data_path),
         '-L', str(atlas_path)
     ]
-
-    logger.info(f"Filtering the pat file based on the atlas using command: {' '.join(pat_filter_command)}")
 
     wgbstools_runner.run(pat_filter_command, input_data_path.parent)
 

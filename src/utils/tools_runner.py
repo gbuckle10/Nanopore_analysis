@@ -56,12 +56,13 @@ class ToolRunner:
         full_command = [str(self.executable_path)] + args
         if output_path:
             if self.output_flag:
-                print(f"Output flag given - {self.output_flag}")
-                # The tool uses a flag like '-o', so I'll add it to the command.
+                logging.debug(f"Output flag given: {self.output_flag}")
                 full_command.extend([self.output_flag, str(output_path)])
                 logger.info(f"Executing: {' '.join(full_command)}")
                 run_command(full_command, output_handler_class=self.handler_class)
             else:
+                logging.debug(f"An output path is given but the ToolRunner has no output flag. The output will be "
+                              f"redirected to {output_path}")
                 # The tool prints to stdout by default. Redirect it.
                 self._run_and_capture_stdout(full_command, output_path)
         else:
