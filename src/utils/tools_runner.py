@@ -64,7 +64,6 @@ class ToolRunner:
         else:
             logger.info(f"Executing: {' '.join(full_command)}")
             run_command(full_command, output_handler=log_info_handler)
-
     def start(self, args: List[str], **kwargs) -> Optional[subprocess.Popen]:
         """
         Starts the command using subprocess.Popen and returns the process object.

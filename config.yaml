@@ -96,7 +96,7 @@ pipeline_steps:
       deconv_algorithm: "uxm"
     tools:
     paths:
-      atlas_file_name: "UXM_atlas.csv"
+      atlas_file_name: "Atlas.U250.l4.hg38.full.tsv"
       manifest_name: "illumina_manifest.csv"
       deconvolution_results_name: "deconvoluted_output.csv"
 

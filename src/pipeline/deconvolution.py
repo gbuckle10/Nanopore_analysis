@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 from src.utils.cli_utils import add_io_arguments
 from pathlib import Path
@@ -43,9 +44,18 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
     indexed_pat_name = f"{input_base_name}_tempnew{pat_index_suffix}"
     filtered_pat_dir = input_data_path.with_name(filtered_pat_name)
     indexed_pat_dir = input_data_path.with_name(indexed_pat_name)
+    deconvoluted_file = output_dir / "deconvolution.csv"
     logger.info(f"Filtering input based on the atlas, filtered file {filtered_pat_dir}")
 
     wgbstools_runner = ToolRunner(wgbstools_exe, '-o')
+
+    # The first step is to convert the bam file to a pat file.
+    bam2pat_command = [
+        'bam2pat',
+        str(input_data_path)
+    ]
+
+    wgbstools_runner.run(bam2pat_command, input_data_path.parent)
 
     pat_filter_command = [
         # 'wgbstools',
@@ -56,7 +66,7 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
 
     logger.info(f"Filtering the pat file based on the atlas using command: {' '.join(pat_filter_command)}")
 
-    wgbstools_runner.run(pat_filter_command, filtered_pat_dir)
+    wgbstools_runner.run(pat_filter_command, input_data_path.parent)
 
     logger.info(f"Finished filtering the pat based on the atlas. Indexing...")
     pat_index_command = [
@@ -68,7 +78,7 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
 
     logger.info(f"Finished indexing the pat. Deconvoluting...")
 
-    uxm_runner = ToolRunner(uxm_exe, '--output')
+    uxm_runner = ToolRunner(uxm_exe, '-o')
 
     deconvolution_command = [
         # 'uxm',
@@ -77,7 +87,8 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
         '--atlas', str(atlas_path)
         # '--output', str(output_dir),
     ]
-    uxm_runner.run(deconvolution_command, output_dir)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    uxm_runner.run(deconvolution_command, deconvoluted_file)
 
 
 def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
@@ -145,10 +156,10 @@ def setup_parsers(subparsers, parent_parser, config):
         deconv_parser, config,
         default_input=None,
         input_file_help="Path to file for deconvolution.",
-        input_dest="pipeline_steps.analysis.paths.deconvolution_input_name",
+        input_dest="pipeline_steps.analysis.paths.user_deconv_input",
         default_output=None,
         output_dir_help="File to save the deconvolution results in.",
-        output_dest="pipeline_steps.analysis.paths.deconvolution_results_name"
+        output_dest="pipeline_steps.analysis.paths.user_deconv_output"
     )
     deconv_parser.set_defaults(func=deconvolution_handler)
 

@@ -363,7 +363,9 @@ class AnalysisPaths(BaseModel):
     full_deconv_output_path: Optional[Path] = None
 
     def _validate(self, is_standalone_run: bool):
-        validate_path(self.full_deconv_input_path, param_name="Deconvolution Input", must_exist=is_standalone_run)
+        validate_path(self.full_deconv_input_path, param_name="Deconvolution Input", must_exist=is_standalone_run,
+                      context_help="This file is the input of the deconvolution. For a standalone deconvolution run it"
+                                   " should be provided with the --input-file CLI argument or via the config file.")
         validate_path(self.full_atlas_path, must_exist=True, must_be_file=True,
                       param_name="Analysis Atlas Path ('full_atlas_path')")
 

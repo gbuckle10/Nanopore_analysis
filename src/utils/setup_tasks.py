@@ -4,7 +4,6 @@ from pathlib import Path
 
 from src import PROJECT_ROOT
 from src.utils.process_utils import run_command
-from src.utils.config_utils import load_config
 import os
 import sys
 import requests

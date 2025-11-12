@@ -3,22 +3,35 @@ from typing import Optional
 
 
 def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = False, must_be_dir: bool = False,
-                  param_name: str = "Path"):
+                  param_name: str = "Path", context_help: Optional[str] = None):
     """
     Validates a given path and raises specific errors on failure.
     """
 
+    def _format_error(base_message: str) -> str:
+        if context_help:
+            return f"{base_message}\n  -> {context_help}"
+        return base_message
+
     if path is None:
-        raise ValueError(f"Missing required parameter: {param_name}")
+        raise ValueError(_format_error(
+            f"Missing required parameter: {param_name}"
+        ))
 
     if must_exist and not path.exists():
-        raise FileNotFoundError(f"Path for {param_name} doesn't exist: {path}")
+        raise FileNotFoundError(_format_error(
+            f"Path for {param_name} doesn't exist: {path}"
+        ))
 
     if must_be_file and not path.is_file():
-        raise ValueError(f"Path for {param_name} must be a file, but a directory was provided: {path}")
+        raise ValueError(_format_error(
+            f"Path for {param_name} must be a file, but a directory was provided: {path}"
+        ))
 
     if must_be_dir and not path.is_dir():
-        raise ValueError(f"Path for {param_name} must be a directory, but a file was provided: {path}")
+        raise ValueError(_format_error(
+            f"Path for {param_name} must be a directory, but a file was provided: {path}"
+        ))
 
 
 def validate_pod5(path_to_check: Optional[Path], param_name: str):
