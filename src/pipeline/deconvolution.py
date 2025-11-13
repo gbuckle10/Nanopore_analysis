@@ -7,7 +7,7 @@ from src.utils.cli_utils import add_io_arguments
 from pathlib import Path
 
 from src.utils.file_utils import ensure_dir_exists
-from src.utils.process_utils import LiveDisplayHandler, SilentHandler, TunableHandler
+from src.utils.process_utils import LiveDisplayHandler, SilentHandler, TunableHandler, LineBufferingHandler
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,41 @@ def deconvolution_handler(config):
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
 
+def _wgbstools_pat_filter(filter_input: Path, filter_output: Path, atlas_path: Path, wgbstools_runner: ToolRunner):
+    """
+    Goes through all of the pat files in the pat_dir and filters them based on the atlas
+    """
+
+    logger.debug(f"The file {filter_input} will be filtered and saved to {filter_output}")
+    ensure_dir_exists(filter_output.parent)
+
+
+    pat_filter_command = [
+        # 'wgbstools',
+        'view',
+        str(filter_input),
+        '-L', str(atlas_path)
+    ]
+    wgbstools_runner.run(pat_filter_command, filter_output)
+
+    index_command = [
+        'index', str(filter_output)
+    ]
+    wgbstools_runner.run(index_command)
+
+
+def _generate_pats(input_data_path: Path, pat_dir: Path, wgbstools_runner: ToolRunner):
+    """
+    Generates pat files using wgbstools
+    """
+
+    bam2pat_command = [
+        'bam2pat',
+        str(input_data_path)
+    ]
+    ensure_dir_exists(pat_dir)
+    wgbstools_runner.run(bam2pat_command, pat_dir)
+    logger.info("Finished generating pat files.")
 
 def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, output_dir):
     '''
@@ -40,71 +75,43 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
     logger.info("Running UXM Deconvolution...")
     logger.info(f"Deconvolving {input_data_path.name} using atlas {atlas_path.name}")
 
-    pat_index_suffix = '.pat.gz'
-    pat_suffix = '.pat'
-
-    # The intermediate files should be named the same as the base file
-    input_base_name = input_data_path.stem
-    filtered_pat_name = f"{input_base_name}{pat_suffix}"
-    indexed_pat_name = f"{input_base_name}{pat_index_suffix}"
-
-    pat_dir = Path("analysis") / "pat_files"
-
-    logger.debug(f"Input base name - {input_base_name}")
-    logger.debug(f"Filtered pat name - {filtered_pat_name}")
-    logger.debug(f"Indexed pat name - {indexed_pat_name}")
-
-    wgbstools_runner = ToolRunner(wgbstools_exe, '-o', handler_class=SilentHandler)
-
-    # The first step is to convert the bam file to a pat file.
-    bam2pat_command = [
-        'bam2pat',
-        str(input_data_path)
-    ]
-    logger.info("Finished generating pat files.")
+    wgbstools_runner = ToolRunner(wgbstools_exe, '-o', handler_class=LineBufferingHandler)
 
     #========================================
     # If input_data_path is a directory, it should loop through the pat files in that folder and do the bam2pat command on each one.
+    # The subsequent filtering step should also loop through all of the files in pat_dir
     #========================================
+    parent_dir = Path("analysis")
+    pat_dir = parent_dir / "pat_files"
+    filtered_pat_dir = parent_dir / "pat_filtered"
+    deconvolution_dir = parent_dir / "deconvoluted_output"
 
-    ensure_dir_exists(pat_dir)
-    wgbstools_runner.run(bam2pat_command, pat_dir)
+    base_name = input_data_path.stem
+    logger.debug(f"File base name - {base_name}")
+    # The first step is to convert the bam file to a pat file.
+    _generate_pats(input_data_path, pat_dir, wgbstools_runner)
 
-    filtered_pat_dir = pat_dir.parent / "pat_filtered"
+    logger.debug(f"Pat files saved to {pat_dir}")
 
+    filter_input = pat_dir / f"{base_name}.pat.gz"
+    filter_output = filtered_pat_dir / f"{base_name}.pat"
+    filter_index_output = filter_output.with_suffix(".pat.gz")
+    logger.debug(f"Filtered index output - {filter_index_output}")
+    # Then we need to filter the pat file(s) using the atlas.
+    _wgbstools_pat_filter(filter_input, filter_output, atlas_path, wgbstools_runner)
 
-    filtered_pat_dir = input_data_path.with_name(filtered_pat_name)
-    indexed_pat_dir = input_data_path.with_name(indexed_pat_name)
-    deconvoluted_file = output_dir / "deconvolution.csv"
-    logger.info(f"Filtering input based on the atlas, filtered file {filtered_pat_dir}")
+    logger.info(f"Finished filtering the pat file {filter_input}")
 
-
-    pat_filter_command = [
-        # 'wgbstools',
-        'view',
-        str(input_data_path),
-        '-L', str(atlas_path)
-    ]
-
-    wgbstools_runner.run(pat_filter_command, input_data_path.parent)
-
-    logger.info(f"Finished filtering the pat based on the atlas. Indexing...")
-    pat_index_command = [
-        'index',
-        str(filtered_pat_dir)
-    ]
-    wgbstools_runner.run(pat_index_command)
-
-    logger.info(f"Finished indexing the pat. Deconvoluting...")
+    deconvoluted_file = deconvolution_dir / f"{base_name}.csv"
 
     uxm_runner = ToolRunner(uxm_exe, '-o', handler_class=LiveDisplayHandler)
 
     deconvolution_command = [
         'deconv',
-        str(indexed_pat_dir),
+        str(filter_index_output),
         '--atlas', str(atlas_path)
     ]
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    ensure_dir_exists(deconvolution_dir)
     uxm_runner.run(deconvolution_command, deconvoluted_file)
 
 

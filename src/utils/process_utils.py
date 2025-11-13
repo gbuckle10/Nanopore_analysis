@@ -78,6 +78,39 @@ class SilentHandler:
 
     def flush(self):
         pass
+
+class LineBufferingHandler:
+    """
+    A simple handler for tools that produce standard text output. It does no
+    interactive terminal manipulation.
+    """
+    def __init__(self, *args, **kwargs):
+        self.buffer = b''
+
+    def __call__(self, byte_chunk: bytes):
+        """Buffers bytes and processes complete lines."""
+        self.buffer += byte_chunk
+        # Use splitlines to handle \n \r and \r\n
+        lines = self.buffer.splitlines(keepends=True)
+        if lines and not lines[-1].endswith((b'\n', b'\r')):
+            self.buffer = lines.pop()
+        else:
+            self.buffer = b""
+
+        for line_bytes in lines:
+            self._process_line(line_bytes)
+
+    def _process_line(self, line_bytes: bytes):
+        """Decodes and logs a single, complete line."""
+        line_text = line_bytes.decode(sys.stdout.encoding, errors='replace').strip()
+        if line_text:
+            logger.info(line_text)
+
+    def flush(self):
+        if self.buffer:
+            self._process_line(self.buffer)
+            self.buffer = b""
+
 class LiveDisplayHandler:
     '''
     A handler class that processes a stream of bytes from a subprocess. It displays progress bars on the terminal by
@@ -154,22 +187,18 @@ def kill_process_group(pgid):
         logger.warning(f"Sending SIGTERM to process group {pgid}")
         os.killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
-        logger.info(f"Process group {pgid} already terminated.")
+        pass
     except Exception as e:
         logger.error(f"Error during process group termination: {e}")
 
-def log_info_handler(line: str):
-    clean_line = line.strip()
-    if clean_line:
-        logger.info(clean_line)
-
-
 def run_command(command: list, output_handler_class=LiveDisplayHandler,
-                stdout_redirect_path: Union[str, Path, None] = None, env=None, cwd=None):
+                stdout_redirect_path: Union[str, Path, None] = None,
+                env=None, cwd=None, **handler_kwargs):
     '''
     Runs the commands for each step, logs the outputs in real time and handles errors.
     '''
 
+    str_command = list(map(str, command))
     logger.info(f"Executing command: {' '.join(command)}")
     if cwd:
         logger.debug(f"Running command in directory: {cwd}")
@@ -180,6 +209,7 @@ def run_command(command: list, output_handler_class=LiveDisplayHandler,
     process = None
     pgid = None
     f_out = None
+
 
     try:
         if stdout_redirect_path:
@@ -202,7 +232,7 @@ def run_command(command: list, output_handler_class=LiveDisplayHandler,
 
         # We don't need the child part of the terminal anymore.
         os.close(child_fd)
-        #pgid = os.getpgid(process.pid)
+        pgid = os.getpgid(process.pid)
 
         handler = output_handler_class()
 
@@ -221,6 +251,7 @@ def run_command(command: list, output_handler_class=LiveDisplayHandler,
                 except OSError:
                     break
 
+        parent_fd = -1
         handler.flush()
         process.wait()
 
