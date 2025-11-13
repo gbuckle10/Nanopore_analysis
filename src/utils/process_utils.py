@@ -6,9 +6,10 @@ import shutil
 import signal
 import subprocess
 import sys
-from typing import Callable, List
+from pathlib import Path
+from typing import Callable, List, Union
 
-logger = logging.getLogger('pipeline')
+logger = logging.getLogger(__name__)
 
 class TunableHandler:
     """
@@ -163,24 +164,35 @@ def log_info_handler(line: str):
         logger.info(clean_line)
 
 
-def run_command(command: list, output_handler: Callable[[str], None] = log_info_handler, output_handler_class=LiveDisplayHandler, env=None, cwd=None):
+def run_command(command: list, output_handler_class=LiveDisplayHandler,
+                stdout_redirect_path: Union[str, Path, None] = None, env=None, cwd=None):
     '''
     Runs the commands for each step, logs the outputs in real time and handles errors.
     '''
 
     logger.info(f"Executing command: {' '.join(command)}")
+    if cwd:
+        logger.debug(f"Running command in directory: {cwd}")
+    if stdout_redirect_path:
+        stdout_redirect_path = str(stdout_redirect_path)
+        logger.debug(f"Redirecting command stdout to: {stdout_redirect_path}")
+
     process = None
     pgid = None
-    handler = output_handler_class()
+    f_out = None
 
     try:
+        if stdout_redirect_path:
+            f_out = open(stdout_redirect_path, 'wb')
+
         # create pseudoterminal
         parent_fd, child_fd = pty.openpty()
+        stdout_target = f_out if f_out else child_fd
 
         # start subprocess, connecting the output to the pseudoterminal.
         process = subprocess.Popen(
             command,
-            stdout=child_fd,
+            stdout=stdout_target,
             stderr=child_fd,
             text=False,
             preexec_fn=os.setpgrp,
@@ -190,7 +202,9 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
 
         # We don't need the child part of the terminal anymore.
         os.close(child_fd)
-        pgid = os.getpgid(process.pid)
+        #pgid = os.getpgid(process.pid)
+
+        handler = output_handler_class()
 
         # Read the clean, live output from the parent part of the terminal
         with os.fdopen(parent_fd, 'rb', 0) as master_file:
@@ -200,7 +214,7 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
                     if not chunk:
                         break
 
-                    logging.debug(f"RAW_CHUNK: {repr(chunk)}")
+                    #logging.debug(f"RAW_CHUNK: {repr(chunk)}")
 
                     handler(chunk)
 

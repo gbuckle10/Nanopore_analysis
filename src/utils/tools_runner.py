@@ -49,25 +49,21 @@ class ToolRunner:
                 os.remove(output_path)
             raise
 
-    def run(self, args: List[str], output_path: Optional[str] = None):  # output_path is optional, but must be a string.
+    def run(self, args: List[str], output_path: Union[str, Path, None] = None):  # output_path is optional, but must be a string.
         """
         Constructs and runs the tool command.
         """
         full_command = [str(self.executable_path)] + args
         if output_path:
             if self.output_flag:
-                logging.debug(f"Output flag given: {self.output_flag}")
                 full_command.extend([self.output_flag, str(output_path)])
-                logger.info(f"Executing: {' '.join(full_command)}")
-                run_command(full_command, output_handler_class=self.handler_class)
             else:
                 logging.debug(f"An output path is given but the ToolRunner has no output flag. The output will be "
                               f"redirected to {output_path}")
                 # The tool prints to stdout by default. Redirect it.
                 self._run_and_capture_stdout(full_command, output_path)
-        else:
-            logger.info(f"Executing: {' '.join(full_command)}")
-            run_command(full_command, output_handler=log_info_handler)
+
+        run_command(full_command, output_handler_class=self.handler_class)
 
     def start(self, args: List[str], **kwargs) -> Optional[subprocess.Popen]:
         """

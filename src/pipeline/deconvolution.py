@@ -50,9 +50,9 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
 
     pat_dir = Path("analysis") / "pat_files"
 
-    print(f"Input base name - {input_base_name}")
-    print(f"Filtered pat name - {filtered_pat_name}")
-    print(f"Indexed pat name - {indexed_pat_name}")
+    logger.debug(f"Input base name - {input_base_name}")
+    logger.debug(f"Filtered pat name - {filtered_pat_name}")
+    logger.debug(f"Indexed pat name - {indexed_pat_name}")
 
     wgbstools_runner = ToolRunner(wgbstools_exe, '-o', handler_class=SilentHandler)
 
@@ -61,8 +61,17 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
         'bam2pat',
         str(input_data_path)
     ]
+    logger.info("Finished generating pat files.")
+
+    #========================================
+    # If input_data_path is a directory, it should loop through the pat files in that folder and do the bam2pat command on each one.
+    #========================================
+
     ensure_dir_exists(pat_dir)
     wgbstools_runner.run(bam2pat_command, pat_dir)
+
+    filtered_pat_dir = pat_dir.parent / "pat_filtered"
+
 
     filtered_pat_dir = input_data_path.with_name(filtered_pat_name)
     indexed_pat_dir = input_data_path.with_name(indexed_pat_name)
