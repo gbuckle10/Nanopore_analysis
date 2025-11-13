@@ -1,6 +1,7 @@
 import logging
 import os
 import pty
+import re
 import shutil
 import signal
 import subprocess
@@ -9,6 +10,128 @@ from typing import Callable
 
 
 logger = logging.getLogger('pipeline')
+FULL_ANSI_REGEX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+LAYOUT_CONTROL_REGEX = re.compile(r'\x1B\[[0-9;]*[A-DJK]')
+
+class SelectiveAnsiInteractiveHandler:
+    def __init__(self, *args, **kwargs):
+        self.buffer = b""
+        self.is_interactive = sys.stdout.isatty()
+        self.last_line_with_colour = ""
+
+    def __call__(self, byte_chunk: bytes):
+        line_text = byte_chunk.decode(sys.stdout.encoding, errors='replace')
+
+        partially_cleaned = LAYOUT_CONTROL_REGEX.sub('', line_text)
+
+        if '\r' in partially_cleaned:
+            final_message = partially_cleaned.rsplit('\r', 1)[-1]
+        else:
+            final_message = partially_cleaned
+
+        final_message = final_message.strip()
+
+        if not final_message:
+            return
+
+        self.last_line_with_colour = final_message
+
+        if self.is_interactive:
+            terminal_width = shutil.get_terminal_size((80, 20)).columns
+
+            reset_code = '\x1b[0m'
+            display_line = (final_message + reset_code).ljust(terminal_width + len(reset_code))
+
+            sys.stdout.write(display_line + '\r')
+            sys.stdout.flush()
+    def flush(self):
+
+        if self.is_interactive:
+            terminal_width = shutil.get_terminal_size((80, 20)).columns
+            sys.stdout.write(' ' * terminal_width + '\r')
+            sys.stdout.flush()
+
+        if self.last_line_with_colour:
+            final_clean_log_message = FULL_ANSI_REGEX.sub('', self.last_line_with_colour).strip()
+            if final_clean_log_message:
+                logger.info(f"Final status: {final_clean_log_message}")
+
+
+class AnsiPassthroughHandler:
+    def __init__(self, *args, **kwargs):
+        self.log_buffer = b""
+
+    def __call__(self, byte_chunk: bytes):
+        try:
+            sys.stdout.buffer.write(byte_chunk)
+            sys.stdout.buffer.flush()
+        except (IOError, ValueError):
+            pass
+
+        self.log_buffer += byte_chunk
+        lines = self.log_buffer.splitlines(keepends=True)
+        if lines and not lines[-1].endswith((b'\n', b'\r')):
+            self.buffer = lines.pop()
+        else:
+            self.buffer = b""
+
+        for line_bytes in lines:
+            self._process_line_for_logging(line_bytes)
+
+    def _process_line_for_logging(self, line_bytes: bytes):
+        line_text = line_bytes.decode(sys.stdout.encoding, errors='replace')
+        clean_line = FULL_ANSI_REGEX.sub('', line_text).strip()
+        if clean_line:
+            logger.debug(f"STREAM: {clean_line}")
+
+    def flush(self):
+        if self.log_buffer:
+            self._process_line_for_logging(self.log_buffer)
+
+class AnsiStrippingInteractiveHandler:
+    def __init__(self, *args, **kwargs):
+        self.buffer = b""
+        self.is_interactive = sys.stdout.isatty()
+        self.last_cleaned_line = ""
+
+    def __call__(self, byte_chunk: bytes):
+        self.buffer += byte_chunk
+        lines = self.buffer.splitlines(keepends=True)
+        if lines and not lines[-1].endswith((b'\n', b'\r')):
+            self.buffer = lines.pop()
+        else:
+            self.buffer = b""
+
+        for line_bytes in lines:
+            self._process_line(line_bytes)
+
+    def _process_line(self, line_bytes: bytes):
+        line_text = line_bytes.decode(sys.stdout.encoding, errors='replace')
+        clean_line = FULL_ANSI_REGEX.sub('', line_text).strip()
+        if not clean_line:
+            return
+
+        self.last_cleaned_line = clean_line
+
+        logger.debug(clean_line)
+
+        if self.is_interactive:
+            # Clear the previous line before printing a new, normal log line
+            terminal_width = shutil.get_terminal_size((80, 20)).columns
+            sys.stdout.write(clean_line.ljust(terminal_width) + '\r')
+            sys.stdout.flush()
+
+    def flush(self):
+        if self.buffer:
+            self._process_line(self.buffer)
+
+        if self.is_interactive:
+            terminal_width = shutil.get_terminal_size((80, 20)).columns
+            sys.stdout.write(' ' * terminal_width + '\r')
+            sys.stdout.flush()
+
+        if self.last_cleaned_line:
+            logger.info(f"Final modkit statis: {self.last_cleaned_line}")
 
 class LiveDisplayHandler:
     '''
@@ -134,7 +257,7 @@ def run_command(command: list, output_handler: Callable[[str], None] = log_info_
                     if not chunk:
                         break
 
-                    #print(f"DEBUG CHUNK: {repr(chunk)}")
+                    logger.debug(f"DEBUG CHUNK: {repr(chunk)}")
 
                     handler(chunk)
                     '''

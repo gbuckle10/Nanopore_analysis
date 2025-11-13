@@ -5,15 +5,17 @@ from src.utils import logger
 from src.utils.cli_utils import add_io_arguments
 from src.utils.file_utils import ensure_dir_exists
 
-from src.utils.process_utils import run_command
+from src.utils.process_utils import run_command, AnsiStrippingInteractiveHandler, AnsiPassthroughHandler, \
+    SelectiveAnsiInteractiveHandler
 
 logger = logging.getLogger(__name__)
 
 def pileup_handler(config):
     methylation_input_file = config.pipeline_steps.methylation.paths.full_aligned_input_path
     methylation_output_file = config.pipeline_steps.methylation.paths.full_bed_file_path
+    reference_fasta = config.pipeline_steps.align.paths.full_ref_fasta_path
 
-    run_methylation_pileup(methylation_input_file, methylation_output_file)
+    run_methylation_pileup(methylation_input_file, methylation_output_file, reference_fasta)
 
 
 def run_methylation_pileup(aligned_sorted_file, output_bed, reference_fasta_path):
@@ -21,13 +23,13 @@ def run_methylation_pileup(aligned_sorted_file, output_bed, reference_fasta_path
     ensure_dir_exists(output_bed.parent)
     pileup_cmd = [
         'modkit', 'pileup',
-        '--cpg',
-        '-r', str(reference_fasta_path),
         str(aligned_sorted_file),
         str(output_bed)
     ]
+    if reference_fasta_path is not None:
+        pileup_cmd.extend(['--cpg', '-r', str(reference_fasta_path)])
 
-    run_command(pileup_cmd)
+    run_command(pileup_cmd, output_handler_class=SelectiveAnsiInteractiveHandler)
 
 
 def setup_parsers(subparsers, parent_parser, config):
@@ -65,5 +67,9 @@ def setup_parsers(subparsers, parent_parser, config):
         default_output=None,
         output_dir_help="Path to the BED file",
         output_dest="pipeline_steps.methylation.paths.user_methylation_ouput"
+    )
+    p_pileup.add_argument(
+        '--ref',
+        help="Path to reference fasta for pileup"
     )
     p_pileup.set_defaults(func=pileup_handler)
