@@ -32,13 +32,57 @@ def deconvolution_handler(config):
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
 
-def _generate_uxm_deconvolution_tasks(input_path: Path, output_dir: Path) -> list[dict]:
+def _generate_nnls_deconvolution_tasks(input_path: Path) -> list[dict]:
+    """
+    Looks at the input path and creates a list of deconvolution jobs (from bed file to deconvolution results in a
+    csv file).
+    """
+    logger.info(f"Deconvoluting the files in {input_path} using the nnls algorithm")
+
+    parent_dir = Path("analysis")
+
+    tasks = []
+    if not input_path.exists():
+        logger.error(f"Input path does not exist: {input_path}")
+        return []
+
+    if input_path.is_dir():
+        logger.info(f"Input is a directory. Searching for .bed files in {input_path}")
+        bed_files = sorted(list(input_path.glob('*.bed')))
+        if not bed_files:
+            logger.warning(f"No .bed files found in directory: {input_path}")
+            return []
+
+        for bed_file in bed_files:
+            base_name = bed_file.stem
+            tasks.append({
+                'input_bed': bed_file,
+                'base_name': base_name,
+                'sample_output_dir': parent_dir / "deconvoluted_output" / f"{base_name}_nnls.csv"
+            })
+
+    elif input_path.is_file():
+        logger.info(f"Input is a single file: {input_path}")
+        if input_path.suffix != '.bed':
+            logger.warning(f"Input file is not a .bed file. Skipping: {input_path}")
+            return []
+
+        base_name = input_path.stem
+        tasks.append({
+            'input_bed': input_path,
+            'base_name': base_name,
+            'sample_output_dir': parent_dir / "deconvoluted_output" / f"{base_name}_nnls.csv"
+        })
+
+    return tasks
+
+def _generate_uxm_deconvolution_tasks(input_path: Path) -> list[dict]:
     """
     Looks at the input path and creates a list of deconvolution jobs (from aligned sorted bam file to
     deconvolution results in a csv file).
     """
 
-    logger.info(f"Deconvoluting the files in {input_path}")
+    logger.info(f"Deconvoluting the files in {input_path} using the uxm algorithm")
 
     parent_dir = Path("analysis")
     pat_dir = parent_dir / "pat_files"
@@ -90,6 +134,12 @@ def _generate_uxm_deconvolution_tasks(input_path: Path, output_dir: Path) -> lis
 
     return tasks
 
+def _run_single_nnls_deconv(task: dict, atlas_path: Path, nnls_runner: ToolRunner):
+    base_name = task['base_name']
+    logger.info(f"--- Starting NNLS deconvolution for sample: {base_name} ---")
+
+    output_dir = task['deconvoluted_file']
+
 def _run_single_uxm_deconv(task: dict, atlas_path: Path, wgbstools_runner: ToolRunner, uxm_runner: ToolRunner):
     """Executes the complete UXM pipeline for a single sample"""
     base_name = task['base_name']
@@ -97,15 +147,8 @@ def _run_single_uxm_deconv(task: dict, atlas_path: Path, wgbstools_runner: ToolR
 
     _generate_pats(task['input_bam'], task['pat_dir'], wgbstools_runner)
     _wgbstools_pat_filter(task['pat_file_path'], task['filtered_pat_path'], atlas_path, wgbstools_runner)
+    _uxm_deconvolution(uxm_runner, task['filtered_index_pat_path'], atlas_path, task['deconvoluted_file'])
 
-    ensure_dir_exists(task['deconvoluted_file'].parent)
-
-    deconvolution_command = [
-        'deconv',
-        str(task['filtered_index_pat_path']),
-        '--atlas', str(atlas_path)
-    ]
-    uxm_runner.run(deconvolution_command, task['deconvoluted_file'])
     logger.info(f"--- Finished UXM deconvolution for sample: {base_name} ---")
 
 def _generate_pats(input_bam: Path, pat_output_dir: Path, wgbstools_runner: ToolRunner):
@@ -141,6 +184,8 @@ def _wgbstools_pat_filter(input_pat: Path, output_pat: Path, atlas_path: Path, w
     logger.info(f"Finished filtering and indexing: {output_pat}")
 
 def _uxm_deconvolution(uxm_runner: ToolRunner, deconv_input: Path, atlas_path: Path, deconv_output: Path):
+    ensure_dir_exists(deconv_output.parent)
+
     deconvolution_command = [
         'deconv',
         str(deconv_input),
@@ -154,7 +199,7 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
     '''
     logger.info("Running UXM Deconvolution...")
 
-    deconv_tasks = _generate_uxm_deconvolution_tasks(input_data_path, output_dir)
+    deconv_tasks = _generate_uxm_deconvolution_tasks(input_data_path)
 
     if not deconv_tasks:
         logger.warning("No valid deconvolution jobs found. Exiting.")
@@ -184,8 +229,9 @@ def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, outp
 
 def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
     '''
-    This will contain the basic nnls algorithm for a generic atlas/bed pair.
+    Runs the NNLS deconvolution algorithm
     '''
+
     logger.info("Running NNLS deconvolution...")
 
     deconv_runner = ToolRunner(nnls_exe, "--out_dir")
