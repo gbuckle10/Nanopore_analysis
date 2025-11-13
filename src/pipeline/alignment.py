@@ -164,9 +164,8 @@ def full_alignment_handler(config: AppSettings):
 
     run_alignment_command(dorado_exe, unaligned_bam, aligned_bam_file, reference_index_path, sort_memory_limit, threads)
 
-    flagstat_report = config.pipeline_steps.align.paths.full_flagstat_path
-
-    run_qc_command(aligned_bam_file, flagstat_report)
+    # Now the qc is always run along with the alignment command because of the looping, so we need to detangle this a bit
+    # at some point
 
 
 def alignment_handler(config):
@@ -275,7 +274,7 @@ def run_alignment_command(dorado_exe, input_path, output_path, reference_index, 
 
         run_command(index_cmd)
 
-        flagstat_report = run_qc_command(aligned_sorted_file)
+        flagstat_report = run_qc_command(output_bam_file)
 
     print("Indexing complete")
 
