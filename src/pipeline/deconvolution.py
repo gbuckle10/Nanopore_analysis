@@ -32,42 +32,113 @@ def deconvolution_handler(config):
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
 
-
-
-def _generate_pats(input_data_path: Path, pat_dir: Path, wgbstools_runner: ToolRunner):
+def _generate_uxm_deconvolution_tasks(input_path: Path, output_dir: Path) -> list[dict]:
     """
-    Generates pat files using wgbstools
+    Looks at the input path and creates a list of deconvolution jobs (from aligned sorted bam file to
+    deconvolution results in a csv file).
     """
 
-    bam2pat_command = [
-        'bam2pat',
-        str(input_data_path)
+    logger.info(f"Deconvoluting the files in {input_path}")
+
+    parent_dir = Path("analysis")
+    pat_dir = parent_dir / "pat_files"
+    filtered_pat_dir = parent_dir / "pat_filtered"
+    deconvolution_dir = parent_dir / "deconvoluted_output"
+
+    tasks = []
+    if not input_path.exists():
+        logger.error(f"Input path does not exist: {input_path}")
+        return []
+
+    # The input is a directory
+    if input_path.is_dir():
+        logger.info(f"The input is a directory. I am searching for .bam files in {input_path}")
+        bam_files = sorted(list(input_path.glob('*.bam')))
+        if not bam_files:
+            logger.warning(f"No .bam files found in directory: {input_path}")
+            return []
+
+        for bam_file in bam_files:
+            base_name = bam_file.stem
+            tasks.append({
+                'input_bam': bam_file,
+                'base_name': base_name,
+                'pat_dir': pat_dir,
+                'pat_file_path': pat_dir / f"{base_name}.pat.gz", # We also need to know what file to look for
+                'filtered_pat_path': filtered_pat_dir / f"{base_name}.pat",
+                'filtered_index_pat_path': filtered_pat_dir / f"{base_name}.pat.gz",
+                'deconvoluted_file': deconvolution_dir / f"{base_name}.csv"
+            })
+
+    # The input is a single file
+    elif input_path.is_file():
+        logger.info(f"The input is a single file: {input_path}")
+        if input_path.suffix != '.bam':
+            logger.warning(f"Input file is not a .bam file. Skipping: {input_path}")
+            return []
+
+        base_name = input_path.stem
+        tasks.append({
+                'input_bam': input_path,
+                'base_name': base_name,
+                'pat_dir': pat_dir,
+                'pat_file_path': pat_dir / f"{base_name}.pat.gz",
+                'filtered_pat_path': filtered_pat_dir / f"{base_name}.pat",
+                'filtered_index_pat_path': filtered_pat_dir / f"{base_name}.pat.gz",
+                'deconvoluted_file': deconvolution_dir / f"{base_name}.csv"
+            })
+
+    return tasks
+
+def _run_single_uxm_deconv(task: dict, atlas_path: Path, wgbstools_runner: ToolRunner, uxm_runner: ToolRunner):
+    """Executes the complete UXM pipeline for a single sample"""
+    base_name = task['base_name']
+    logger.info(f"--- Starting UXM deconvolution for sample: {base_name} ---")
+
+    _generate_pats(task['input_bam'], task['pat_dir'], wgbstools_runner)
+    _wgbstools_pat_filter(task['pat_file_path'], task['filtered_pat_path'], atlas_path, wgbstools_runner)
+
+    ensure_dir_exists(task['deconvoluted_file'].parent)
+
+    deconvolution_command = [
+        'deconv',
+        str(task['filtered_index_pat_path']),
+        '--atlas', str(atlas_path)
     ]
-    ensure_dir_exists(pat_dir)
-    wgbstools_runner.run(bam2pat_command, pat_dir)
+    uxm_runner.run(deconvolution_command, task['deconvoluted_file'])
+    logger.info(f"--- Finished UXM deconvolution for sample: {base_name} ---")
+
+def _generate_pats(input_bam: Path, pat_output_dir: Path, wgbstools_runner: ToolRunner):
+    """
+    Generates a single pat file from a single bam file
+    """
+
+    bam2pat_command = ['bam2pat', str(input_bam)]
+    ensure_dir_exists(pat_output_dir)
+
+    wgbstools_runner.run(bam2pat_command, pat_output_dir)
     logger.info("Finished generating pat files.")
 
-def _wgbstools_pat_filter(filter_input: Path, filter_output: Path, atlas_path: Path, wgbstools_runner: ToolRunner):
+def _wgbstools_pat_filter(input_pat: Path, output_pat: Path, atlas_path: Path, wgbstools_runner: ToolRunner):
     """
     Goes through all of the pat files in the pat_dir and filters them based on the atlas
     """
 
-    logger.debug(f"The file {filter_input} will be filtered and saved to {filter_output}")
-    ensure_dir_exists(filter_output.parent)
-
+    logger.debug(f"The file {input_pat} will be filtered and saved to {output_pat}")
+    ensure_dir_exists(output_pat.parent)
 
     pat_filter_command = [
-        # 'wgbstools',
         'view',
-        str(filter_input),
+        str(input_pat),
         '-L', str(atlas_path)
     ]
-    wgbstools_runner.run(pat_filter_command, filter_output)
+    wgbstools_runner.run(pat_filter_command, output_pat)
+    logger.info(f"Pat file {input_pat} has been filtered based on {atlas_path.name}")
 
-    index_command = [
-        'index', str(filter_output)
-    ]
+    index_command = ['index', str(output_pat)]
     wgbstools_runner.run(index_command)
+
+    logger.info(f"Finished filtering and indexing: {output_pat}")
 
 def _uxm_deconvolution(uxm_runner: ToolRunner, deconv_input: Path, atlas_path: Path, deconv_output: Path):
     deconvolution_command = [
@@ -76,45 +147,38 @@ def _uxm_deconvolution(uxm_runner: ToolRunner, deconv_input: Path, atlas_path: P
         '--atlas', str(atlas_path)
     ]
     uxm_runner.run(deconvolution_command, deconv_output)
+
 def _run_uxm_algorithm(wgbstools_exe, uxm_exe, input_data_path, atlas_path, output_dir):
     '''
     Runs the UXM deconvolution algorithm
     '''
     logger.info("Running UXM Deconvolution...")
-    logger.info(f"Deconvolving {input_data_path.name} using atlas {atlas_path.name}")
+
+    deconv_tasks = _generate_uxm_deconvolution_tasks(input_data_path, output_dir)
+
+    if not deconv_tasks:
+        logger.warning("No valid deconvolution jobs found. Exiting.")
+        return
+
+    logger.info(f"There are {len(deconv_tasks)} deconvolution task(s) to do.")
 
     wgbstools_runner = ToolRunner(wgbstools_exe, '-o', handler_class=SilentHandler)
-
-    #========================================
-    # If input_data_path is a directory, it should loop through the pat files in that folder and do the bam2pat command on each one.
-    # The subsequent filtering step should also loop through all of the files in pat_dir
-    #========================================
-    parent_dir = Path("analysis")
-    pat_dir = parent_dir / "pat_files"
-    filtered_pat_dir = parent_dir / "pat_filtered"
-    deconvolution_dir = parent_dir / "deconvoluted_output"
-
-    base_name = input_data_path.stem
-    logger.debug(f"File base name - {base_name}")
-    # The first step is to convert the bam file to a pat file.
-    _generate_pats(input_data_path, pat_dir, wgbstools_runner)
-
-    logger.debug(f"Pat files saved to {pat_dir}")
-
-    filter_input = pat_dir / f"{base_name}.pat.gz"
-    filter_output = filtered_pat_dir / f"{base_name}.pat"
-    filter_index_output = filter_output.with_suffix(".pat.gz")
-    logger.debug(f"Filtered index output - {filter_index_output}")
-    # Then we need to filter the pat file(s) using the atlas.
-    _wgbstools_pat_filter(filter_input, filter_output, atlas_path, wgbstools_runner)
-
-    logger.info(f"Finished filtering the pat file {filter_input}")
-
-    deconvoluted_file = deconvolution_dir / f"{base_name}.csv"
-    ensure_dir_exists(deconvolution_dir)
-
     uxm_runner = ToolRunner(uxm_exe, '-o', handler_class=LiveDisplayHandler)
-    _uxm_deconvolution(uxm_runner, filter_index_output, atlas_path, deconvoluted_file)
+
+    failed_samples = []
+    for i, job in enumerate(deconv_tasks):
+        logger.info(f"--- Running deconvolution task {i+1}/{len(deconv_tasks)}")
+        try:
+            _run_single_uxm_deconv(job, atlas_path, wgbstools_runner, uxm_runner)
+        except Exception as e:
+            logger.error(f"Failed to process sample {job['base_name']}. Error: {e}")
+            failed_samples.append(job['base_name'])
+
+    if failed_samples:
+        logger.error(f"UXM pipeline finished with {len(failed_samples)} failed sample(s): {', '.join(failed_samples)}")
+    else:
+        logger.info("All UXM deconvolution jobs finished successfully.")
+
 
 
 
