@@ -18,7 +18,7 @@ def build_config_paths(config: AppSettings) -> None:
     common_paths.root = root
     common_paths.data_dir = root / "data"
     common_paths.log_dir = root / "logs"
-    common_paths.results_dir = root / "results"
+    common_paths.results_dir = root / "analysis"
     common_paths.reference_genome_dir = root / "reference_genomes"
     common_paths.externals_dir = root / "externals"
 
