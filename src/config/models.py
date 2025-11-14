@@ -348,7 +348,9 @@ class AnalysisPaths(BaseModel):
     manifest_name: str
     deconvolution_results_name: str
     atlas_dir_name: str = "atlas"
-    deconvolution_dir_name: str = "deconvolution"
+    deconvolution_dir_name: str = "deconvoluted_output"
+    pat_dir_name: str = "pat_files"
+    filtered_pat_dir_name: str = "pat_filtered"
     deconvolution_input_name: str = "to_deconvolute.csv"
 
     user_atlas_input: Optional[str] = None
@@ -361,6 +363,8 @@ class AnalysisPaths(BaseModel):
     full_manifest_path: Optional[Path] = None
     full_deconv_input_path: Optional[Path] = None
     full_deconv_output_path: Optional[Path] = None
+    full_pat_dir: Optional[Path] = None
+    full_pat_filtered_dir: Optional[Path] = None
 
     def _validate(self, is_standalone_run: bool):
         validate_path(self.full_deconv_input_path, param_name="Deconvolution Input", must_exist=is_standalone_run,
@@ -395,6 +399,8 @@ class AnalysisPaths(BaseModel):
         else:
             self.full_deconv_output_path = resolve_path(analysis_dir, self.deconvolution_dir_name)
 
+        self.full_pat_dir = analysis_dir / self.pat_dir_name
+        self.full_pat_filtered_dir = analysis_dir / self.filtered_pat_dir_name
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
