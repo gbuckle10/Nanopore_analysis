@@ -93,7 +93,7 @@ pipeline_steps:
   analysis:
     params:
       methylation_aggregation_chunksize: '5000000'
-      deconv_algorithm: "uxm"
+      deconv_algorithm: "nnls"
     tools:
     paths:
       atlas_file_name: "Atlas.U250.l4.hg38.full.tsv"

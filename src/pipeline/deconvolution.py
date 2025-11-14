@@ -19,15 +19,13 @@ def deconvolution_handler(config: AppSettings):
     analysis_settings = config.pipeline_steps.analysis
     algorithm = analysis_settings.params.deconv_algorithm
 
-
-
     if algorithm == "uxm":
         wgbstools_runner = ToolRunner(analysis_settings.tools.wgbstools_exe, '-o', handler_class=SilentHandler)
         uxm_runner = ToolRunner(analysis_settings.tools.uxm_exe, '-o', handler_class=LiveDisplayHandler)
         _run_uxm_algorithm(config, wgbstools_runner, uxm_runner)
     elif algorithm == "nnls":
         nnls_runner = ToolRunner(analysis_settings.tools.methatlas_exe, '--out_dir', handler_class=LiveDisplayHandler)
-        _run_nnls_algorithm()
+        _run_nnls_algorithm(config, nnls_runner)
     else:
         logger.error("You have chosen an algorithm that doesn't exist. Unfortunately I can't do this.")
 
@@ -46,7 +44,7 @@ def _run_uxm_algorithm(config: AppSettings, wgbstools_runner: ToolRunner, uxm_ru
     deconv_tasks = _generate_uxm_deconvolution_tasks(config)
 
     if not deconv_tasks:
-        logger.warning("No valid UXM deconvolution jobs found. Exiting.")
+        logger.warning("No valid UXM deconvolution tasks found. Exiting.")
         return
 
     logger.info(f"There are {len(deconv_tasks)} deconvolution task(s) to do.")
@@ -69,7 +67,7 @@ def _run_uxm_algorithm(config: AppSettings, wgbstools_runner: ToolRunner, uxm_ru
 
 def _generate_uxm_deconvolution_tasks(config: AppSettings) -> list[dict]:
     """
-    Generates a list of deconvolution jobs by getting all the paths from the config object and ensuring a consistent
+    Generates a list of deconvolution tasks by getting all the paths from the config object and ensuring a consistent
     architecture for the output.
     """
     analysis_paths = config.pipeline_steps.analysis.paths
@@ -90,7 +88,6 @@ def _generate_uxm_deconvolution_tasks(config: AppSettings) -> list[dict]:
         return []
 
     bam_files = []
-    # The input is a directory
     if input_path.is_dir():
         logger.info(f"The input is a directory. I am searching for .bam files in {input_path}")
         bam_files = sorted(list(input_path.glob('*.bam')))
@@ -103,7 +100,7 @@ def _generate_uxm_deconvolution_tasks(config: AppSettings) -> list[dict]:
         return []
 
     for bam_file in bam_files:
-        base_name = bam_file.stem # Maybe we need to find a way to clean up the file names if there are multiple extensions
+        base_name = bam_file.stem  # Maybe we need to find a way to clean up the file names if there are multiple extensions
         tasks.append({
             'input_bam': bam_file,
             'base_name': base_name,
@@ -115,6 +112,7 @@ def _generate_uxm_deconvolution_tasks(config: AppSettings) -> list[dict]:
         })
 
     return tasks
+
 
 def _run_single_uxm_deconv(task: dict, atlas_path: Path, wgbstools_runner: ToolRunner, uxm_runner: ToolRunner):
     """Executes the complete UXM pipeline for a single sample"""
@@ -174,74 +172,96 @@ def _uxm_deconvolution(uxm_runner: ToolRunner, deconv_input: Path, atlas_path: P
     uxm_runner.run(deconvolution_command, deconv_output)
 
 
-def _run_nnls_algorithm(nnls_exe, input_data_path, output_dir, atlas_path):
+# ===============================
+# NNLS Algorithm
+# ===============================
+
+def _run_nnls_algorithm(config: AppSettings, nnls_runner: ToolRunner):
     '''
-    Runs the NNLS deconvolution algorithm
+    Orchestrates the entire UXM deconvolution pipeline
     '''
 
     logger.info("Running NNLS deconvolution...")
 
-    deconv_runner = ToolRunner(nnls_exe, "--out_dir")
-    command = [
-        "-a",
-        str(atlas_path),
-        str(input_data_path)
-        # "--out_dir", str(output_dir)
-    ]
+    deconv_tasks = _generate_nnls_deconvolution_tasks(config)
 
-def _run_single_nnls_deconv(task: dict, atlas_path: Path, nnls_runner: ToolRunner):
-    base_name = task['base_name']
-    logger.info(f"--- Starting NNLS deconvolution for sample: {base_name} ---")
+    if not deconv_tasks:
+        logger.warning(f"No valid NNLS deconvolution tasks found. Exiting.")
+        return
 
-    output_dir = task['deconvoluted_file']
+    logger.info(f"There are {len(deconv_tasks)} deconvolution task(s) to do.")
+
+    atlas_path = config.pipeline_steps.analysis.paths.full_atlas_path
+    failed_samples = []
+
+    for i, task in enumerate(deconv_tasks):
+        logger.info(f"--- Running deconvolution task {i+1}/{len(deconv_tasks)}")
+        try:
+            _run_single_nnls_deconv(task, atlas_path, nnls_runner)
+        except Exception as e:
+            logger.error(f"Failed to process sample {task['base_name']}")
+            failed_samples.append(task['base_name'])
+
+    if failed_samples:
+        logger.error(f"NNLS pipeline finished with {len(failed_samples)} failed sample(s): {', '.join(failed_samples)}")
+    else:
+        logger.info("All UXM deconvolution jobs finished successfully.")
 
 
-
-def _generate_nnls_deconvolution_tasks(input_path: Path) -> list[dict]:
+def _generate_nnls_deconvolution_tasks(config: AppSettings) -> list[dict]:
     """
-    Looks at the input path and creates a list of deconvolution jobs (from bed file to deconvolution results in a
-    csv file).
+    Generates a list of deconvolution tasks by getting all the paths from config and ensuring
+    a consistent architecture for the output
     """
+    analysis_paths = config.pipeline_steps.analysis.paths
+    input_path = analysis_paths.full_deconv_input_path
     logger.info(f"Deconvoluting the files in {input_path} using the nnls algorithm")
 
-    parent_dir = Path("analysis")
+    deconvolution_dir = analysis_paths.full_deconv_output_path
+
 
     tasks = []
     if not input_path.exists():
         logger.error(f"Input path does not exist: {input_path}")
         return []
 
+    bed_files = []
     if input_path.is_dir():
         logger.info(f"Input is a directory. Searching for .bed files in {input_path}")
         bed_files = sorted(list(input_path.glob('*.bed')))
-        if not bed_files:
-            logger.warning(f"No .bed files found in directory: {input_path}")
-            return []
-
-        for bed_file in bed_files:
-            base_name = bed_file.stem
-            tasks.append({
-                'input_bed': bed_file,
-                'base_name': base_name,
-                'sample_output_dir': parent_dir / "deconvoluted_output" / f"{base_name}_nnls.csv"
-            })
-
     elif input_path.is_file():
-        logger.info(f"Input is a single file: {input_path}")
-        if input_path.suffix != '.bed':
-            logger.warning(f"Input file is not a .bed file. Skipping: {input_path}")
-            return []
+        logger.info(f"The input is a single .bed file: {input_path}")
+        bed_files = [input_path]
 
-        base_name = input_path.stem
+    if not bed_files:
+        logger.warning(f"No .bed files found in directory: {input_path}")
+        return []
+
+    for bed_file in bed_files:
+        base_name = bed_file.stem
         tasks.append({
-            'input_bed': input_path,
+            'input_bed': bed_file,
             'base_name': base_name,
-            'sample_output_dir': parent_dir / "deconvoluted_output" / f"{base_name}_nnls.csv"
+            'deconvoluted_file': deconvolution_dir / f"{base_name}_nnls_results.csv"
         })
 
     return tasks
 
+def _run_single_nnls_deconv(task: dict, atlas_path: Path, nnls_runner: ToolRunner):
+    """Executes the complete NNLS pipeline for a single sample"""
+    base_name = task['base_name']
+    logger.info(f"--- Starting NNLS deconvolution for sample: {base_name} ---")
+    output_path = task['deconvoluted_file']
+    ensure_dir_exists(output_path.parent)
 
+    command = [
+        "-a", str(atlas_path),
+        str(task['input_bed'])
+    ]
+
+    nnls_runner.run(command, output_path=output_path.parent)
+
+    logger.info(f"--- Finished UXM deconvolution for sample: {base_name}")
 
 def _add_atlas_arg(parser, config):
     parser.add_argument(
