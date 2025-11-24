@@ -217,7 +217,7 @@ class AlignmentPaths(BaseModel):
         return None
 
 
-    def _validate(self, is_standalone_run: bool):
+    def _validate(self, is_standfalone_run: bool):
         validate_path(self.full_unaligned_input_path, param_name="Alignment Input", must_exist=is_standalone_run)
 
         if not (self.genome_id or self.custom_fasta_reference):
