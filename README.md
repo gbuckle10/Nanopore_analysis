@@ -179,3 +179,35 @@ This builds a Docker image tagged `nanopore-pipeline:latest` and creates a `nano
 
 ---
 
+## Configuration
+
+All pipeline settings are controlled by `config.yaml` in the project root, which is intended to be self-explanatory. A few things to note if you want to edit it:
+- **Use relative paths only** - do not use absolute paths for any files or directories
+- **`pipeline_control.run_steps`** - toggle which steps run when using the `run` command. Steps set to `false` are skipped entirely.
+- **`pipeline_steps.setup.params.dorado_version`** - controls which version of Dorado the installer downloads. Update this if you need a specific version.
+- **`genome_id` vs `custom_fasta_reference`** - in the alignment section, provide one or the other but not both. `genome_id` (e.g. `hg38`) tells the pipeline to look for the reference genome in the standard `reference_genomes/` directory structure, while `custom_fasta_reference` lets you point directly to a FASTA file anywhere on disk.
+
+### Runtime config
+
+A second file, `runtime_config.yaml`, is generated automatically by the installer and stores paths to downloaded tools (e.g. the Dorado executable). Its values override `config.yaml` where they overlap. Do not edit this manually.
+
+---
+
+## Usage
+
+Always activate the Conda environment first
+
+```bash
+conda activate nanopore_analysis
+```
+
+The general command structure is:
+
+```
+nanopore_analysis <command> [subcommand] options
+```
+
+Run `nanopore_analysis --help` or `nanopore_analysis <command> --help` for a full list of options at any given level.
+
+---
+
