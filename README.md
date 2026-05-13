@@ -211,3 +211,115 @@ Run `nanopore_analysis --help` or `nanopore_analysis <command> --help` for a ful
 
 ---
 
+## Tutorial: Running the Full Pipeline
+
+This tutorial walks through a complete run from POD5 files to deconvolution output.
+
+### Step 0: Download required resources
+
+**Reference genome** (hg38 from iGenomes via S3):
+```bash
+nanopore_analysis download genome
+```
+
+The pipeline expects **UCSC-style chromosome headers** (e.g. `chr1`, `chrX`). The default download URL points to an hg38 genome with UCSC headers. Make sure any manually downloaded genome also uses this convention - using the wrong header style (e.g. `1` instead of `chr1`) will cause alignment and methylation steps to fail silently.
+
+You can also download the genome manually using the AWS CLI:
+
+```bash
+aws s3 cp "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa" \
+  reference_genomes/hg38/genome.fa --no-sign-request
+```
+
+To install AWS CLI v2:
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+```
+ 
+**Methylation atlas** (UXM hg38 atlas):
+```bash
+nanopore_analysis download atlas
+```
+
+The atlas from [UXM_deconv](https://github.com/nloyfer/UXM_deconv/tree/main/supplemental) is used by default. Make sure the atlas genome assembly matches the one used for basecalling and alignment.
+
+**Illumina manifest** (required for NNLS deconvolution):
+```bash
+nanopore_analysis download manifest
+```
+
+These files are saved to `data/atlas/` by default
+
+--- 
+
+**Sample data for testing**
+
+You can browse and download sample ONT data from the open data bucket. The `aws s3 ls` command is useful for exploring what is available:
+
+```bash
+aws s3 ls s3://ont-open-data/ --no-sign-request
+```
+
+To download a pre-aligned BAM for testing (bypassing basecalling entirely):
+```bash
+aws s3 cp "s3://ont-open-data/gm24385_mod_2021.09/extra_analysis/alignment/20210510_1600_X1_FAQ32172_f02f2d1c.bam" \
+  data/alignment/taken_alignment.bam --no-sign-request
+```
+
+---
+
+### Step 1: Basecalling
+
+Place your POD5 files in `data/pod5/` (or update `pod5_input_path` in `config.yaml`), then run:
+
+```bash
+nanopore_analysis basecalling run
+```
+
+To override paths at the command line:
+
+```bash
+nanopore_analysis basecalling run \
+  --input-file /path/to/pod5/ \
+  --output-dir data/basecalled_output/basecalled.bam
+```
+
+If your library is barcoded and you want to demultiplex:
+
+```bash
+nanopore_analysis basecalling run --demultiplex
+```
+
+This will basecall first, then automatically check whether the output BAM is multiplexed and demultiplex it if so.
+
+--- 
+
+### Step 2: Alignment
+
+```bash
+nanopore_analysis align run
+```
+
+This will:
+1. Check for a pre-build minimap2 index (`.mmi`) for your reference genome, and build one if missing
+2. Align the basecalled BAM using Dorado aligner, piped into `samtools sort`
+3. Index the sorted BAM with `samtools index`
+4. Run `samtools flagstat` and save a QC report
+
+To specify paths explicitly:
+
+```bash
+nanopore_analysis align run \
+  --input-file data/basecalled_output/basecalled.bam \
+  --output-dir data/alignment/aligned.sorted.bam \
+  --ref reference_genomes/hg38/genome.fa
+```
+ 
+To run QC on an already-aligned BAM without re-aligning:
+ 
+```bash
+nanopore_analysis align qc --input-file data/alignment/aligned.sorted.bam
+```
+ 
