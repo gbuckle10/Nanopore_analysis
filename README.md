@@ -132,6 +132,13 @@ This will:
 - Create a `nanopore_analysis` symlink in the project root
 - Copy Conda activation scripts so `PYTHONPATH` is set automatically on environment activation
 
+Once the installer has finished, deactivate and reactivate the environment for the changes to take effect.
+
+```bash
+conda deactivate
+conda activate nanopore_analysis
+```
+
 **4. Install the pipeline:** (if not created automatically)
 
 ```bash
