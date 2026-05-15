@@ -373,7 +373,7 @@ class AnalysisPaths(BaseModel):
 
 class AnalysisStep(BaseModel):
     params: AnalysisParams
-    tools: AnalysisTools
+    tools: Optional[AnalysisTools] = None # Populated by runtime_config after setup
     paths: AnalysisPaths
 
 
@@ -407,7 +407,7 @@ class AppSettings(BaseModel):
     globals: Globals
     pipeline_control: PipelineControl
     pipeline_steps: PipelineSteps
-    tools: Tools
+    tools: Optional[Tools] = None # Populated by runtime_config after setup
     paths: Paths = Paths()  # Default to an empty instance
     metadata: Optional[RunMetadata] = None
 
@@ -446,7 +446,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
         with open(runtime_config_path, 'r') as f:
             runtime_config_data = yaml.safe_load(f) or {}
     except FileNotFoundError:
-        raise FileNotFoundError(f"Base config file not found: {config_path}")
+        runtime_config_data = {}
 
     # Do the deep merge (on a copy of the config data so we don't change in-place)
     config_data = deep_merge(runtime_config_data, user_config_data.copy())

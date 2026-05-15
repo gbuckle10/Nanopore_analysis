@@ -15,3 +15,4 @@ authors = [
 [project.scripts]
 nanopore_analysis = "src.run_pipeline:main"
 summarise_lengths = "src.analysis.summarise_lengths:main"
+resource_download = "src.utils.resource_downloader:main"
