@@ -95,21 +95,6 @@ Accept the licence agreement. When asked whether to automatically initialise con
 
 Close and reopen WSL to finish the installation.
 
-**3. Fix line endings (if you edit files on Windows)**
-
-If you edit any project files in a Windows editor, you may get  `$'\r': command not found` errors in WSL due to Windows-style line endings (CRLF). If you're lucky you can change the line endings to LF directly in your editor:
-
-- **PyCharm** - click the `CRLF` button in the bottom-right status bar and select `LF`.
-- **VS Code** - click the `CRLF` button in the bottom-right status bar and select `LF`. To apply this to all new files automatically, add `"files.eol": "\n"` to your `settings.json`.
-- **Vim/Neovim** - run `:set fileformat=unix`then save with `:w`. To make it permanent, add `set fileformat=unix` to your `.vimrc` or `init.vim` file.
-
-If you can't change the setting in your editor, use `dos2unix` as a last resort:
-```bash
-sudo apt-get update
-sudo apg-get install dos2unix
-find . -type f -name "*.sh" -exec dos2unix {} \+ 
-```
-
 --- 
 
 ### Option 1: Conda (recommended)
@@ -518,9 +503,20 @@ export PYTHONPATH=$PYTHONPATH:$PWD/src
 ```
  
 **`$'\r': command not found` in WSL**
- 
-Line endings are Windows-style (CRLF). See the [WSL setup section](#wsl-setup-windows-users) for how to fix this with `dos2unix` or your editor settings.
- 
+
+This happens when project files have been edited on Windows and have Windows-style line endings (CRLF). The easiest fix is to change the line ending setting in your editor to LF:
+
+- **PyCharm** - click the `CRLF` button in the bottom-right status bar and select `LF`.
+- **VS Code** - click the `CRLF` button in the bottom-right status bar and select `LF`. To apply this to all new files automatically, add `"files.eol": "\n"` to your `settings.json`.
+- **Vim/Neovim** - run `:set fileformat=unix`then save with `:w`. To make it permanent, add `set fileformat=unix` to your `.vimrc` or `init.vim` file.
+
+If you can't change the setting in your editor, use `dos2unix` as a last resort:
+```bash
+sudo apt-get update
+sudo apg-get install dos2unix
+find . -type f -name "*.sh" -exec dos2unix {} \+ 
+```
+
 **Conda commands not found in a new WSL terminal**
  
 ```bash
