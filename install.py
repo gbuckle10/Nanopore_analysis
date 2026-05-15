@@ -42,26 +42,6 @@ def install_conda(task):
     """
     Creates the Conda environment and the local symlink.
     """
-    env_name = "nanopore_analysis"
-
-    '''
-    if task == 'all':
-        run_command([
-            "mamba", "env", "create", "-f", "environment.yml"
-        ], "Creating conda environment and running internal setup step.")
-    '''
-    print(">>> Installing Conda activation scripts")
-    conda_info = subprocess.check_output(["conda", "info", "--json"], text=True)
-    import json
-    conda_root = json.loads(conda_info)['conda_prefix']
-    env_path = os.path.join(conda_root, 'envs', env_name)
-    activation_dir = os.path.join(env_path, 'etc', 'conda', 'activate.d')
-    os.makedirs(activation_dir, exist_ok=True)
-    import shutil
-    shutil.copy(
-        './etc/conda/activate.d/env_vars.sh',
-        os.path.join(activation_dir, 'env_vars.sh')
-    )
 
     command_to_run = [
         "python", "-m", "src.utils.setup_tasks", task
