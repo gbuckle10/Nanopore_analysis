@@ -237,19 +237,6 @@ def _add_subcommands(subparsers, parent_parser, config):
                             dest="pipeline_steps.analysis.paths.manifest_name")
     p_manifest.set_defaults(func=manifest_handler)
 
-
-def setup_parsers(subparsers, parent_parser, config):
-    download_parser = subparsers.add_parser(
-        "download", help="Download files necessary for the pipeline.",
-        formatter_class=argparse.RawTextHelpFormatter,
-        parents=[parent_parser]
-    )
-    download_subparsers = download_parser.add_subparsers(
-        title="Available Commands", dest='subcommand', metavar="<command>"
-    )
-    _add_subcommands(download_subparsers, parent_parser, config)
-
-
 def main():
     Logger.setup_logger()
 

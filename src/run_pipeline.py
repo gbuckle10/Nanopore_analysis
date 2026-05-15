@@ -9,7 +9,6 @@ from pathlib import Path
 from src.config.models import load_and_validate_configs, AppSettings, print_config
 from src.config.paths import build_config_paths, run_initial_validation, update_config_from_args
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
-from src.utils import resource_downloader
 from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
 from src import PROJECT_ROOT
@@ -92,7 +91,6 @@ def main():
     alignment.setup_parsers(subparsers, global_parent_parser, config)
     methylation.setup_parsers(subparsers, global_parent_parser, config)
     deconvolution.setup_parsers(subparsers, global_parent_parser, config)
-    resource_downloader.setup_parsers(subparsers, global_parent_parser, config)
 
     try:
         first_arg = sys.argv[1]
