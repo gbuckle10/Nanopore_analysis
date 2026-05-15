@@ -322,4 +322,62 @@ To run QC on an already-aligned BAM without re-aligning:
 ```bash
 nanopore_analysis align qc --input-file data/alignment/aligned.sorted.bam
 ```
- 
+---
+
+### Step 3: Methylation Pileup
+
+```bash
+nanopore_analysis methylation run
+```
+
+With explicit paths:
+```bash
+nanopore_analysis methylation run \
+  --input-file data/alignment/aligned.sorted.bam \ 
+  --output-dir data/methylation/methylation.bed \
+  --ref reference_genomes/hg38/genome.fa
+```
+
+This runs `modkit pileup` to produce a BED file of per-CpG methylation levels. Providing `--ref` restricts output to CpG sites only, which is strongly recommended
+
+---
+
+### Step 4: Deconvolution
+
+```bash
+nanopore_analysis deconvolution
+```
+
+With options:
+```bash
+nanopore_analysis deconvolution \
+  --algorithm uxm \
+  --atlas data/atlas/UXM_atlas.csv
+```
+
+Two algorithms are supported:
+
+- **`uxm`** (default) - uses wgbs_tools + UXM_deconv. Filters the PAT file against the atlas, indexes it, then runs `uxm deconv`. See [Working with wgbs_tools](#working-with-wgbs-tools) for manual PAT file preparation.
+- **`nnls`** - uses the meth_atlas NNLS algorithm with a full atlas CSV.
+
+Results are saved to `results/deconvolution/deconvoluted_output.csv` by default.
+
+---
+
+### Running the full pipeline in one command
+
+If all steps are enabled in `config.yaml`:
+
+```bash
+nanopore_analysis run
+```
+
+You can override individual settings without editing the config:
+
+```bash
+nanopore_analysis run \
+  --kit-name SQK-NBD114-24 \
+  --algorithm uxm
+```
+
+
