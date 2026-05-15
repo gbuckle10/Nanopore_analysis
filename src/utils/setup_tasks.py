@@ -10,6 +10,25 @@ import requests
 import tarfile
 import yaml
 
+def link_tools_to_conda_bin(executable_paths):
+    conda_prefix = os.environ.get('CONDA_PREFIX')
+    if not conda_prefix:
+        print("WARNING: CONDA_PREFIX not set, skipping tool linking.")
+        return
+
+    bin_dir = os.path.join(conda_prefix, 'bin')
+    tool_names = {'uxm_exe': 'uxm', 'wgbstools_exe': 'wgbstools'}
+
+    for key, name in tool_names.items():
+        exe_path = executable_paths.get(key)
+        if not exe_path:
+            continue
+        os.chmod(exe_path, 0o755)
+        link_path = os.path.join(bin_dir, name)
+        if os.path.islink(link_path) or os.path.exists(link_path):
+            os.remove(link_path)
+        os.symlink(exe_path, link_path)
+        print(f"Linked '{name}' -> {exe_path}")
 
 def download_file(url, destination):
     print(f"Downloading from {url} to {destination}")
@@ -168,6 +187,7 @@ def main(argv=None):
 
     if args.command in ['all', 'submodules']:
         submodule_paths = setup_submodules(config)
+        link_tools_to_conda_bin(submodule_paths)
         runtime_config.setdefault('pipeline_steps', {}).setdefault('analysis', {}).setdefault('tools', {}).update(submodule_paths)
     print(">>> Writing updated runtime_config.yaml...")
     with open('runtime_config.yaml', 'w') as f:
