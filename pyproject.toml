@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "nanopore-analysis"
+version = "1.0.0"
+requires-python = ">=3.9"
+
+[project.scripts]
+nanopore_analysis = "src.run_pipeline:main"
