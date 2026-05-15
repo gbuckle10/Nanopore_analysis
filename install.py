@@ -68,11 +68,7 @@ def install_conda(task):
     ]
     run_command(command_to_run, f"Running step logic for '{task}'")
 
-    print(">>> Creating local symlink: ./nanopore_analysis")
-    if os.path.exists("nanopore_analysis"):
-        os.remove("nanopore_analysis")
-    os.symlink("src/run_pipeline.py", "nanopore_analysis")
-    os.chmod("src/run_pipeline.py", 0o755)
+    run_command(["pip", "install", "-e", "."], "Installing package and registering nanopore_analysis command")
     print(">>> Local setup complete.")
 
 
