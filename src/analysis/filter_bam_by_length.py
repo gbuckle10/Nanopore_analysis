@@ -7,7 +7,6 @@ from logger import setup_logger
 import subprocess
 
 
-
 def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selection="both"):
     '''
     Takes a bam file and filters based on the size cutoff. A new bam file is made based on the filtering,
@@ -87,7 +86,8 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
         if output_below:
             output_below.close()
 
-if __name__ == "__main__":
+
+def main():
     setup_logger()
 
     parser = argparse.ArgumentParser(
@@ -122,7 +122,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
     if args.output_dir:
         output_directory = args.output_dir
     else:
@@ -133,3 +132,7 @@ if __name__ == "__main__":
     print(f"Mode: {args.mode}")
     print(f"Output directory: {output_directory}")
     filter_bam_by_length(args.input_bam, args.cutoff, output_directory, args.mode)
+
+
+if __name__ == "__main__":
+    main()
