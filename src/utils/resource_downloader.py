@@ -6,11 +6,41 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
+from src.config.models import load_and_validate_configs
+from src.config.paths import build_config_paths, update_config_from_args
 from src.utils.file_utils import ensure_dir_exists, decompress_file
+from src.utils.logger import Logger
 from src.utils.process_utils import run_command
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
+
+
+def _download_s3(url: str, destination: Path, include: str = None, exclude: str = None):
+    """Download using s3"""
+    cmd = ["aws", "s3", "cp", url, str(destination), "--no-sign-request", "--recursive", "--quiet"]
+    if include:
+        cmd += ["--exclude", "*"]
+        cmd += ["--include", include]
+    elif exclude:
+        cmd += ["--exclude", exclude]
+    destination.mkdir(parents=True, exist_ok=True)
+    run_command(cmd)
+
+
+def download(url: str, destination: Path, **kwargs):
+    """Download something"""
+    if url.startswith("s3://"):
+        _download_s3(url, destination, **kwargs)
+    else:
+        final_destination_and_download(url, destination)
+
+
+def sample_data_handler(config):
+    url = str(config.pipeline_steps.setup.downloads.fast5_download_url)
+    destination = config.pipeline_steps.setup.paths.fast5_input_dir
+    logger.info(f"Downloading sample fast5 data from {url} to {destination}")
+    download(url, Path(destination), include="*.fast5")
 
 
 def _download_file_with_progress(url: str, destination: Path):
@@ -62,21 +92,15 @@ def reference_genome_handler(config):
     if (user_path.exists() and user_path.is_dir()) or (not user_path.exists() and user_path.suffix == ''):
         # If the user path exists, it's a directory. If it doesn't exist, there is no file extension.
         logger.info(f"Reference path '{user_path}' is a directory. Appending default filename.")
-
-        try:
-            default_filename = config.pipeline_steps.align.paths.full_ref_fasta_path
-        except KeyError:
-            logger.error(f"Error: '{user_path}' is a directory, but 'indexed_ref_gen_fasta_name' is not set in config.")
-            sys.exit(1)
-
-        final_ref_path = user_path / default_filename
+        filename = str(url).split('/')[-1]
+        final_ref_path = user_path / filename
     else:
         logger.info(f"Reference path is a full file path: '{user_path}'")
         final_ref_path = user_path
 
     logger.info(f"The final output path will be {final_ref_path}")
 
-    if not os.path.exists(final_ref_path):
+    if not os.path.exists(final_ref_path) or getattr(config, 'force', False):
         logger.info(f"Reference file {final_ref_path} doesn't exist. Downloading from {url}")
         run_command([
             "aws", "s3", "cp", str(url), str(final_ref_path), "--no-sign-request"
@@ -102,8 +126,6 @@ def atlas_handler(config):
     destination = config.pipeline_steps.analysis.paths.full_atlas_path
     if not destination:
         sys.exit("Error: No output path specified and config doesn't contain the path.")
-
-
 
     # The interactive tag needs to be fixed - probs will need to add the args back into this.
     '''
@@ -172,104 +194,83 @@ def final_destination_and_download(url: str, destination: Path, is_interactive: 
     else:
         return None
 
-def download_and_index_reference_genome_wgbs(config):
-    """
-    Use wgbstools init_genome to initialise the specified genome.
-    """
-    genome = config['paths']['reference_genome']
-    print(f"Initialising reference genome {genome}")
-    wgbstools_cmd = [
-        "wgbstools", "init_genome",
-        genome
-    ]
 
-    wgbstools_exe = config['submodules']['wgbstools']
-    wgbstools_runner = ToolRunner(wgbstools_exe)
+def _add_subcommands(subparsers, parent_parser, config):
+    download_parent = argparse.ArgumentParser(add_help=False)
+    download_parent.add_argument('--force', action="store_true",
+                                 dest="force",
+                                 help="Force redownload even if the file already exists.")
+    p_sample = subparsers.add_parser('sample_data', help="Download sample fast5 data.", parents=[download_parent])
+    p_sample.add_argument("--url", type=str,
+                          default=str(config.pipeline_steps.setup.downloads.fast5_download_url),
+                          dest="pipeline_steps.setup.downloads.fast5_download_url")
+    p_sample.add_argument("--output-dir", type=Path, default=None,
+                          dest="pipeline_steps.setup.paths.fast5_input_dir")
+    p_sample.set_defaults(func=sample_data_handler)
 
-    wgbstools_runner.run(wgbstools_cmd)
+    p_genome = subparsers.add_parser('genome', help="Download and prepare the reference genome.",
+                                     parents=[download_parent])
+    p_genome.add_argument("--url", type=str,
+                          default=config.pipeline_steps.setup.downloads.reference_genome_url,
+                          dest="pipeline_steps.setup.downloads.reference_genome_url")
+    p_genome.add_argument("--output-dir", type=Path, default=None,
+                          dest="pipeline_steps.align.paths.custom_fasta_reference")
+    p_genome.set_defaults(func=reference_genome_handler)
+
+    p_atlas = subparsers.add_parser('atlas', help="Download the methylation atlas.",
+                                    parents=[download_parent])
+    p_atlas.add_argument("--url", type=str,
+                         default=config.pipeline_steps.setup.downloads.uxm_atlas_url,
+                         dest="pipeline_steps.setup.downloads.uxm_atlas_url")
+    p_atlas.add_argument("--output-dir", type=Path,
+                         default=config.pipeline_steps.analysis.paths.full_atlas_path,
+                         dest="pipeline_steps.analysis.paths.atlas_file_name")
+    p_atlas.set_defaults(func=atlas_handler)
+
+    p_manifest = subparsers.add_parser('manifest', help="Download the Illumina manifest.",
+                                       parents=[download_parent])
+    p_manifest.add_argument("--url", type=str,
+                            default=config.pipeline_steps.setup.downloads.manifest_url,
+                            dest="pipeline_steps.setup.downloads.manifest_url")
+    p_manifest.add_argument("--output-dir", type=Path,
+                            default=config.pipeline_steps.analysis.paths.full_manifest_path,
+                            dest="pipeline_steps.analysis.paths.manifest_name")
+    p_manifest.set_defaults(func=manifest_handler)
 
 
 def setup_parsers(subparsers, parent_parser, config):
-    download_parent_parser = argparse.ArgumentParser(add_help=False)
-    download_parent_parser.add_argument(
-        '--force',
-        action="store_true",
-        help="Force redownload even if the file already exists."
-    )
-
     download_parser = subparsers.add_parser(
-        "download",
-        help="Download files necessary for deconvolution",
-        description="This command group contains tools for downloading and preparing files necessary for deconvolution.",
+        "download", help="Download files necessary for the pipeline.",
         formatter_class=argparse.RawTextHelpFormatter,
         parents=[parent_parser]
     )
     download_subparsers = download_parser.add_subparsers(
-        title="Available Commands",
-        description="Choose one of the following actions",
-        dest='subcommand',
-        metavar="<command>"
+        title="Available Commands", dest='subcommand', metavar="<command>"
     )
+    _add_subcommands(download_subparsers, parent_parser, config)
 
-    p_genome = download_subparsers.add_parser(
-        'genome',
-        help="Download, and prepare the specified genomes. --wgbstools will run the wgbs_tools init_genome.",
-        parents=[download_parent_parser]
-    )
-    p_genome.add_argument(
-        '--wgbstools',
-        action="store_true",
-        dest="pipeline_steps.setup.params.download_ref_with_wgbstools",
-        help="Downloads and initialises the genome using wgbs_tools' init_genome function"
-    )
-    p_genome.add_argument(
-        "--url", type=str,
-        default=config.pipeline_steps.setup.downloads.reference_genome_url,
-        dest="pipeline_steps.setup.downloads.reference_genome_url",
-        help="URL to download the reference genome from"
-    )
-    p_genome.add_argument(
-        "--output-dir", type=Path,
-        default=None,
-        dest="pipeline_steps.align.paths.custom_fasta_reference",
-        help="Folder to save the reference genome in."
-    )
-    p_genome.set_defaults(func=reference_genome_handler)
 
-    p_atlas = download_subparsers.add_parser(
-        'atlas',
-        help="Download the specified methylation atlas.",
-        parents=[download_parent_parser]
-    )
-    p_atlas.add_argument(
-        "--url", type=str,
-        default=config.pipeline_steps.setup.downloads.uxm_atlas_url,
-        dest="config.pipeline_steps.setup.downloads.uxm_atlas_url",
-        help="URL to download the reference atlas genome from"
-    )
-    p_atlas.add_argument(
-        "--output-dir", type=Path,
-        default=config.pipeline_steps.analysis.paths.full_atlas_path,
-        dest="pipeline_steps.analysis.paths.atlas_file_name",
-        help="Path to saved atlas file."
-    )
-    p_atlas.set_defaults(func=atlas_handler)
+def main():
+    Logger.setup_logger()
 
-    p_manifest = download_subparsers.add_parser(
-        'manifest',
-        help="Download the specified Illumina manifest.",
-        parents=[download_parent_parser]
-    )
-    p_manifest.add_argument(
-        "--url", type=str,
-        default=config.pipeline_steps.setup.downloads.manifest_url,
-        dest="pipeline_steps.setup.downloads.manifest_url",
-        help="URL to download the reference atlas genome from"
-    )
-    p_manifest.add_argument(
-        "--output-dir", type=Path,
-        default=config.pipeline_steps.analysis.paths.full_manifest_path,
-        dest="pipeline_steps.analysis.paths.manifest_name",
-        help="Path to saved atlas file."
-    )
-    p_manifest.set_defaults(func=manifest_handler)
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('-u', '--user-config', default='config.yaml', type=Path)
+    pre_parser.add_argument('-r', '--runtime-config', default='runtime_config.yaml', type=Path)
+    conf_args, _ = pre_parser.parse_known_args()
+
+    config = load_and_validate_configs(conf_args.user_config, conf_args.runtime_config)
+    build_config_paths(config)
+
+    parser = argparse.ArgumentParser(description="Download resources for the nanopore analysis pipeline.")
+    parser.add_argument('-u', '--user-config', default='config.yaml', type=Path)
+    parser.add_argument('-r', '--runtime-config', default='runtime_config.yaml', type=Path)
+    subparsers = parser.add_subparsers(dest='subcommand', metavar='<resource>')
+    _add_subcommands(subparsers, pre_parser, config)
+
+    args = parser.parse_args()
+    update_config_from_args(config, args, parser)
+
+    if hasattr(args, 'func'):
+        args.func(config)
+    else:
+        parser.print_help()
