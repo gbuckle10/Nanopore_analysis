@@ -1,0 +1,100 @@
+# ========================================================
+# config.tutorial.yaml
+#
+# This config is pre-configured for the tutorial walkthrough using the
+# publicly available GM24385 ONT dataset. See TUTORIAL.md for instructions.
+#
+# To use this config, pass it to any pipeline command with --user-config:
+#   nanopore_analysis --user-config config.tutorial.yaml <command>
+#
+# DO NOT use absolute paths in this file. All paths are relative to the
+# project root.
+# ========================================================
+
+conda_env_name: "nanopore_analysis"
+
+globals:
+  threads: "4"
+  sort_memory_limit: "2G"
+
+pipeline_control:
+  run_steps:
+    basecalling: true
+    align: true
+    methylation_summary: true
+    analysis: true
+
+pipeline_steps:
+  # ---------------
+  # Step 0: Setup
+  # ---------------
+  setup:
+    params:
+      dorado_version: "0.9.6"
+      num_fast5_files: "2"
+    downloads:
+      # Raw FAST5 files for the tutorial dataset. Downloaded manually in Step 1.
+      fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
+      # hg19 reference genome with UCSC-style chromosome headers (chr1, chr2, etc.)
+      reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa"
+      uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
+      manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
+      full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
+    paths:
+      fast5_input_dir_name: "fast5_input"
+
+  # --------------------
+  # Step 1: Basecalling
+  # --------------------
+  # The GM24385 dataset was sequenced with R9.4.1 chemistry.
+  # hac is used here for a reasonable balance of speed and accuracy.
+  # Change model_speed to "sup" for higher accuracy at the cost of compute time.
+  basecalling:
+    params:
+      method: "complex"
+      demultiplex: false
+      complex_settings:
+        model_speed: "hac"
+        basecalling_modifications: "5mCG_5hmCG"
+        kit_name: "SQK-NBD114-24"
+      explicit_settings:
+        base_model_name: "dna_r9.4.1_e8_sup@v3.3"
+        mod_model_name: "dna_r9.4.1_e8_sup@v3.3_5mCG_5hmCG@v0"
+      batch_size: "64"
+    paths:
+      pod5_input_path: "data/pod5"
+      basecalled_bam_name: "tutorial.bam"
+
+  # -------------------------
+  # Step 2: Alignment
+  # -------------------------
+  # The GM24385 dataset uses hg19. Do not change genome_id unless you are
+  # using a different dataset. The atlas and manifest must match the genome.
+  align:
+    paths:
+      genome_id: "hg19"
+      custom_fasta_reference: null
+      aligned_bam_name: "tutorial.aligned.sorted.bam"
+      alignment_flagstat_name: "tutorial.flagstat.txt"
+      alignment_stats_name: "tutorial.stats.txt"
+
+  # -------------------------------
+  # Step 3: Methylation Summary
+  # -------------------------------
+  methylation:
+    paths:
+      methylation_bed_name: "methylation.bed"
+      methylation_log_name: "methylation.log"
+
+  # ------------------------------------
+  # Step 4: Deconvolution and Analysis
+  # ------------------------------------
+  analysis:
+    params:
+      methylation_aggregation_chunksize: '5000000'
+      deconv_algorithm: "uxm"
+    tools:
+    paths:
+      atlas_file_name: "UXM_atlas.tsv"
+      manifest_name: "illumina_manifest.csv"
+      deconvolution_results_name: "deconvoluted_output.csv"
