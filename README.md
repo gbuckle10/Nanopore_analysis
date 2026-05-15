@@ -113,6 +113,8 @@ conda env create -f environment.yml
 conda activate nanopore_analysis
 ```
 
+When prompted, accept the terms of service.
+
 To update the environment later if `environment.yml` has changed:
 ```bash
 conda env update --file environment.yml --prune

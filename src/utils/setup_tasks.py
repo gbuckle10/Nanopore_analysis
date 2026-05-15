@@ -4,7 +4,6 @@ from pathlib import Path
 
 from src import PROJECT_ROOT
 from src.utils.process_utils import run_command
-from src.utils.config_utils import load_config
 import os
 import sys
 import requests
@@ -73,7 +72,7 @@ def install_dorado(config):
     Downloads and extracts the correct version of Dorado.
     """
     print(" --- Setting up Dorado ---")
-    version = config['parameters']['setup']['dorado_version']
+    version = config['pipeline_steps']['setup']['params']['dorado_version']
     archive_filename = f"dorado-{version}-linux-x64.tar.gz"
     download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-linux-x64.tar.gz"
 
@@ -147,12 +146,13 @@ def main(argv=None):
 
     print(f">>> Loading configurations")
 
-    config = load_config(args.config)
+    with open(args.config, 'r') as f:
+        config = yaml.safe_load(f)
 
     # If dorado version is in args, override config
     if args.dorado_version is not None:
         print(f"Overriding config with user-defined dorado version '{args.dorado_version}'")
-        config['pipeline_steps']['setup']['params']['dorado_version'] = args.dorado_version
+        config = args.dorado_version
 
     # Load existing runtime_config, otherwise make a new one.
     try:
