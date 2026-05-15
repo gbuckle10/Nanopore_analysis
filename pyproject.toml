@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nanopore-analysis"
+version = "1.0.0"
+requires-python = ">=3.9"
+description = "A command-line pipeline fopr Nanopore sequencing data analysis, from basecalling through to methylation-based cell-type deconvolution"
+authors = [
+    {name = "George Buckle"}
+]
+
+
+[project.scripts]
+nanopore_analysis = "src.run_pipeline:main"
+summarise_lengths = "src.analysis.summarise_lengths:main"

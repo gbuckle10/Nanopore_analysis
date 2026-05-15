@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 import csv
 from collections import Counter
-from src.utils.logger import setup_logger
+from src.utils.logger import Logger
 
 
 def summarise_lengths(input_file, output_dir=None, must_be_aligned=False, min_length=0, max_length=float('inf')):
@@ -50,8 +50,8 @@ def summarise_lengths(input_file, output_dir=None, must_be_aligned=False, min_le
         print(f"Error processing BAM file: {e}", file=sys.stderr)
         sys.exit(1)
 
-if __name__ == '__main__':
-    setup_logger()
+def main():
+    Logger.setup_logger()
 
     parser = argparse.ArgumentParser(
         description="Summarise the read length distribution in a bam file."
@@ -84,7 +84,6 @@ if __name__ == '__main__':
         help="Maximum length to count"
     )
 
-
     args = parser.parse_args()
 
     if args.output_dir:
@@ -93,5 +92,9 @@ if __name__ == '__main__':
         output_directory = args.input_bam.parent
 
     summarise_lengths(args.input_bam, output_directory, args.must_be_aligned, args.min_length, args.max_length)
+
+
+if __name__ == '__main__':
+    main()
 
 

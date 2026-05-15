@@ -3,9 +3,8 @@ import pysam
 import logging
 from pathlib import Path
 import sys
-from logger import setup_logger
+from logger import Logger
 import subprocess
-
 
 
 def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selection="both"):
@@ -87,8 +86,9 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
         if output_below:
             output_below.close()
 
-if __name__ == "__main__":
-    setup_logger()
+
+def main():
+    Logger.setup_logger()
 
     parser = argparse.ArgumentParser(
         description="Filter a bam file by a specified length and indexes the output"
@@ -122,7 +122,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
     if args.output_dir:
         output_directory = args.output_dir
     else:
@@ -133,3 +132,7 @@ if __name__ == "__main__":
     print(f"Mode: {args.mode}")
     print(f"Output directory: {output_directory}")
     filter_bam_by_length(args.input_bam, args.cutoff, output_directory, args.mode)
+
+
+if __name__ == "__main__":
+    main()
