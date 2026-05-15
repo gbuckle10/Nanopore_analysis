@@ -50,7 +50,7 @@ def setup_submodules(config):
     comp_command = ["python", "install.py"]
     # run_external_command(comp_command, cwd=wgbstools_dir)
 
-    submodule_paths_config = config.get('pipeline_steps', {}).get('analysis', {}).get('tools', {})
+    submodule_paths_config = config.get('pipeline_steps', {}).get('analysis', {}).get('tools') or {}
 
     uxm_rel = submodule_paths_config.get('uxm_dir', 'externals/UXM_deconv')
     wgbstools_rel = submodule_paths_config.get('wgbstools_dir', 'externals/wgbs_tools')
@@ -87,6 +87,7 @@ def install_dorado(config):
     else:
         print(f"Downloading dorado version {version} from {download_url}")
         archive_path = os.path.join(PROJECT_ROOT, "tools", archive_filename)
+        os.makedirs(os.path.dirname(archive_path), exist_ok=True)
         download_file(download_url, archive_path)
 
         print(f"Extracting {archive_path}...")
@@ -152,7 +153,7 @@ def main(argv=None):
     # If dorado version is in args, override config
     if args.dorado_version is not None:
         print(f"Overriding config with user-defined dorado version '{args.dorado_version}'")
-        config = args.dorado_version
+        config['pipeline_steps']['setup']['params']['dorado_version'] = args.dorado_version
 
     # Load existing runtime_config, otherwise make a new one.
     try:
