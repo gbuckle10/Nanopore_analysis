@@ -11,7 +11,7 @@ from typing import Optional, Any, Dict, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
 
 from src.config.validators import validate_path, validate_pod5, resolve_path
-
+from src import PROJECT_ROOT
 
 class Globals(BaseModel):
     threads: int = 4
@@ -434,6 +434,11 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
     Loads two YAML config files (runtime_config.yaml and config.yaml), deep-merges them, and validates them with
     Pydantic. The config in the second position will override values from the config in the first position.
     """
+
+    # Resolve paths
+    config_path = resolve_path(Path.cwd(), str(config_path))
+    runtime_config_path = resolve_path(Path.cwd(), str(runtime_config_path))
+
     # Load the YAML files into dictionaries
     try:
         with open(config_path, 'r') as f:
