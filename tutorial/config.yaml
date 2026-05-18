@@ -39,7 +39,7 @@ pipeline_steps:
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      data_input_dir_name: "pod5_input"
+      data_input_dir_name: "pod5"
 
   # --------------------
   # Step 1: Basecalling
@@ -66,11 +66,10 @@ pipeline_steps:
   # -------------------------
   # Step 2: Alignment
   # -------------------------
-  # The GM24385 dataset uses hg19. Do not change genome_id unless you are
-  # using a different dataset. The atlas and manifest must match the genome.
+
   align:
     paths:
-      genome_id: "hg19"
+      genome_id: "hg38"
       custom_fasta_reference: null
       aligned_bam_name: "tutorial.aligned.sorted.bam"
       alignment_flagstat_name: "tutorial.flagstat.txt"
