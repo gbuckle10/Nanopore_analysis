@@ -105,14 +105,16 @@ def _download_file_with_progress(url: str, destination: Path):
 def reference_genome_handler(config):
     url = config.pipeline_steps.setup.downloads.reference_genome_url
     use_wgbs = config.pipeline_steps.setup.params.download_ref_with_wgbstools
+    genome_id = config.pipeline_steps.align.paths.genome_id
 
     if use_wgbs:
-        logger.info("We are going to initialise the genome using wgbstools")
-    else:
-        logger.info("We are going to initialise the genome and index with minimap2")
+        logger.info(f"We are going to initialise genome {genome_id} using wgbstools")
+        run_command(["wgbstools", "init_genome", genome_id])
+        return
+
+    logger.info("We are going to initialise the genome and index with minimap2")
 
     ref_path = config.pipeline_steps.align.paths.full_ref_fasta_path
-
     user_path = Path(ref_path)
 
     # Determine final file path

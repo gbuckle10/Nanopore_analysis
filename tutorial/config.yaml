@@ -35,7 +35,7 @@ pipeline_steps:
     downloads:
       data_download_url: "s3://ont-open-data/giab_2025.01/flowcells/HG002/PAW70337/pod5/PAW70337_66b2eea5_de8117b1_11.pod5"
       reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
-      uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
+      uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U250.l4.hg38.full.tsv"
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
@@ -92,6 +92,6 @@ pipeline_steps:
       deconv_algorithm: "uxm"
     tools:
     paths:
-      atlas_file_name: "UXM_atlas.tsv"
+      atlas_file_name: "Atlas.U250.l4.hg38.full.tsv"
       manifest_name: "illumina_manifest.csv"
       deconvolution_results_name: "deconvoluted_output.csv"
