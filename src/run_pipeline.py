@@ -29,9 +29,6 @@ COMMAND_MAP = {
     'analysis': 'pipeline',
     'all': 'pipeline',
 
-    'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
-    'summarise-lengths': 'src/analysis/summarise_lengths.py',
-    'download': 'src/utils/resource_downloader.py'
 }
 
 
