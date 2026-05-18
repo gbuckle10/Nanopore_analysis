@@ -133,3 +133,98 @@ Bone-Osteob,0.0300103
 Since we're only using a single POD5 file rather than a full run, the deconvolution result will be noisy and should not be interpreted as a definitive cell-type profile. The important thing at this stage is that the pipeline completes without errors and produces a CSV with plausible non-zero values across cell types.
 
 ---
+
+## 2. Basecalling
+
+Basecalling is the process of converting the raw electrical signal recorded by the Nanopore device into DNA sequences. The tool that does this is **Dorado**, which is downloaded automatically during installation.
+
+The output is an unaligned BAM file - a standard format for storing sequencing reads, in this case without any positional information because we haven't mapped them to a genome yet.
+
+### What you need
+
+- A directory of `.pod5` files (the raw output from your Nanopore device)
+- Dorado installed (handled by `python install.py conda all`)
+
+If your sequencer produced `.fast5` files instead of `.pod5`, convert them first using the `pod5` tool included in the conda environment:
+
+```bash
+pod5 convert fast5 data/fast5_input/*.fast5 --output data/pod5/
+```
+
+### Choosing a Model
+
+Dorado uses a neural network model to interpret the raw signal. The two things to specify are:
+
+**Model speed** - a tradeoff between accuracy and compute time:
+- `hac` (high accuracy) - good accuracy, reasonable speed. Right for most runs.
+- `sup` (super accuracy) - better accuracy, significantly slower. Worth it if you're not in a rush or have a good GPU.
+
+**Modification model** - tells Dorado to detect methylation at the same time as basecalling. For CpG methylation use `5mCG_5hmCG`.
+
+Set these in `config.yaml`:
+
+```yaml
+pipeline_steps:
+  basecalling:
+    params:
+      method: "complex"
+      complex_settings:
+        model_speed: "hac"
+        basecalling_modifications: "5mCG_5hmCG"
+    paths:
+      pod5_input_path: "data/pod5"
+      basecalled_bam_name: "my_experiment.bam"
+```
+
+> **What is `method: complex`?** The pipeline has two ways to specify a model. `complex` lets you describe the model by its properties and the pipeline builds the full model name for you. `explicit` lets you name a specific model version directly. For most purposes `complex` is fine.
+
+### Running Basecalling
+
+```bash
+nanopore_analysis basecalling run
+```
+
+Or override the input/output without touching the config:
+
+```bash
+nanopore_analysis basecalling run \
+  --input-file data/pod5/ \
+  --output-dir data/basecalled_output/my_experiment.bam
+```
+
+### If your run used barcodes (demultiplexing)
+
+Barcoding lets you sequence multiple samples in a single run by tagging each sample's DNA with a unique sequence. If your run used barcodes, the basecalled BAM will contain reads from all samples mixed together and you need to separate them. This is called **demultiplexing**.
+
+Set `demultiplex: true` and provide your kit name:
+
+```yaml
+pipeline_steps:
+  basecalling:
+    params:
+      demultiplex: true
+      complex_settings:
+        kit_name: "SQK-NBD114-24"
+```
+
+Then run as normal - basecalling and demultiplexing happen in one step, producing a separate BAM per barcode in `data/demultiplexed/`.
+
+If you already have a basecalled BAM and just want to demultiplex it:
+
+```bash
+nanopore_analysis basecalling demux \
+  --input-file data/basecalled_output/my_experiment.bam \
+  --output-dir data/demultiplexed/
+```
+
+### Checking Your Output
+
+A quick sanity check after basecalling is to look at the read length distribution:
+
+```bash
+summarise_lengths \
+  data/basecalled_output/my_experiment.bam \
+  --output-dir data/qc/
+```
+
+A healthy run shows a broad spread of lengths, typically peaking somewhere between 5-20 kb depending on the library prep. If almost all reads are below 1 kb, something likely went wrong during library preparation rather than basecalling.
