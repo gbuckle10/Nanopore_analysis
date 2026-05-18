@@ -11,7 +11,6 @@ from typing import Optional, Any, Dict, Literal
 from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
 
 from src.config.validators import validate_path, validate_pod5, resolve_path
-from src import PROJECT_ROOT
 
 class Globals(BaseModel):
     threads: int = 4
@@ -40,7 +39,7 @@ class PipelineControl(BaseModel):
 
 
 class SetupDownloads(BaseModel):
-    fast5_download_url: AnyUrl
+    data_download_url: AnyUrl
     reference_genome_url: AnyUrl
     uxm_atlas_url: AnyUrl
     manifest_url: AnyUrl
@@ -48,21 +47,24 @@ class SetupDownloads(BaseModel):
 
 
 class SetupPaths(BaseModel):
-    fast5_input_dir_name: str = "fast5_input"
-    fast5_input_dir: Optional[Path] = None
+    data_input_dir_name: str = "fast5_input"
+    data_input_dir: Optional[Path] = None
 
     def _validate(self):
         pass
 
     def _build(self, common_paths: Paths):
         """Builds full paths for setup step """
-        self.fast5_input_dir = resolve_path(common_paths.data_dir, self.fast5_input_dir_name)
+        self.data_input_dir = resolve_path(common_paths.data_dir, self.data_input_dir_name)
 
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
 
+
 class SetupParams(BaseModel):
     download_ref_with_wgbstools: bool = False
+    num_files: Optional[int] = None
+    input_format: str
 
 
 class SetupStep(BaseModel):

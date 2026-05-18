@@ -1,11 +1,14 @@
 import argparse
+import fnmatch
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 import requests
 from tqdm import tqdm
 
+from src import PROJECT_ROOT
 from src.config.models import load_and_validate_configs
 from src.config.paths import build_config_paths, update_config_from_args
 from src.utils.file_utils import ensure_dir_exists, decompress_file
@@ -15,16 +18,40 @@ from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
+def list_s3_files(url: str, include: str = None) -> list[str]:
+    """Return S3 URIs of files at url, optionally filtered by fnmatch pattern"""
+    result = subprocess.run(
+        ["aws", "s3", "ls", url, '--recursive', '--no-sign-request'],
+        capture_output=True, text=True, check=True
+    )
+    files = []
+    for line in result.stdout.splitlines():
+        # Each line: "date time size key"
+        key = line.split(maxsplit=3)[-1]
+        s3_uri = "s3://" + url.split("/")[2] + "/" + key
+        if include is None or fnmatch.fnmatch(key, include):
+            files.append(s3_uri)
 
-def _download_s3(url: str, destination: Path, include: str = None, exclude: str = None):
+    return files
+
+def _download_s3(url: str, destination: Path, format: str = None, include: str = None, exclude: str = None, max_files: int = None):
     """Download using s3"""
-    cmd = ["aws", "s3", "cp", url, str(destination), "--no-sign-request", "--recursive", "--quiet"]
+    destination.mkdir(parents=True, exist_ok=True)
+    if max_files is not None:
+        logger.info(f"Downloading {max_files} file(s).")
+        files = list_s3_files(url, include=include)[:max_files]
+        for s3_uri in files:
+            filename = s3_uri.split("/")[-1]
+            logger.info(f"Downloading {filename}")
+            run_command(["aws", "s3", "cp", s3_uri, str(destination / filename), "--no-sign-request"])
+        return
+
+    cmd = ["aws", "s3", "cp", url, str(destination), "--no-sign-request", "--recursive"]
     if include:
-        cmd += ["--exclude", "*"]
-        cmd += ["--include", include]
+        cmd += ["--exclude", "*", "--include", include]
     elif exclude:
         cmd += ["--exclude", exclude]
-    destination.mkdir(parents=True, exist_ok=True)
+
     run_command(cmd)
 
 
@@ -37,10 +64,12 @@ def download(url: str, destination: Path, **kwargs):
 
 
 def sample_data_handler(config):
-    url = str(config.pipeline_steps.setup.downloads.fast5_download_url)
-    destination = config.pipeline_steps.setup.paths.fast5_input_dir
-    logger.info(f"Downloading sample fast5 data from {url} to {destination}")
-    download(url, Path(destination), include="*.fast5")
+    url = str(config.pipeline_steps.setup.downloads.data_download_url)
+    destination = config.pipeline_steps.setup.paths.data_input_dir
+    max_files = config.pipeline_steps.setup.params.num_files
+    file_format = config.pipeline_steps.setup.params.input_format
+    logger.info(f"Downloading sample data from {url} to {destination}")
+    download(url, Path(destination), include=f"*.{file_format}", max_files=max_files)
 
 
 def _download_file_with_progress(url: str, destination: Path):
@@ -196,16 +225,23 @@ def final_destination_and_download(url: str, destination: Path, is_interactive: 
 
 
 def _add_subcommands(subparsers, parent_parser, config):
-    download_parent = argparse.ArgumentParser(add_help=False)
+    download_parent = argparse.ArgumentParser(add_help=False, parents=[parent_parser])
     download_parent.add_argument('--force', action="store_true",
                                  dest="force",
                                  help="Force redownload even if the file already exists.")
-    p_sample = subparsers.add_parser('sample_data', help="Download sample fast5 data.", parents=[download_parent])
+    p_sample = subparsers.add_parser('sample_data', help="Download sample data.", parents=[download_parent])
     p_sample.add_argument("--url", type=str,
-                          default=str(config.pipeline_steps.setup.downloads.fast5_download_url),
-                          dest="pipeline_steps.setup.downloads.fast5_download_url")
+                          default=str(config.pipeline_steps.setup.downloads.data_download_url),
+                          dest="pipeline_steps.setup.downloads.data_download_url")
     p_sample.add_argument("--output-dir", type=Path, default=None,
-                          dest="pipeline_steps.setup.paths.fast5_input_dir")
+                          dest="pipeline_steps.setup.paths.data_input_dir",
+                          help="Directory to save downloaded files into.")
+    sample_limit_group = p_sample.add_mutually_exclusive_group()
+    sample_limit_group.add_argument("--max-files", type=int, default=config.pipeline_steps.setup.params.num_files,
+                                    dest="max_files",
+                                    help="Maximum number of files to download.")
+    sample_limit_group.add_argument("--all-files", action="store_const", const=None, dest="max_files",
+                                    help="Download all available files, ignoring any limit")
     p_sample.set_defaults(func=sample_data_handler)
 
     p_genome = subparsers.add_parser('genome', help="Download and prepare the reference genome.",
