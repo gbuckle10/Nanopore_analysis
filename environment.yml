@@ -14,14 +14,14 @@ dependencies:
   - python=3.9
   - unzip
   - curl
-  - pyarrow=20.0
+  - pyarrow=20.0 # Can't remember why it's pinned to 20, I think it's a dependency of another dependency
   - go-yq
   - bedtools
   - pybedtools
   - requests
   - pandas
-  - scipy
-  - matplotlib
+  - scipy # Required by submodules
+  - matplotlib # Required by submodules
   - conda_forge:gxx
   - pysam
   - pydantic

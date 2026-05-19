@@ -1,52 +1,44 @@
-# Start from a clean Ubuntu image
-FROM ubuntu:22.04
+FROM gbuck10/nanopore-analysis-base:latest
 
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies required by pipeline and Conda
-RUN apt-get update && apt-get install -y \
-    wget \
-    unzip \
-    git \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy project files into container's filesystem
 # Create a directory called /app to hold the project.
 WORKDIR /app
-
-# Add metadata to the image
-LABEL version="0.9.0"
-
-# Tells python to look for modules in the project root.
 ENV PYTHONPATH="/app"
 
-# Download and install Miniforge
-RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh" -O miniforge.sh && \
-    bash miniforge.sh -b -p /opt/conda && \
-    rm miniforge.sh
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV PATH="${PATH}:/app"
-
-# Copy environment.yml
-COPY environment.yml .
-
-# Create the conda environment from environment.yml
-RUN mamba env create -f environment.yml
+# Add metadata to the image
+LABEL version="1.0.0"
 
 # Activate the conda environment for all subsequent commands
 SHELL ["mamba", "run", "-n", "nanopore_analysis", "/bin/bash", "-c"]
-
 COPY . .
 
-# Create a symlink to the main script in a PATH directory
-RUN ln -s /app/src/run_pipeline.py /usr/local/bin/nanopore_analysis
+RUN chmod +x externals/wgbs_tools/wgbstools externals/UXM_deconv/uxm && \
+    ln -s /app/externals/wgbs_tools/wgbstools /opt/conda/envs/nanopore_analysis/bin/wgbstools && \
+    ln -s /app/externals/UXM_deconv/uxm /opt/conda/envs/nanopore_analysis/bin/uxm
 
-RUN echo "Conda environment activated successfully" && \
-    python --version && \
-    yq --version
+# Install the pipeline entry point
+RUN pip install -e .
+
+
+# Download and install Dorado
+RUN mkdir -p tools && \
+    version=$(yq '.pipeline_steps.setup.params.dorado_version' config.yaml) && \
+    wget "https://cdn.oxfordnanoportal.com/software/analysis/dorado-${version}-linux-x64.tar.gz" -O tools/dorado.tar.gz && \
+    tar -xzf tools/dorado.tar.gz -C tools/ && \
+    rm tools/dorado.tar.gz && \
+    echo "Dorado ${version} installed successfully"
+
+# Write runtime_config.yaml with Dorado path
+RUN version=$(yq '.pipeline_steps.setup.params.dorado_version' config.yaml) && \
+    echo "tools:" > runtime_config.yaml && \
+    echo "  dorado: /app/tools/dorado-${version}-linux-x64/bin/dorado" >> runtime_config.yaml
+
+# Verify the installation
+RUN nanopore_analysis --help
 
 # Environment is now built and ready.
 ENTRYPOINT ["nanopore_analysis"]
-CMD ["all"]
+CMD ["--help"]

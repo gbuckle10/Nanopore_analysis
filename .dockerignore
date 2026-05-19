@@ -11,13 +11,9 @@ venv/
 
 # Directories to ignore
 data/
-tools/
 output/
 analysis/
 reference_genomes/
-
-# Submodule directory
-externals/
 
 # Local conda environments
 .conda/
