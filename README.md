@@ -101,6 +101,8 @@ Close and reopen WSL to finish the installation.
 
 **1. Clone the repository**
 
+Ensure that you are in your WSL home directory (or subdirectories) before cloning - cloning into a Windows-mounted path (e.g. `/mnt/c/...`) will result in permission errors.
+
 ```bash
 git clone https://github.com/gbuckle10/Nanopore_analysis.git
 cd Nanopore_analysis
@@ -155,9 +157,33 @@ nanopore_analysis --help
 
 ### Option 2: Docker
 
-**1. Clone the repository**
+**Prerequisites: Installing Docker Desktop (Windows Users)**
+
+Install Docker Desktop following the [official instructions](https://docs.docker.com/desktop/setup/install/windows-install/), ensuring the WSL2 backend is enabled. Once installed, open Docker Desktop and go to **Settings -> Resources -> WSL Integration** and enable integration for your Ubuntu instance. Then add your user to the `docker` group so you can run Docker commands without `sudo`:
 
 ```bash
+sudo usermod -aG docker $USER
+```
+
+Close and reopen your WSL terminal for the change to take effect. Then verify that it works from your WSL terminal by running: 
+
+```bash
+docker --version
+```
+
+**Installing the pipeline with Docker**
+
+The following steps should be run in your WSL terminal. 
+
+First, install Miniconda to get Python - follow steps 1 and 2 from the [WSL Setup](#) section above. Once Miniconda is installed you don't need to create the conda environment, just clone the repo and run the installer. 
+
+
+**1. Clone the repository**
+
+Ensure that you are in your WSL home directory (or subdirectories) before cloning - cloning into a Windows-mounted path (e.g. `/mnt/c/...`) will result in permission errors.
+
+```bash
+cd ~
 git clone https://github.com/gbuckle10/Nanopore_analysis.git
 cd Nanopore_analysis
 ```

@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Copy project files into container's filesystem
 # Create a directory called /app to hold the project.
 WORKDIR /app
+ENV PYTHONPATH="/app"
 
 # Add metadata to the image
 LABEL version="1.0.0"
@@ -40,4 +41,4 @@ RUN nanopore_analysis --help
 
 # Environment is now built and ready.
 ENTRYPOINT ["nanopore_analysis"]
-CMD ["--all"]
+CMD ["--help"]
