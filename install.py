@@ -4,6 +4,7 @@ import sys
 import subprocess
 import argparse
 
+
 DOCKER_WRAPPER_SCRIPT = """#!/bin/bash
 # This script runs the nanopore pipeline inside its Docker container.
 IMAGE_NAME="nanopore-analysis:latest"
@@ -29,7 +30,8 @@ def install_docker():
     """
     Builds the docker image and creates the wrapper script.
     """
-    run_command(["docker", "build", "-t", "nanopore-pipeline:latest", "."], "Building Docker image")
+
+    run_command(["docker", "build", "--progress=plain", "-t", "nanopore-pipeline:latest", "."], "Building Docker image")
 
     print(">>> Creating Docker wrapper script: ./nanopore_analysis")
     with open("nanopore_analysis", "w") as f:
