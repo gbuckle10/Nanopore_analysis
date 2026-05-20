@@ -95,26 +95,13 @@ Accept the licence agreement. When asked whether to automatically initialise con
 
 Close and reopen WSL to finish the installation.
 
-**3. Fix line endings (if you edit files on Windows)**
-
-If you edit any project files in a Windows editor, you may get  `$'\r': command not found` errors in WSL due to Windows-style line endings (CRLF). If you're lucky you can change the line endings to LF directly in your editor:
-
-- **PyCharm** - click the `CRLF` button in the bottom-right status bar and select `LF`.
-- **VS Code** - click the `CRLF` button in the bottom-right status bar and select `LF`. To apply this to all new files automatically, add `"files.eol": "\n"` to your `settings.json`.
-- **Vim/Neovim** - run `:set fileformat=unix`then save with `:w`. To make it permanent, add `set fileformat=unix` to your `.vimrc` or `init.vim` file.
-
-If you can't change the setting in your editor, use `dos2unix` as a last resort:
-```bash
-sudo apt-get update
-sudo apg-get install dos2unix
-find . -type f -name "*.sh" -exec dos2unix {} \+ 
-```
-
 --- 
 
 ### Option 1: Conda (recommended)
 
 **1. Clone the repository**
+
+Ensure that you are in your WSL home directory (or subdirectories) before cloning - cloning into a Windows-mounted path (e.g. `/mnt/c/...`) will result in permission errors.
 
 ```bash
 git clone https://github.com/gbuckle10/Nanopore_analysis.git
@@ -127,6 +114,8 @@ cd Nanopore_analysis
 conda env create -f environment.yml
 conda activate nanopore_analysis
 ```
+
+When prompted, accept the terms of service.
 
 To update the environment later if `environment.yml` has changed:
 ```bash
@@ -145,6 +134,13 @@ This will:
 - Create a `nanopore_analysis` symlink in the project root
 - Copy Conda activation scripts so `PYTHONPATH` is set automatically on environment activation
 
+Once the installer has finished, deactivate and reactivate the environment for the changes to take effect.
+
+```bash
+conda deactivate
+conda activate nanopore_analysis
+```
+
 **4. Install the pipeline:** (if not created automatically)
 
 ```bash
@@ -161,9 +157,33 @@ nanopore_analysis --help
 
 ### Option 2: Docker
 
-**1. Clone the repository**
+**Prerequisites: Installing Docker Desktop (Windows Users)**
+
+Install Docker Desktop following the [official instructions](https://docs.docker.com/desktop/setup/install/windows-install/), ensuring the WSL2 backend is enabled. Once installed, open Docker Desktop and go to **Settings -> Resources -> WSL Integration** and enable integration for your Ubuntu instance. Then add your user to the `docker` group so you can run Docker commands without `sudo`:
 
 ```bash
+sudo usermod -aG docker $USER
+```
+
+Close and reopen your WSL terminal for the change to take effect. Then verify that it works from your WSL terminal by running: 
+
+```bash
+docker --version
+```
+
+**Installing the pipeline with Docker**
+
+The following steps should be run in your WSL terminal. 
+
+First, install Miniconda to get Python - follow steps 1 and 2 from the [WSL Setup](#) section above. Once Miniconda is installed you don't need to create the conda environment, just clone the repo and run the installer. 
+
+
+**1. Clone the repository**
+
+Ensure that you are in your WSL home directory (or subdirectories) before cloning - cloning into a Windows-mounted path (e.g. `/mnt/c/...`) will result in permission errors.
+
+```bash
+cd ~
 git clone https://github.com/gbuckle10/Nanopore_analysis.git
 cd Nanopore_analysis
 ```
@@ -518,9 +538,20 @@ export PYTHONPATH=$PYTHONPATH:$PWD/src
 ```
  
 **`$'\r': command not found` in WSL**
- 
-Line endings are Windows-style (CRLF). See the [WSL setup section](#wsl-setup-windows-users) for how to fix this with `dos2unix` or your editor settings.
- 
+
+This happens when project files have been edited on Windows and have Windows-style line endings (CRLF). The easiest fix is to change the line ending setting in your editor to LF:
+
+- **PyCharm** - click the `CRLF` button in the bottom-right status bar and select `LF`.
+- **VS Code** - click the `CRLF` button in the bottom-right status bar and select `LF`. To apply this to all new files automatically, add `"files.eol": "\n"` to your `settings.json`.
+- **Vim/Neovim** - run `:set fileformat=unix`then save with `:w`. To make it permanent, add `set fileformat=unix` to your `.vimrc` or `init.vim` file.
+
+If you can't change the setting in your editor, use `dos2unix` as a last resort:
+```bash
+sudo apt-get update
+sudo apg-get install dos2unix
+find . -type f -name "*.sh" -exec dos2unix {} \+ 
+```
+
 **Conda commands not found in a new WSL terminal**
  
 ```bash

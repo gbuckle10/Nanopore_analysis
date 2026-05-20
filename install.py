@@ -4,6 +4,7 @@ import sys
 import subprocess
 import argparse
 
+
 DOCKER_WRAPPER_SCRIPT = """#!/bin/bash
 # This script runs the nanopore pipeline inside its Docker container.
 IMAGE_NAME="nanopore-analysis:latest"
@@ -29,7 +30,8 @@ def install_docker():
     """
     Builds the docker image and creates the wrapper script.
     """
-    run_command(["docker", "build", "-t", "nanopore-pipeline:latest", "."], "Building Docker image")
+
+    run_command(["docker", "build", "--progress=plain", "-t", "nanopore-pipeline:latest", "."], "Building Docker image")
 
     print(">>> Creating Docker wrapper script: ./nanopore_analysis")
     with open("nanopore_analysis", "w") as f:
@@ -42,37 +44,13 @@ def install_conda(task):
     """
     Creates the Conda environment and the local symlink.
     """
-    env_name = "nanopore_analysis"
-
-    '''
-    if task == 'all':
-        run_command([
-            "mamba", "env", "create", "-f", "environment.yml"
-        ], "Creating conda environment and running internal setup step.")
-    '''
-    print(">>> Installing Conda activation scripts")
-    conda_info = subprocess.check_output(["conda", "info", "--json"], text=True)
-    import json
-    conda_root = json.loads(conda_info)['conda_prefix']
-    env_path = os.path.join(conda_root, 'envs', env_name)
-    activation_dir = os.path.join(env_path, 'etc', 'conda', 'activate.d')
-    os.makedirs(activation_dir, exist_ok=True)
-    import shutil
-    shutil.copy(
-        './etc/conda/activate.d/env_vars.sh',
-        os.path.join(activation_dir, 'env_vars.sh')
-    )
 
     command_to_run = [
         "python", "-m", "src.utils.setup_tasks", task
     ]
     run_command(command_to_run, f"Running step logic for '{task}'")
 
-    print(">>> Creating local symlink: ./nanopore_analysis")
-    if os.path.exists("nanopore_analysis"):
-        os.remove("nanopore_analysis")
-    os.symlink("src/run_pipeline.py", "nanopore_analysis")
-    os.chmod("src/run_pipeline.py", 0o755)
+    run_command(["pip", "install", "-e", "."], "Installing package and registering nanopore_analysis command")
     print(">>> Local setup complete.")
 
 
