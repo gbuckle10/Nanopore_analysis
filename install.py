@@ -51,8 +51,9 @@ def install_conda(task):
     run_command(command_to_run, f"Running step logic for '{task}'")
 
     run_command(["pip", "install", "-e", "."], "Installing package and registering nanopore_analysis command")
-    print(">>> Local setup complete.")
-
+    print("\n>>> Local setup complete.")
+    print("    Start a new terminal session, then activate the environment with:")
+    print("        conda activate nanopore_analysis")
 
 def add_args(parser):
     """
