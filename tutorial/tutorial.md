@@ -495,3 +495,36 @@ A few things to keep in mind when interpreting results:
 - **Small proportions may not be meaningful.** Values below ~2-3% are often within the noise for low-coverage samples.
 
 --- 
+
+## 6. BAM Utilities
+
+These are standalone tools that operate on BAM files independeltly from the main pipeline. They are useful for exploring and quality-checking your data at any stage.
+
+---
+
+### Summarising Read Lengths
+
+Before committing to a full pipeline run it is worth checking the read length distribution of your BAM. A healthy long-read run should show a broad spread of lengths, typically peaking somewhere between 5-20 kb depending on your library prep.
+
+```bash
+summarise_lengths data/alignment/my_experiment.aligned.sorted.bam --output-dir data/qc/
+```
+
+This works on both aligned and unaligned BAMs, so you can run it immediately after basecalling to catch any issues before alignment. The output is a CSV with two columns:
+
+
+| Column | Content |
+|---|---|
+| `read_length` | Length of the read in base pairs |
+| `count` | Number of reads at that length |
+
+Saved as `<input_stem>_read_length_distribution.csv` in your output directory.
+
+**Things to look out for:**
+- Almost all reads below 1 kb - something probably went wrong during library preparation
+- A sharp peak at a very specific length - may indicate adapter contamination
+- A completely flat distribution - worth double-checking your basecalling model
+
+Of course these may be expected depending on your sample, so they are only worrying if your sample isn't expected to produce these results.
+
+---

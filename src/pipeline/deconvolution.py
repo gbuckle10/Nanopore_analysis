@@ -1,5 +1,7 @@
 import argparse
 import logging
+import sys
+
 import pandas as pd
 
 from src.utils.cli_utils import add_io_arguments
@@ -241,6 +243,15 @@ def deconvolution_prep_handler(config):
 
 def deconvolution_handler(config):
     input_data_path = config.pipeline_steps.analysis.paths.full_deconv_input_path
+
+    if input_data_path.suffix == ".bed" or input_data_path.name.endswith(".bed.gz"):
+        logger.error(
+            f"BED file input({input_data_path.name}) is not supported by 'deconv run'. "
+            f"Run 'nanopore_analysis deconv prep' first to convert it, then pass the "
+            f"resulting CSV as --input."
+        )
+        raise sys.exit(1)
+
     atlas_path = config.pipeline_steps.analysis.paths.full_atlas_path
     output_dir = config.pipeline_steps.analysis.paths.full_deconv_results_path
     algorithm = config.pipeline_steps.analysis.params.deconv_algorithm
