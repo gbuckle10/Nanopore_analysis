@@ -11,8 +11,12 @@ authors = [
     {name = "George Buckle"}
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
 
 [project.scripts]
 nanopore_analysis = "src.run_pipeline:main"
 summarise_lengths = "src.analysis.summarise_lengths:main"
 resource_download = "src.utils.resource_downloader:main"
+filter_by_length = "src.analysis.filter_bam_by_length:main"
