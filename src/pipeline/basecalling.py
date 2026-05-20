@@ -146,6 +146,7 @@ def _add_kit_name_arg(parser, config):
         "--kit-name", type=str,
         default=config.pipeline_steps.basecalling.params.complex_settings.kit_name,
         dest="pipeline_steps.basecalling.params.complex_settings.kit_name",
+        metavar="KIT",
         help="Specify the Nanopore kit name"
     )
 
@@ -155,6 +156,7 @@ def _add_model_name_arg(parser, config):
         '--model-name', type=str,
         default=config.pipeline_steps.basecalling.params.explicit_settings.base_model_name,
         dest="pipeline_steps.basecalling.params.explicit_settings.base_model_name",
+        metavar="MODEL",
         help="Name of the model to download."
     )
 

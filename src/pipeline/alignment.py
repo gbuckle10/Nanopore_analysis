@@ -317,12 +317,14 @@ def _make_alignment_parent_parser(config):
         default=None,
         dest="pipeline_steps.align.paths.custom_fasta_reference",
         type=Path,
+        metavar="PATH",
         help="Path to the reference genome"
     )
     parent.add_argument(
         "--threads",
         default=None,
         dest="globals.threads",
+        metavar="INT",
         help="Number of threads for alignment and samtools."
     )
     return parent
