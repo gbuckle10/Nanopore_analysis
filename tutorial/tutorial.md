@@ -227,4 +227,271 @@ summarise_lengths \
   --output-dir data/qc/
 ```
 
-A healthy run shows a broad spread of lengths, typically peaking somewhere between 5-20 kb depending on the library prep. If almost all reads are below 1 kb, something likely went wrong during library preparation rather than basecalling.
+A good run shows a broad spread of lengths, typically peaking somewhere between 5-20 kb depending on the library prep. If almost all reads are below 1 kb, something likely went wrong during library preparation rather than basecalling.
+
+---
+
+## 3. Alignment
+
+Alignment is the process of mapping each basecalled read to its position in the reference genome. The pipeline uses **minimap2** for alignment and **samtools** for sorting and indexing the output. The result is a sorted, indexed BAM file - the standard input for all downstream steps.
+
+--- 
+
+### What you need
+
+- A basecalled unaligned BAM (from the basecalling step)
+- A reference genome FASTA file in your `reference_genomes/` directory
+
+If you don't have a reference genome yet, download it first:
+
+```bash
+resource_download genome
+```
+
+The pipeline searches `reference_genomes/` for your genome using the `genome_id` set in `config.yaml`. It looks for the file in several common layouts, for example:
+
+```
+reference_genomes/hg38.fa
+reference_genomes/hg38/genome.fa
+reference_genomes/hg38/hg38.fa
+```
+
+If your FASTA is somewhere else or has an unusual name, use `custom_fasta_reference` instead of `genome_id`:
+
+```yaml
+pipeline_steps:
+  align:
+    paths:
+      custom_fasta_reference: "reference_genomes/my_genome.fa"
+```
+
+---
+
+### The minimap2 Index
+
+Before alignment, minimap2 needs an index of the reference genome (a `.mmi` file). This is built automatically the first time you run alignment and saved alongside the FASTA:
+
+```
+reference_genomes/hg38/genome.mmi
+```
+
+Building the index takes a few minutes but only needs to be done once - subsequent runs will find it and skip straight to alignment.
+
+---
+
+### Running Alignment
+
+```bash
+nanopore_analysis align run
+```
+
+Or override the input and output without touching the config:
+
+```bash
+nanopore_analysis align run --input-file data/basecalled_output/my_experiment.bam --output-dir data/alignment/my_experiment.aligned.sorted.bam
+```
+
+This will:
+1. Build the minimap2 index if it doesn't already exist
+2. Align the reads to the reference genome
+3. Sort the output with samtools
+4. Index the sorted BAM
+
+A flagstat QC report is also written automatically to `data/alignment/qc`.
+
+---
+
+### Aligning Multiple BAM files
+
+If you demultiplexed your data, you will have a directory of BAM files rather than a single file. Pass the directory as the input and the pipeline will align every BAM it finds:
+
+```bash
+nanopore_analysis align run --input-file data/demultiplexed/ --output-dir data/alignment
+```
+
+Each file is saved as `<stem>.aligned.bam` inside the output directory.
+
+---
+
+### Reading the Flagstat Report
+
+After alignment, a flagstat report is saved to `data/alignment/qc/`. This is a quick summary of alignment quality. The key line to check is the mapped percentage:
+
+```
+95.42% mapped
+```
+
+For a good whole-genome sequencing run you would typically expect >90% of reads to map. A low mapping rate could indicate a mismatch between the sequencing chemistry and the basecalling model, or the wrong reference genome (i.e. hg19 instead of hg38).
+
+---
+
+### Running QC on an Existing BAM
+
+If you already have an aligned BAM and just want to regenerate the QC report:
+
+```bash
+nanopore_analysis align qc --input-file data/alignment/my_experiment.aligned.sorted.bam
+```
+
+---
+
+## 4. Methylation Summary
+
+The methylation summary step converts the methylation tags embedded in the aligned BAM into a tabular format that the deconvolution step can read. The tool that does this is **modkit**, which produces a BED file with one row per CpG site across the genome.
+
+> **This step is optional for deconvolution.** The UXM algorithm works directly from the aligned BAM via wgbstools `bam2pat`, bypassing the BED file entirely. The NNLS algorithm does use the BED file, but if you are only running UXM you can skip this step completely by setting `methylation_summary: false` in `config.yaml`. It is included in the tutorial for completeness and because it can be useful for quality checking your data before deconvolution.
+
+---
+
+### What You Need
+
+- A sorted, indexed aligned BAM (from the alignment step)
+- Optionally, a reference genome FASTA - strongly recommended
+
+### Running the Methylation Summary
+
+```bash
+nanopore_analysis methylation run
+```
+
+Or with explicit paths
+
+```bash
+nanopore_analysis methylation run --input-file data/alignment/my_experiment.aligned.sorted.bam --output-dir data/methylation/methylation.bed --ref reference_genomes/hg38/genome.fa
+```
+
+Providing `--ref` enables CpG-only mode (`--cpg` in modkit), which restricts output to canonical CpG sites. This is significantly faster than the default and produces cleaner data for deconvolution. It is strongly recommended.
+
+Progress is shown as a live updating status line on the terminal. This is the slowest step in the pipeline on a full BAM - expect it to run for some time.
+
+---
+
+### Understanding the Output
+
+The BED file has one row per CpG site. The columns most relevant to downstream analysis are:
+
+| Column | Content |
+|---|---|
+| 1 | Chromosome |
+| 2 | Start position |
+| 4 | Modification type (`m` = 5mCG) |
+| 11 | Beta value (0–100, percent methylation) |
+
+A beta value of 0 means fully unmethylated at that site, 100 means fully methylated. Most CpG sites in a human sample will sit at one extreme or the other - a bimodal distribution is normal and expected.
+
+---
+
+### Spot-checking a Region
+
+If you have wgbstools installed you can quickly visualise the methylation pattern at any genomic region directly from the BED file:
+
+```bash
+wgbstools view -r chr1:910433-910476 data/methylation/methylation.bed
+```
+
+---
+
+## 5. Deconvolution
+
+Deconvolution uses the methylation data to estimate the proportions of different cell types present in your sample. The pipeline supports two algorithms - **UXM** and **NNLS** - which are fundamentally different in how they work and what inputs they require. It is important to understand this difference before running anything, since the two workflows are completely separate.
+
+---
+
+### Understanding the Two Algorithms
+
+**UXM** Operates at the read level, looking at patterns of methylation across blocks of CpG sites within individual reads. It works directly from the aligned BAM via a `.pat.gz` file generated by wgbstools. Crucially, **the BED file produced by the methylation summary step is not used by UXM can can't be used as input to it** - the two are incompatible formats. UXM is more robust against lower coverage, and is recommended for most runs.
+
+**NNLS** operates at the site level, comparing per-CpG beta values against an Illumina-based reference atlas. It requires the methylation summary BED file as its starting point, which is then converted to Illumina probe coordinates via the `deconvolution prep` step. **The PAT file used by UXM cannot be used as input to NNLS.** Because it relies on Illumina probe coordinates, it is better suited to high-coverage data where per-site estimates are reliable.
+
+| | UXM | NNLS |
+|---|---|---|
+| Input | `.pat.gz` (from `wgbstools bam2pat`) | `.csv` (from `deconvolution prep`) |
+| Starts from | Aligned BAM | Methylation summary BED |
+| Atlas | UXM atlas | Illumina-based full atlas |
+| Best for | Standard Nanopore coverage | High coverage data |
+
+---
+
+### UXM Deconvolution
+
+UXM does not use the methylation summary BED file. YOu can run it directly after alignment, without running the methylation summary step at all.
+
+**Step 1 - Generate a PAT file:**
+
+The PAT format is a compact read-level methylation format used by wgbstools. Generate one from the aligned BAM:
+
+```bash
+wgbstools bam2pat data/alignment/my_experiment.aligned.sorted.bam --out_dir data/processed/
+```
+
+**Step 2 - Run deconvolution**
+
+```bash
+nanopore_analysis deconvolution --input-file data/processed/my_experiment.aligned.sorted.pat.gz --output-dir results/deconvolution/deconvoluted_output.csv --algorithm uxm --atlas data/atlas/UXM_atlas.tsv
+```
+
+Behind the scenes the pipeline will:
+1. Filter the PAT file to only the CpG loci present in the atlas (`wgbstools view`)
+2. Index the filtered file (`wgbstools index`)
+3. Run `uxm deconv` against the atlas
+
+---
+
+### NNLS Deconvolution
+
+First download the Illumina manifest if you haven't already:
+
+```bash
+resource_download manifest
+```
+
+Then run the deconvolution prep step to convert the BED file to Illumina coordinates:
+
+```bash
+resource_download manifest
+```
+
+Then run the deconvolution prep step to convert the BED file to Illumina coordinates:
+
+```bash
+nanopore_analysis deconvolution prep --bed-file data/methylation/methylation.bed \
+  --manifest-file data/atlas/illumina_manifest.csv \
+  --chunk-size 5000000
+```
+
+Then run deconvolution:
+
+```bash
+nanopore_analysis deconvolution run \ 
+  --input-file data/processed/deconvolution_illumina.csv \
+  --output-dir results/deconvolution/ \
+  --algorithm nnls \
+  --atlas data/atlas/full_atlas.csv
+```
+
+---
+
+### Reading the Output
+
+The result is a CSV at `results/deconvolution/deconvoluted_output.csv`. Each row is a cell type and each value is the estimated proportion for that sample, summing to approximately 1.
+
+```
+CellType,tutorial
+Adipocytes,0.0000000
+Bladder-Ep,0.0000000
+Blood-B,0.0260316
+Blood-Granul,0.0738950
+Blood-Mono+Macro,0.0138440
+Blood-NK,0.0317679
+Blood-T,0.0000000
+Bone-Osteob,0.0300103
+...
+```
+
+A few things to keep in mind when interpreting results:
+
+- **Coverage matters.** Lower coverage produces noisier estimates. A single POD5 file will give you a rough picture but not a precise one.
+- **The atlas determines what cell types are reported.** If a cell type isn't in your atlas it won't appear in the output.
+- **Small proportions may not be meaningful.** Values below ~2-3% are often within the noise for low-coverage samples.
+
+--- 
