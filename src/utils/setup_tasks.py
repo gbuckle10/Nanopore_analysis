@@ -4,13 +4,31 @@ from pathlib import Path
 
 from src import PROJECT_ROOT
 from src.utils.process_utils import run_command
-from src.utils.config_utils import load_config
 import os
 import sys
 import requests
 import tarfile
 import yaml
 
+def link_tools_to_conda_bin(executable_paths):
+    conda_prefix = os.environ.get('CONDA_PREFIX')
+    if not conda_prefix:
+        print("WARNING: CONDA_PREFIX not set, skipping tool linking.")
+        return
+
+    bin_dir = os.path.join(conda_prefix, 'bin')
+    tool_names = {'uxm_exe': 'uxm', 'wgbstools_exe': 'wgbstools'}
+
+    for key, name in tool_names.items():
+        exe_path = executable_paths.get(key)
+        if not exe_path:
+            continue
+        os.chmod(exe_path, 0o755)
+        link_path = os.path.join(bin_dir, name)
+        if os.path.islink(link_path) or os.path.exists(link_path):
+            os.remove(link_path)
+        os.symlink(exe_path, link_path)
+        print(f"Linked '{name}' -> {exe_path}")
 
 def download_file(url, destination):
     print(f"Downloading from {url} to {destination}")
@@ -51,7 +69,7 @@ def setup_submodules(config):
     comp_command = ["python", "install.py"]
     # run_external_command(comp_command, cwd=wgbstools_dir)
 
-    submodule_paths_config = config.get('pipeline_steps', {}).get('analysis', {}).get('tools', {})
+    submodule_paths_config = config.get('pipeline_steps', {}).get('analysis', {}).get('tools') or {}
 
     uxm_rel = submodule_paths_config.get('uxm_dir', 'externals/UXM_deconv')
     wgbstools_rel = submodule_paths_config.get('wgbstools_dir', 'externals/wgbs_tools')
@@ -73,7 +91,7 @@ def install_dorado(config):
     Downloads and extracts the correct version of Dorado.
     """
     print(" --- Setting up Dorado ---")
-    version = config['parameters']['setup']['dorado_version']
+    version = config['pipeline_steps']['setup']['params']['dorado_version']
     archive_filename = f"dorado-{version}-linux-x64.tar.gz"
     download_url = f"https://cdn.oxfordnanoportal.com/software/analysis/dorado-{version}-linux-x64.tar.gz"
 
@@ -88,6 +106,7 @@ def install_dorado(config):
     else:
         print(f"Downloading dorado version {version} from {download_url}")
         archive_path = os.path.join(PROJECT_ROOT, "tools", archive_filename)
+        os.makedirs(os.path.dirname(archive_path), exist_ok=True)
         download_file(download_url, archive_path)
 
         print(f"Extracting {archive_path}...")
@@ -147,7 +166,8 @@ def main(argv=None):
 
     print(f">>> Loading configurations")
 
-    config = load_config(args.config)
+    with open(args.config, 'r') as f:
+        config = yaml.safe_load(f)
 
     # If dorado version is in args, override config
     if args.dorado_version is not None:
@@ -167,6 +187,7 @@ def main(argv=None):
 
     if args.command in ['all', 'submodules']:
         submodule_paths = setup_submodules(config)
+        link_tools_to_conda_bin(submodule_paths)
         runtime_config.setdefault('pipeline_steps', {}).setdefault('analysis', {}).setdefault('tools', {}).update(submodule_paths)
     print(">>> Writing updated runtime_config.yaml...")
     with open('runtime_config.yaml', 'w') as f:
