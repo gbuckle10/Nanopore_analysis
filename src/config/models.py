@@ -195,11 +195,8 @@ class AlignmentPaths(BaseModel):
             return resolve_path(common_paths.root, user_path)
 
         elif self.genome_id:
-            # If they just provided a genome id (e.g. hg38), look in the expected places.
-            print(f"Reference fasta based on {self.genome_id}")
-            # Base reference dir is the reference_genomes directory.
+            # If they just provided a genome id (e.g. hg38), look in the expected places
             base_ref_dir = resolve_path(common_paths.root, self.reference_genome_dir_name)
-            print(f"base ref dir - {base_ref_dir}")
             # Define the possible places the genome will be found in.
             search_paths = [
                 # Directly inside the reference genome folder (e.g. reference_genomes/hg38.fa)
@@ -212,8 +209,6 @@ class AlignmentPaths(BaseModel):
                 base_ref_dir / self.genome_id / "genome.fa",
                 base_ref_dir / self.genome_id / "genome.fa.gz"
             ]
-
-            print(f"Search paths - {search_paths}")
 
             return next((path for path in search_paths if path.is_file()), base_ref_dir / f"{self.genome_id}.fa")
 
