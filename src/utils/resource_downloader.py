@@ -2,11 +2,13 @@ import argparse
 import fnmatch
 import logging
 import os
-import subprocess
 import sys
 from pathlib import Path
 import requests
 from tqdm import tqdm
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
 
 from src import PROJECT_ROOT
 from src.config.models import load_and_validate_configs
@@ -18,41 +20,41 @@ from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
 
+
+def _s3_client():
+    return boto3.client('s3', config=Config(signature_version=UNSIGNED))
+
+
 def list_s3_files(url: str, include: str = None) -> list[str]:
     """Return S3 URIs of files at url, optionally filtered by fnmatch pattern"""
-    result = subprocess.run(
-        ["aws", "s3", "ls", url, '--recursive', '--no-sign-request'],
-        capture_output=True, text=True, check=True
-    )
+    bucket, prefix = url.replace("s3://", "").split("/", 1)
+    client = _s3_client()
+    paginator = client.get_paginator('list_objects_v2')
     files = []
-    for line in result.stdout.splitlines():
-        # Each line: "date time size key"
-        key = line.split(maxsplit=3)[-1]
-        s3_uri = "s3://" + url.split("/")[2] + "/" + key
-        if include is None or fnmatch.fnmatch(key, include):
-            files.append(s3_uri)
-
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get('Contents', []):
+            key = obj['Key']
+            s3_uri = f"s3://{bucket}/{key}"
+            if include is None or fnmatch.fnmatch(key, include):
+                files.append(s3_uri)
     return files
+
 
 def _download_s3(url: str, destination: Path, format: str = None, include: str = None, exclude: str = None, max_files: int = None):
     """Download using s3"""
     destination.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading s3 with boto3 ")
+    files = list_s3_files(url, include=include)
     if max_files is not None:
+        files = files[:max_files]
         logger.info(f"Downloading {max_files} file(s).")
-        files = list_s3_files(url, include=include)[:max_files]
-        for s3_uri in files:
-            filename = s3_uri.split("/")[-1]
-            logger.info(f"Downloading {filename}")
-            run_command(["aws", "s3", "cp", s3_uri, str(destination / filename), "--no-sign-request"])
-        return
-
-    cmd = ["aws", "s3", "cp", url, str(destination), "--no-sign-request", "--recursive"]
-    if include:
-        cmd += ["--exclude", "*", "--include", include]
-    elif exclude:
-        cmd += ["--exclude", exclude]
-
-    run_command(cmd)
+    client = _s3_client()
+    bucket = url.replace("s3://", "").split("/")[0]
+    for s3_uri in files:
+        key = s3_uri.replace(f"s3://{bucket}/", "")
+        filename = s3_uri.split("/")[-1]
+        logger.info(f"Downloading {filename}")
+        client.download_file(bucket, key, str(destination / filename))
 
 
 def download(url: str, destination: Path, **kwargs):
@@ -133,9 +135,9 @@ def reference_genome_handler(config):
 
     if not os.path.exists(final_ref_path) or getattr(config, 'force', False):
         logger.info(f"Reference file {final_ref_path} doesn't exist. Downloading from {url}")
-        run_command([
-            "aws", "s3", "cp", str(url), str(final_ref_path), "--no-sign-request"
-        ])
+        s3_url = str(url).replace("s3://", "")
+        bucket, key = s3_url.split("/", 1)
+        _s3_client().download_file(bucket, key, str(final_ref_path))
     else:
         logger.info("Reference genome already exists.")
 

@@ -27,6 +27,7 @@ dependencies:
   - pydantic
   - tqdm
   - pip
+  - boto3
   - pip:
     - pyyaml
     #- pandas
