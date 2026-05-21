@@ -35,6 +35,7 @@ pipeline_steps:
       num_files: "1"
       input_format: "pod5"
       dorado_version: "0.9.6"
+      download_ref_with_wgbstools: true
     downloads:
       data_download_url: "s3://ont-open-data/giab_2025.01/flowcells/HG002/PAW70337/pod5/PAW70337_66b2eea5_de8117b1_11.pod5"
       reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"

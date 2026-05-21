@@ -3,6 +3,7 @@ import fnmatch
 import logging
 import os
 import sys
+import threading
 from pathlib import Path
 import requests
 from tqdm import tqdm
@@ -15,7 +16,7 @@ from src.config.models import load_and_validate_configs
 from src.config.paths import build_config_paths, update_config_from_args
 from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.logger import Logger
-from src.utils.process_utils import run_command
+from src.utils.process_utils import run_command, spinner
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,7 @@ def _download_file_with_progress(url: str, destination: Path):
 def reference_genome_handler(config):
     url = config.pipeline_steps.setup.downloads.reference_genome_url
     use_wgbs = config.pipeline_steps.setup.params.download_ref_with_wgbstools
+    print(f"Use wgbstools? - {use_wgbs}")
     genome_id = config.pipeline_steps.align.paths.genome_id
 
     if use_wgbs:
@@ -146,9 +148,16 @@ def reference_genome_handler(config):
 
     if not os.path.exists(ref_mmi):
         logger.info("Indexing reference genome with minimap2...")
-        run_command([
-            "minimap2", "-d", str(ref_mmi), str(final_ref_path)
-        ])
+        stop = threading.Event()
+        t = threading.Thread(target=spinner, args=(stop,), kwargs={"message": "Indexing reference genome..."})
+        t.start()
+        try:
+            run_command([
+                "minimap2", "-d", str(ref_mmi), str(final_ref_path)
+            ])
+        finally:
+            stop.set()
+            t.join()
     else:
         logger.info(f"Reference genome index already exists.")
 
