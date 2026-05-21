@@ -22,14 +22,14 @@ dependencies:
   - pandas
   - scipy # Required by submodules
   - matplotlib # Required by submodules
-  - conda_forge:gxx
+  - conda-forge::gxx
   - pysam
   - pydantic
   - tqdm
   - pip
-  - boto3
   - pip:
     - pyyaml
+    - boto3
     #- pandas
     #- scipy
     #- matplotlib
