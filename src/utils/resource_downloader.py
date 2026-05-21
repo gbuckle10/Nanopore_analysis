@@ -16,7 +16,7 @@ from src.config.models import load_and_validate_configs
 from src.config.paths import build_config_paths, update_config_from_args
 from src.utils.file_utils import ensure_dir_exists, decompress_file
 from src.utils.logger import Logger
-from src.utils.process_utils import run_command, spinner
+from src.utils.process_utils import run_command, spinner, AnsiPassthroughHandler, SelectiveAnsiInteractiveHandler
 from src.utils.tools_runner import ToolRunner
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,12 @@ def reference_genome_handler(config):
 
     if use_wgbs:
         logger.info(f"We are going to initialise genome {genome_id} using wgbstools")
-        run_command(["wgbstools", "init_genome", genome_id])
+        ref_path = config.pipeline_steps.align.paths.full_ref_fasta_path
+        if ref_path and Path(ref_path).exists():
+            logger.info(f"Found existing FASTA at {ref_path}, passing to wgbstools")
+            run_command(["wgbstools", "init_genome", genome_id, "--fasta", str(ref_path)], output_handler_class=AnsiPassthroughHandler)
+        else:
+            run_command(["wgbstools", "init_genome", genome_id], output_handler_class=AnsiPassthroughHandler)
         return
 
     logger.info("We are going to initialise the genome and index with minimap2")
