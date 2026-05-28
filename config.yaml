@@ -32,16 +32,18 @@ pipeline_steps:
   # ---------------
   setup:
     params:
+      num_files: "1"
+      input_format: "pod5"
       dorado_version: "0.9.6"
-      num_fast5_files: "2"
+      download_ref_with_wgbstools: true
     downloads:
-      fast5_download_url: "s3://ont-open-data/gm24385_mod_2021.09/flowcells/20210511_1515_X2_FAQ32637_9b683def/fast5_pass/"
+      data_download_url: "s3://ont-open-data/giab_2025.01/flowcells/HG002/PAW70337/pod5/PAW70337_66b2eea5_de8117b1_11.pod5"
       reference_genome_url: "s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa"
-      uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U25.l4.hg38.full.tsv"
+      uxm_atlas_url: "https://raw.githubusercontent.com/nloyfer/UXM_deconv/refs/heads/main/supplemental/Atlas.U250.l4.hg38.full.tsv"
       manifest_url: "https://webdata.illumina.com/downloads/productfiles/humanmethylation450/humanmethylation450_15017482_v1-2.csv"
       full_atlas_url: "https://github.com/nloyfer/meth_atlas/raw/refs/heads/master/full_atlas.csv.gz"
     paths:
-      fast5_input_dir_name: "fast5_input"
+      data_input_dir_name: "pod5"
 
   # --------------------
   # Step 1: Basecalling
@@ -72,7 +74,7 @@ pipeline_steps:
   # -------------------------
   align:
     paths:
-      genome_id: "hg19"
+      genome_id: "hg38"
       # If the genome isn't simply in the reference_genome/ folder, write where it is below.
       custom_fasta_reference: null
       aligned_bam_name: "taken_alignment.sorted.bam"

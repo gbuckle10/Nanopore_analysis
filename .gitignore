@@ -214,6 +214,7 @@ __marimo__/
 /data/
 /models/
 /analysis/
+/reference_genomes/
 # Ignore downloaded archives
 *.zip
 *.tar.gz

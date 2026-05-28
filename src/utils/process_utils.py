@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import pty
@@ -6,6 +7,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 from typing import Callable
 
 
@@ -270,6 +272,7 @@ class LiveDisplayHandler:
                 self._handle_newline(line)
             elif terminator == '\r':
                 self._handle_carriage_return(line)
+
     def _handle_newline(self, line: str):
         clean_line = line.strip()
 
@@ -301,6 +304,15 @@ class LiveDisplayHandler:
             #sys.stdout.write('\n')
             sys.stdout.flush()
 
+def spinner(stop_event, message="Working..."):
+    for char in itertools.cycle('|/-\\'):
+        if stop_event.is_set():
+            break
+        sys.stdout.write(f"\r{message} {char}")
+        sys.stdout.flush()
+        time.sleep(0.1)
+    sys.stdout.write('\r' + ' ' * (len(message) + 2)  + '\r')
+    sys.stdout.flush()
 def kill_process_group(pgid):
     """
     Safely terminates a process group.

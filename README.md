@@ -61,7 +61,6 @@ An optional demultiplexing step can be inserted between basecalling and alignmen
 - Linux or WSL (Windows Subsystem for Linux)
 - [Conda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge)
 - Git
-- AWS CLI v2 (only needed for downloading reference genomes or sample data from S3)
 - Docker (optional, for the Docker-based installation)
 
 ---
@@ -108,49 +107,30 @@ git clone https://github.com/gbuckle10/Nanopore_analysis.git
 cd Nanopore_analysis
 ```
 
-**2. Create the Conda environment**
-
-```bash
-conda env create -f environment.yml
-conda activate nanopore_analysis
-```
-
-When prompted, accept the terms of service.
-
-To update the environment later if `environment.yml` has changed:
-```bash
-conda env update --file environment.yml --prune
-```
-
-**3. Run the installer** (downloads Dorado and sets up submodules)
+**2. Run the installer** (downloads Dorado and sets up submodules)
 
 ```bash
 python install.py conda all
 ```
 
 This will:
+- Create the `nanopore_analysis` conda environment from `environment.yml`.
 - Install external tools (Dorado) into `tools/`
 - Initialise and compile Git submodules (wgbs_tools, UXM_deconv, meth_atlas)
-- Create a `nanopore_analysis` symlink in the project root
-- Copy Conda activation scripts so `PYTHONPATH` is set automatically on environment activation
+- Install the pipeline in editable mode.
 
-Once the installer has finished, deactivate and reactivate the environment for the changes to take effect.
+When prompted during environment creation, accept the terms of service.
+
+Once the installer has finished, activate the environment:
 
 ```bash
-conda deactivate
 conda activate nanopore_analysis
 ```
 
-**4. Install the pipeline:** (if not created automatically)
+To update the environment later if `environment.yml` has changed:
 
 ```bash
-pip install -e .
-```
-
-This installs the package in editable mode and creates the `nanopore_analysis` command, which you can now call from anywhere:
-
-```bash
-nanopore_analysis --help
+conda env update --file environment.yml --prune
 ```
 
 ---
@@ -548,7 +528,7 @@ This happens when project files have been edited on Windows and have Windows-sty
 If you can't change the setting in your editor, use `dos2unix` as a last resort:
 ```bash
 sudo apt-get update
-sudo apg-get install dos2unix
+sudo apt-get install dos2unix
 find . -type f -name "*.sh" -exec dos2unix {} \+ 
 ```
 

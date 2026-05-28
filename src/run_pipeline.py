@@ -1,21 +1,18 @@
 #!/usr/bin/env python
 import argparse
 import logging
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.config.models import load_and_validate_configs, AppSettings, print_config
+from src.config.models import load_and_validate_configs
 from src.config.paths import build_config_paths, run_initial_validation, update_config_from_args
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
-from src.utils import resource_downloader
 from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
-from src import PROJECT_ROOT
 
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
-DEFAULT_RUNTIME_CONFIG_PATH = PROJECT_ROOT / "runtime_config.yaml"
+DEFAULT_CONFIG_PATH = "config.yaml"
+DEFAULT_RUNTIME_CONFIG_PATH = "runtime_config.yaml"
 
 COMMAND_MAP = {
     'setup': 'pipeline',
@@ -30,9 +27,6 @@ COMMAND_MAP = {
     'analysis': 'pipeline',
     'all': 'pipeline',
 
-    'filter-bam-by-length': 'src/analysis/filter_bam_by_length.py',
-    'summarise-lengths': 'src/analysis/summarise_lengths.py',
-    'download': 'src/utils/resource_downloader.py'
 }
 
 
@@ -92,7 +86,6 @@ def main():
     alignment.setup_parsers(subparsers, global_parent_parser, config)
     methylation.setup_parsers(subparsers, global_parent_parser, config)
     deconvolution.setup_parsers(subparsers, global_parent_parser, config)
-    resource_downloader.setup_parsers(subparsers, global_parent_parser, config)
 
     try:
         first_arg = sys.argv[1]

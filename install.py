@@ -14,6 +14,26 @@ docker run --rm -it \\
   "$IMAGE_NAME" "$@"
 """
 
+def create_or_update_conda_env():
+    env_file = "environment.yml"
+
+    # Check whether the environment already exists
+    result = subprocess.run(
+        ["conda", "env", "list"], capture_output=True, text=True
+    )
+
+    if "nanopore_analysis" in result.stdout:
+        print(">>> Conda environment 'nanopore_analysis' already exists. Updating...")
+        run_command(
+            ["conda", "env", "update", "--file", env_file, "--prune"],
+            "Updating conda environment."
+        )
+    else:
+        print(">>> Creating conda environment from environment.yml...")
+        run_command(
+            ["conda", "env", "create", "--file", env_file],
+            "Creating conda environment"
+        )
 
 def run_command(command, description):
     print(f">>> {description}...")
@@ -44,15 +64,21 @@ def install_conda(task):
     """
     Creates the Conda environment and the local symlink.
     """
+    create_or_update_conda_env()
 
     command_to_run = [
-        "python", "-m", "src.utils.setup_tasks", task
+        "conda", "run", "--no-capture-output", "-n", "nanopore_analysis", "python", "-m", "src.utils.setup_tasks", task
     ]
     run_command(command_to_run, f"Running step logic for '{task}'")
 
-    run_command(["pip", "install", "-e", "."], "Installing package and registering nanopore_analysis command")
-    print(">>> Local setup complete.")
+    run_command(
+        ["conda", "run", "--no-capture-output", "-n", "nanopore_analysis", "pip", "install", "-e", "."],
+        "Installing package and registering nanopore_analysis command"
+    )
 
+    print("\n>>> Local setup complete.")
+    print("    Start a new terminal session, then activate the environment with:")
+    print("        conda activate nanopore_analysis")
 
 def add_args(parser):
     """
