@@ -3,8 +3,9 @@ import pysam
 import logging
 from pathlib import Path
 import sys
-from logger import Logger
 import subprocess
+
+from src.utils.logger import Logger
 
 
 def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selection="both"):
@@ -23,7 +24,11 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
     logger = logging.getLogger('pipeline')
     logger.info(f"Splitting file: {input_file}")
     logger.info(f"Read size cutoff - {size_cutoff}")
-    prefix = Path(input_file).stem
+    input_path = Path(input_file)
+    if output_dir is None:
+        output_dir = input_path.parent
+    output_dir = Path(output_dir)
+    prefix = input_path.stem
 
     output_above = None
     output_below = None
@@ -65,12 +70,12 @@ def filter_bam_by_length(input_file, size_cutoff, output_dir=None, side_selectio
 
         logger.info("--- Indexing output files ---")
         if side_selection in ['above', 'both']:
-            logger.info("Indexing {output_above}")
+            logger.info(f"Indexing {output_above}")
             index_above_cmd = ['samtools', 'index', file_above]
             subprocess.run(index_above_cmd, check=True)
             logger.info("Indexing complete")
         if side_selection in ['below', 'both']:
-            logger.info("Indexing {output_below}")
+            logger.info(f"Indexing {output_below}")
             index_below_cmd = ['samtools', 'index', file_below]
             subprocess.run(index_below_cmd, check=True)
             logger.info("Indexing complete")
@@ -114,10 +119,11 @@ def main():
         "--mode",
         choices=['above', 'below', 'both'],
         type=str,
+        default="both",
         help="Specify which reads to save:\n"
              "  above: save reads with length > cutoff\n"
              "  below: save reads with length <= cutoff\n"
-             "  both: save reads above and below the cutoff in separate files"
+             "  both (default): save reads above and below the cutoff in separate files"
     )
 
     args = parser.parse_args()
