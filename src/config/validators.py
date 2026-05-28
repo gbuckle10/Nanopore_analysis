@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Optional
-
+from src import PROJECT_ROOT
 
 def validate_path(path: Path, must_exist: bool = True, must_be_file: bool = False, must_be_dir: bool = False,
                   param_name: str = "Path"):
@@ -50,6 +50,28 @@ def validate_pod5(path_to_check: Optional[Path], param_name: str):
 
     return True
 
+def resolve_config_path(config_path: Path) -> Path:
+    """
+    Resolves a config file path with a cwd-then-PROJECT_ROOT fallback
+    - Absolute paths are used as-is and must exist
+    - Relative paths are tried against cwd first, then PROJECT_ROOT
+    """
+    if config_path.is_absolute():
+        if not config_path.exists():
+            raise FileNotFoundError(f"Base config file not found: {config_path}")
+        return config_path
+
+    cwd_candidate = Path.cwd() / config_path
+    if cwd_candidate.exists():
+        return cwd_candidate
+
+    root_candidate = PROJECT_ROOT / config_path
+    if root_candidate.exists():
+        return root_candidate
+
+    raise FileNotFoundError(
+        f"Base config not found. Tried:\n   {cwd_candidate}\n   {root_candidate}"
+    )
 
 def resolve_path(root_dir: Path, path_from_config: str):
     """

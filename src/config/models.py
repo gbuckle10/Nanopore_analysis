@@ -3,14 +3,13 @@ from __future__ import annotations
 import collections
 import logging
 import pprint
-from dataclasses import Field
 
 import yaml
 from pathlib import Path
 from typing import Optional, Any, Dict, Literal
-from pydantic import BaseModel, ValidationError, AnyUrl, model_validator
+from pydantic import BaseModel, ValidationError, AnyUrl
 
-from src.config.validators import validate_path, validate_pod5, resolve_path
+from src.config.validators import validate_path, validate_pod5, resolve_path, resolve_config_path
 
 class Globals(BaseModel):
     threads: int = 4
@@ -130,7 +129,7 @@ class BasecallingPaths(BaseModel):
             self.full_pod5_path = resolve_path(root_dir, self.user_pod5_input)
         else:
             self.full_pod5_path = resolve_path(root_dir, self.pod5_input_path)
-        
+
         conv_basecalled_dir = resolve_path(common_paths.data_dir, self.basecalled_output_dir_name)
         conv_bam_path = resolve_path(conv_basecalled_dir, self.basecalled_bam_name)
 
@@ -214,7 +213,6 @@ class AlignmentPaths(BaseModel):
 
         return None
 
-
     def _validate(self):
         if not (self.genome_id or self.custom_fasta_reference):
             raise ValueError(
@@ -239,19 +237,18 @@ class AlignmentPaths(BaseModel):
             self.full_unaligned_input_path = conv_unaligned_input
 
         if self.user_alignment_output:
-            #print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
+            # print(f"The user specified an output, so we will resolve {self.user_alignment_output}")
             self.full_aligned_bam_path = resolve_path(root_dir, self.user_alignment_output)
         else:
             self.alignment_output_dir = resolve_path(common_paths.data_dir, self.alignment_dir_name)
             self.full_aligned_bam_path = resolve_path(self.alignment_output_dir, self.aligned_bam_name)
 
-        #print(f"The full aligned bam path is {self.full_aligned_bam_path}")
+        # print(f"The full aligned bam path is {self.full_aligned_bam_path}")
         if self.custom_fasta_reference:
             if self.genome_id:
                 logging.info(f"User provided custom reference '--ref {self.custom_fasta_reference}'. "
                              f"This will override the genome_id: '{self.genome_id}' from the config file.")
                 self.genome_id = None
-
 
         self.qc_output_dir = resolve_path(self.alignment_output_dir, self.qc_dir_name)
         self.full_flagstat_path = resolve_path(self.qc_output_dir, self.alignment_flagstat_name)
@@ -365,14 +362,13 @@ class AnalysisPaths(BaseModel):
         self.full_deconv_results_path = resolve_path(deconvolution_dir, self.deconvolution_results_name)
         self.full_deconv_input_path = resolve_path(deconvolution_dir, self.deconvolution_input_name)
 
-
     def build_and_validate(self, common_paths: Paths):
         self._build(common_paths)
 
 
 class AnalysisStep(BaseModel):
     params: AnalysisParams
-    tools: Optional[AnalysisTools] = None # Populated by runtime_config after setup
+    tools: Optional[AnalysisTools] = None  # Populated by runtime_config after setup
     paths: AnalysisPaths
 
 
@@ -406,7 +402,7 @@ class AppSettings(BaseModel):
     globals: Globals
     pipeline_control: PipelineControl
     pipeline_steps: PipelineSteps
-    tools: Optional[Tools] = None # Populated by runtime_config after setup
+    tools: Optional[Tools] = None  # Populated by runtime_config after setup
     paths: Paths = Paths()  # Default to an empty instance
     metadata: Optional[RunMetadata] = None
 
@@ -427,7 +423,6 @@ def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
 
     return d2
 
-
 def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> AppSettings:
     """
     Loads two YAML config files (runtime_config.yaml and config.yaml), deep-merges them, and validates them with
@@ -435,7 +430,7 @@ def load_and_validate_configs(config_path: Path, runtime_config_path: Path) -> A
     """
 
     # Resolve paths
-    config_path = resolve_path(Path.cwd(), str(config_path))
+    config_path = resolve_config_path(config_path)
     runtime_config_path = resolve_path(Path.cwd(), str(runtime_config_path))
 
     # Load the YAML files into dictionaries

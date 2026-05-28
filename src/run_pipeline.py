@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 import argparse
 import logging
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.config.models import load_and_validate_configs, AppSettings, print_config
+from src.config.models import load_and_validate_configs
 from src.config.paths import build_config_paths, run_initial_validation, update_config_from_args
 from src.pipeline import basecalling, alignment, deconvolution, methylation, full_pipeline
 from src.utils.file_utils import save_final_config
 from src.utils.logger import Logger
-from src import PROJECT_ROOT
 
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
-DEFAULT_RUNTIME_CONFIG_PATH = PROJECT_ROOT / "runtime_config.yaml"
+DEFAULT_CONFIG_PATH = "config.yaml"
+DEFAULT_RUNTIME_CONFIG_PATH = "runtime_config.yaml"
 
 COMMAND_MAP = {
     'setup': 'pipeline',
