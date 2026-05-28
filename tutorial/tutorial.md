@@ -17,122 +17,88 @@ For installation instructions, troubleshooting and WSL/Docker setup, see the **R
 
 ## 1. Full Pipeline Walkthrough
 
-This section walks through a complete analysis run using publicly available ONT data, starting from raw POD5 files and ending with a cell-type deconvolution result.
+This section describes how a complete analysis run fits together - what each step does, what it takes as input, and what it produces. Each step is covered in detail in its own section below.
+
+The pipeline takes raw Nanopore output and produces a cell-type deconvolution result in four main steps:
+
+```
+POD5 files
+    ↓  Basecalling (Dorado)
+Unaligned BAM
+    ↓  Alignment (minimap2 + samtools)
+Aligned, sorted, indexed BAM
+    ↓  Methylation Summary (modkit) — optional for UXM
+BED file
+    ↓  Deconvolution (UXM or NNLS)
+Cell-type proportions CSV
+```
+
+> **Note on runtime:** Basecalling, alignment, and methylation summary all take significant time on a real dataset. This is normal - the pipeline is designed for whole-genome sequencing data. For learning about individual steps, the sections below each explain what you need and how to run them independently without having to run the full pipeline first.
+
+---
 
 ### The Sample Dataset
 
-We will use the Genome in a Bottle 2025.01 release from Oxford Nanopore's open data repository: the HG002 sample, sequenced on a PromethION with R10.4.1 chemistry. The raw POD5 files are available without authentication at:
-
-```
-s3://ont-open-data/giab_2025.01/flowcells/HG002/
-```
-
-We will only download one file from the dataset to illustrate the workflow of this pipeline. We also need the **hg38 reference genome** and the **UXM methylation atlas**. The pipeline can download these and we will do so at the point in the walkthrough where they are needed..
-
-### Step 0 - Set Up the Tutorial Directory
-
-All tutorial files live in the `tutorial/` folder in the project root. This includes a `config.yaml` that is pre-configured for this walkthrough - all four pipeline steps enabled, hg38 as the reference genome, and the correct filenames throughout.
-
-Start by navigating to the tutorial directory:
+The individual step sections use publicly available data from the Genome in a Bottle 2025.01 release from Oxford Nanopore's open data repository: the HG002 sample, sequenced on a PromethION with R10.4.1 chemistry with 5mCG methylation detection. Resources for this dataset can be downloaded with:
 
 ```bash
-cd tutorial
+resource_download sample_data   # pre-basecalled BAM
+resource_download genome        # hg38 reference genome
+resource_download atlas         # UXM methylation atlas
 ```
-
-All commands in this walkthrough are run from here. The pipeline picks up `config.yaml` from your current working directory automatically, so no extra flags are needed.
-
-### Step 1 - Download and Prepare the Raw Data
-
-The pipeline has a built-in command for downloading the tutorial dataset.
-
-```bash
-resource_download sample_data
-```
-
-This downloads a single POD5 file from HG002 flow cell data to `data/pod5/`. PromethION POD5 files are very large, so one file is enough to demonstrate the full pipeline. We won't get whole-genome coverage from a single file, but there will be sufficient reads for basecalling, alignment, and deconvolution to run meaningfully. If you want more coverage, you can increase `setup.params.num_files` in `tutorial/config.yaml`. You will also need to update `setup.downloads.data_download_url` to point one level up in the S3 bucket (i.e the flow cell directory rather than the specific file) so the pipeline has multiple files to choose from.
-
-> **Using FAST5 data instead?**: If your dataset uses the older FAST5 format, set `input_format: "fast5"` under `basecalling.params` in `config.yaml`. The conversion to POD5 happens automatically at the start of the basecalling step.
-
-If you want to download from a different URL or save to a different location:
-
-```bash
-resource_download sample_data \
-  --url s3://my-bucket/my-data/.../ \
-  --output-dir data/my_input/
-```
-
-### Step 2 - Download the Reference Resources
-
-Download the atlas and the reference genome before starting the pipeline steps:
-
-```bash
-resource_download genome
-resource_download atlas
-```
-
-The atlas (~4 MB) is saved to `data/atlas/UXM_atlas.tsv`. The reference genome (~3 GB) is downloaded and initialised via wgbstools and saved to `reference_genomes/`. Both only need to be downloaded once and can be reused across experiments.
-
-### Step 3 - Basecalling
-
-```bash
-nanopore_analysis basecalling run
-```
-
-This runs Dorado on the POD5 file in `data/pod5` using the `hac` model with `5mCG_5hmCG` methylation detection. The output is an unaligned BAM at `data/basecalled_output/tutorial.bam`.
-
-### Step 4 - Alignment
-
-```bash
-nanopore_analysis align run
-```
-
-This aligns the basecalled reads to hg38 with minimap2, sorts and indexes the output, and saves it to `data/alignment/tutorial.aligned.sorted.bam`. A flagstat QC report is also written to `data/alignment/qc/`.
-
-### Step 5 - Methylation Summary
-
-```bash
-nanopore_analysis methylation run
-```
-
-This runs `modkit pileup` on the aligned BAM, producing a BED file of per-CpG methylation calls at `data/methylation/methylation.bed`.
-
-### Step 6 - Deconvolution
-
-Before deconvolution, generate a PAT file from the aligned BAM using wgbstools:
-
-```bash
-wgbstools bam2pat data/alignment/tutorial.aligned.sorted.bam --out-dir data/processed/
-```
-
-Then run deconvolution:
-
-```bash
-nanopore_analysis deconvolution --input-file data/processed/tutorial.aligned.sorted.pat.gz --output-dir results/deconvolution/deconvoluted_output.csv --algorithm uxm --atlas data/atlas/Atlas.U250.l4.hg38.full.tsv
-```
-
-Progress for each step is logged to the terminal and written in full to `logs/`.
-
-
-### Reading the Output
-
-The result is a CSV at `results/deconvolution/deconvoluted_output.csv`. Each row is a cell type and each value is the estimated proportion for that sample:
-
-```
-CellType,tutorial
-Adipocytes,0.0000000
-Bladder-Ep,0.0000000
-Blood-B,0.0260316
-Blood-Granul,0.0738950
-Blood-Mono+Macro,0.0138440
-Blood-NK,0.0317679
-Blood-T,0.0000000
-Bone-Osteob,0.0300103
-...
-```
-
-Since we're only using a single POD5 file rather than a full run, the deconvolution result will be noisy and should not be interpreted as a definitive cell-type profile. The important thing at this stage is that the pipeline completes without errors and produces a CSV with plausible non-zero values across cell types.
 
 ---
+
+### Running the Full Pipeline
+
+Once you're familiar with the individual steps and have your data resources in place, you can run everything in sequence with:
+
+```bash
+nanopore_analysis run
+```
+
+This executes whichever steps are enabled in `config.yaml` in order. Each step's output becomes the next step's input automatically.
+
+For your own data, the typical `config.yaml` setup is:
+
+```yaml
+pipeline_control:
+  run_steps:
+    basecalling: true
+    align: true
+    methylation_summary: true  # set false if using UXM only
+    analysis: true
+```
+
+Progress for each step is logged to the terminal and written in full to a timestamped file in `logs/`.
+
+### Expected Output Structure
+
+After a full run, your directory will look something like this:
+
+```
+data/
+├── basecalled_output/
+│   └── my_experiment.bam
+├── alignment/
+│   ├── my_experiment.aligned.sorted.bam
+│   ├── my_experiment.aligned.sorted.bam.bai
+│   └── qc/
+│       └── my_experiment.flagstat.txt
+├── methylation/
+│   └── methylation.bed
+├── processed/
+│   └── my_experiment.aligned.sorted.pat.gz
+└── atlas/
+    └── UXM_atlas.tsv
+results/
+└── deconvolution/
+    └── deconvoluted_output.csv
+logs/
+└── 2024-03-15_10-30-00_pipeline_run.log
+```
+
+--- 
 
 ## 2. Basecalling
 
@@ -184,7 +150,7 @@ pipeline_steps:
 nanopore_analysis basecalling run
 ```
 
-Or override the input/output without touching the config:
+Or override the input/output without modifying the config:
 
 ```bash
 nanopore_analysis basecalling run \
@@ -227,7 +193,7 @@ summarise_lengths \
   --output-dir data/qc/
 ```
 
-A good run shows a broad spread of lengths, typically peaking somewhere between 5-20 kb depending on the library prep. If almost all reads are below 1 kb, something likely went wrong during library preparation rather than basecalling.
+A good run shows a broad spread of lengths, typically peaking somewhere between 5-20 kb depending on the library prep. If almost all reads are below 1 kb, something likely went wrong during library preparation rather than basecalling. This of course doesn't apply if there is an experimental reason for the length distribution being different.
 
 ---
 
@@ -247,6 +213,9 @@ If you don't have a reference genome yet, download it first:
 ```bash
 resource_download genome
 ```
+
+> **Install the genome via wgbstools if possible.** The deconvolution step (UXM) relies on several files that wgbstools generates alongside the genome when you use `wgbstools init_genome`.
+> If the genome is installed without these files (e.g. directly downloaded as a FASTA), alignment will still work but the wgbstools `bam2pat` and `uxm deconv` steps won't function correctly. The `resource_download genome` command handles this automatically, but if you're providing your own FASTA be sure to run `wgbstools init_genome` on it first.
 
 The pipeline searches `reference_genomes/` for your genome using the `genome_id` set in `config.yaml`. It looks for the file in several common layouts, for example:
 
@@ -269,7 +238,7 @@ pipeline_steps:
 
 ### The minimap2 Index
 
-Before alignment, minimap2 needs an index of the reference genome (a `.mmi` file). This is built automatically the first time you run alignment and saved alongside the FASTA:
+Before alignment, minimap2 needs an index of the reference genome (a `.mmi` file). If you installed the genome via wgbstools, this index is already generated as part of `init_genome`and the pipeline will find it automatically. If it isn't present, the pipeline will automatically build it the first time you run alignment and saved alongside the FASTA:
 
 ```
 reference_genomes/hg38/genome.mmi
@@ -288,7 +257,9 @@ nanopore_analysis align run
 Or override the input and output without touching the config:
 
 ```bash
-nanopore_analysis align run --input-file data/basecalled_output/my_experiment.bam --output-dir data/alignment/my_experiment.aligned.sorted.bam
+nanopore_analysis align run \
+  --input-file data/basecalled_output/my_experiment.bam \
+  --output-dir data/alignment/my_experiment.aligned.sorted.bam
 ```
 
 This will:
@@ -306,7 +277,9 @@ A flagstat QC report is also written automatically to `data/alignment/qc`.
 If you demultiplexed your data, you will have a directory of BAM files rather than a single file. Pass the directory as the input and the pipeline will align every BAM it finds:
 
 ```bash
-nanopore_analysis align run --input-file data/demultiplexed/ --output-dir data/alignment
+nanopore_analysis align run \
+  --input-file data/demultiplexed/ \ 
+  --output-dir data/alignment
 ```
 
 Each file is saved as `<stem>.aligned.bam` inside the output directory.
@@ -330,7 +303,8 @@ For a good whole-genome sequencing run you would typically expect >90% of reads 
 If you already have an aligned BAM and just want to regenerate the QC report:
 
 ```bash
-nanopore_analysis align qc --input-file data/alignment/my_experiment.aligned.sorted.bam
+nanopore_analysis align qc \
+  --input-file data/alignment/my_experiment.aligned.sorted.bam
 ```
 
 ---
@@ -528,3 +502,25 @@ Saved as `<input_stem>_read_length_distribution.csv` in your output directory.
 Of course these may be expected depending on your sample, so they are only worrying if your sample isn't expected to produce these results.
 
 ---
+
+### Filtering by Read Length
+
+Longer reads tend to cover more CpG sites in a single read, which gives the UXM algorithm more complete methylation block information to work with. Filtering to longer reads before deconvolution can improve result quality, particularly when working with low coverage data.
+
+```bash
+filter_by_length data/alignment/my_experiment.aligned.sorted.bam --cutoff 5000 --mode above --output-dir data/filtered/
+```
+
+The `--mode` argument controls which reads are kept:
+
+| Mode | Behaviour |
+|---|---|
+| `above` | Keep only reads longer than the cutoff |
+| `below` | Keep only reads shorter than or equal to the cutoff |
+| `both` | Write both files separately |
+
+The output BAM is indexed automatically. You can then use it as the input to any downstream step in place of the original BAM.
+
+**Choosing a cutoff** depends on your data. A cutoff of 5000 bp is a reasonable starting point for whole-genome methylation data, but you should check your readlength distribution first - if your run peaked at 8 kb, a 5000 bp cutoff will keep most of your reads; if it peaked at 3 kb, you may end up with very little data.
+
+> **Note:** Filtering to long reads reduces the total number of reads available, which lowers coverage. There is a tradeoff between read quality and coverage - if your data is already low coverage then filtering aggressively may do more harm than good.
