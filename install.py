@@ -67,12 +67,12 @@ def install_conda(task):
     create_or_update_conda_env()
 
     command_to_run = [
-        "python", "-m", "src.utils.setup_tasks", task
+        "conda", "run", "--no-capture-output", "-n", "nanopore_analysis", "python", "-m", "src.utils.setup_tasks", task
     ]
     run_command(command_to_run, f"Running step logic for '{task}'")
 
     run_command(
-        ["conda", "run", "-n", "nanopore_analysis", "pip", "install", "-e", "."],
+        ["conda", "run", "--no-capture-output", "-n", "nanopore_analysis", "pip", "install", "-e", "."],
         "Installing package and registering nanopore_analysis command"
     )
 
